@@ -1,0 +1,14 @@
+
+# Mobile build artifacts
+*.apk
+*.ipa
+
+# Keystore / keys
+*.jks
+key.properties
+upload-keystore.jks
+
+# Flutter build dirs
+build/
+.flutter-plugins
+
