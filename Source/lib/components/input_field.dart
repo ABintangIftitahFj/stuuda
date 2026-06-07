@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:stundaa/support/app_theme.dart' as app_theme;
 
 class InputField extends StatelessWidget {
   final String? placeholder;
@@ -65,26 +67,30 @@ class InputField extends StatelessWidget {
       onChanged: onChanged,
       controller: controller,
       autofocus: autofocus,
-      style: const TextStyle(
+      style: GoogleFonts.plusJakartaSans(
         height: 1.5,
         fontSize: 16.0,
+        color: app_theme.lavenderWhite,
       ),
       textAlignVertical: TextAlignVertical.center,
       decoration: InputDecoration(
         labelText: labelText,
-        labelStyle: const TextStyle(
+        labelStyle: GoogleFonts.plusJakartaSans(
           fontSize: 16.0,
-          color: Colors.grey,
+          color: app_theme.iceBlue,
+          fontWeight: FontWeight.w500,
         ),
         helperText: helperText,
         hintText: placeholder,
-        hintStyle: const TextStyle(
-          color: Colors.grey,
+        hintStyle: GoogleFonts.plusJakartaSans(
+          color: app_theme.secondary,
           fontSize: 14.0,
+          fontWeight: FontWeight.w500,
         ),
-        errorStyle: const TextStyle(
+        errorStyle: GoogleFonts.plusJakartaSans(
           fontSize: 12,
-          color: Colors.red,
+          color: app_theme.error,
+          fontWeight: FontWeight.w600,
         ),
         suffixIcon: suffixIcon != null
             ? Padding(
@@ -99,24 +105,28 @@ class InputField extends StatelessWidget {
               )
             : null,
         focusedBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: borderColor ?? Colors.green, width: 2),
-          borderRadius: BorderRadius.circular(12.0),
+          borderSide:
+              BorderSide(color: borderColor ?? app_theme.cyanGlow, width: 1.6),
+          borderRadius: BorderRadius.circular(18.0),
         ),
         enabledBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: borderColor ?? Colors.grey.shade300),
-          borderRadius: BorderRadius.circular(12.0),
+          borderSide: const BorderSide(
+            color: Color.fromRGBO(167, 223, 255, 0.22),
+          ),
+          borderRadius: BorderRadius.circular(18.0),
         ),
         errorBorder: OutlineInputBorder(
-          borderSide: const BorderSide(color: Colors.red, width: 2),
-          borderRadius: BorderRadius.circular(12.0),
+          borderSide: const BorderSide(color: app_theme.error, width: 1.5),
+          borderRadius: BorderRadius.circular(18.0),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderSide: const BorderSide(color: Colors.red, width: 2),
-          borderRadius: BorderRadius.circular(12.0),
+          borderSide: const BorderSide(color: app_theme.error, width: 1.5),
+          borderRadius: BorderRadius.circular(18.0),
         ),
         filled: true,
-        fillColor: Colors.grey.shade100,
-        contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        fillColor: const Color.fromRGBO(255, 255, 255, 0.055),
+        contentPadding:
+            const EdgeInsets.symmetric(vertical: 18, horizontal: 14),
       ),
       maxLength: maxlength,
     );

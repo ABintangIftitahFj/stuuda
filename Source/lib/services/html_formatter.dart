@@ -5,7 +5,6 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:html/parser.dart' as html_parser;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:video_player/video_player.dart';
-import 'package:whatsjet_demo/services/utils.dart';
 
 class WhatsAppHtmlFormatter {
   static TextSpan format(String htmlText,
@@ -232,7 +231,7 @@ class _SimpleVideoPlayerState extends State<SimpleVideoPlayer> {
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.network(widget.videoUrl)
+    _controller = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl))
       ..initialize().then((_) {
         setState(() {
           _isInitialized = true;
@@ -297,7 +296,7 @@ class _SimpleAudioPlayerState extends State<SimpleAudioPlayer> {
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.network(widget.audioUrl)
+    _controller = VideoPlayerController.networkUrl(Uri.parse(widget.audioUrl))
       ..initialize().then((_) {
         setState(() {
           _isInitialized = true;

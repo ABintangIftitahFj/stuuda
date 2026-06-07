@@ -19,10 +19,14 @@ class PusherService {
         authEndpoint: apiUrl("broadcasting/auth", queryParameters: {
           'auth_token': authToken,
         }).toString(),
-        onError: (message, code, exception) {},
+        onError: (message, code, exception) {
+          // ignore
+        },
       );
       await _pusher.connect();
-    } catch (e) {}
+    } catch (e) {
+      // ignore
+    }
   }
 
   Future<void> subscribeToChannel({
@@ -37,12 +41,16 @@ class PusherService {
           try {
             final data = jsonDecode(eventResponseData.data);
             onEvent(eventResponseData.eventName, data);
-          } catch (e) {}
+          } catch (e) {
+            // ignore
+          }
         },
         onSubscriptionError: (error) {
           if (onSubscriptionError != null) onSubscriptionError(error);
         },
       );
-    } catch (e) {}
+    } catch (e) {
+      // ignore
+    }
   }
 }

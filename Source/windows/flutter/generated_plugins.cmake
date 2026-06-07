@@ -6,6 +6,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   audioplayers_windows
   emoji_picker_flutter
   flutter_secure_storage_windows
+  flutter_webrtc
   permission_handler_windows
   url_launcher_windows
 )

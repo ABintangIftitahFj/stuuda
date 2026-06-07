@@ -1,11 +1,11 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../services/utils.dart';
+import 'package:stundaa/services/utils.dart';
 import 'common.dart';
 import 'package:file_picker/file_picker.dart';
-import '../../support/app_theme.dart' as app_theme;
-import '../../services/data_transport.dart' as data_transport;
+import 'package:stundaa/support/app_theme.dart' as app_theme;
+import 'package:stundaa/services/data_transport.dart' as data_transport;
 
 class UploadWidget extends StatefulWidget {
   final String buttonLabel;
@@ -158,7 +158,7 @@ class _UploadWidgetState extends State<UploadWidget> {
           ?.files;
       String uploadedImageName = paths?[0].path ?? '';
       // });
-      if ((uploadedImageName == '') || (uploadedImageName == null)) {
+      if (uploadedImageName == '') {
         setState(() {
           _isLoading = false;
         });
@@ -349,7 +349,7 @@ class _UploadImagesWidgetState extends State<UploadImagesWidget> {
       ))
           ?.files;
       String uploadedImageName = paths?[0].path ?? '';
-      if ((uploadedImageName == '') || (uploadedImageName == null)) {
+      if (uploadedImageName == '') {
         setState(() {
           _isLoading = false;
         });

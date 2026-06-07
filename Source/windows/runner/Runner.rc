@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "lw_dating_app" "\0"
+            VALUE "FileDescription", "stunnda" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "lw_dating_app" "\0"
+            VALUE "InternalName", "stunnda" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2022 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "lw_dating_app.exe" "\0"
-            VALUE "ProductName", "lw_dating_app" "\0"
+            VALUE "OriginalFilename", "stunnda.exe" "\0"
+            VALUE "ProductName", "stunnda" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

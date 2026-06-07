@@ -1,16 +1,14 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:http_parser/http_parser.dart';
-import '/services/input_security.dart';
+import 'package:stundaa/services/input_security.dart';
 import 'package:fbroadcast/fbroadcast.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
-import '../../screens/user/login.dart';
-import '../../support/app_config.dart' as app_config;
+import 'package:stundaa/screens/user/login.dart';
+import 'package:stundaa/support/app_config.dart' as app_config;
 import 'auth.dart' as auth;
 import 'package:path/path.dart' as p;
 import 'utils.dart';
-import 'dart:developer';
 
 String token = '';
 
@@ -30,35 +28,25 @@ _setHeaders() {
 }
 
 typedef OnCallbackType = Function(Map<String, dynamic>? responseData);
-Future /* <http.Response> */  post(
+
+Future<String> post(
   String requestedUrl, {
   Map<String, dynamic>? inputData,
   BuildContext? context,
-  bool? secured = false,
+  bool secured = false,
   List<String>? unSecuredFields,
   OnCallbackType? onSuccess,
   OnCallbackType? thenCallback,
   Function? onError,
   OnCallbackType? onFailed,
 }) async {
-  Map<String, dynamic>? newInputData = {};
-  if ((secured == true) && (inputData != null)) {
-
-    /* inputData = inputData.map((key, value) {
-      if ((unSecuredFields != null) && unSecuredFields.contains(key)) {
-        return value;
-      } else {
-        return InputSecurity().text(value);
-      }
-    }); */
+  Map<String, dynamic> newInputData = {};
+  if (secured && inputData != null) {
     inputData.forEach((key, value) {
-      // Inside the forEach loop where you process inputData:
-
       if ((unSecuredFields != null) && unSecuredFields.contains(key)) {
         newInputData[key] = value;
       } else {
-        newInputData[InputSecurity().text(key)] =
-            InputSecurity().text(value.toString());
+        newInputData[InputSecurity().text(key)] = InputSecurity().text(value.toString());
       }
     });
   }
@@ -76,6 +64,7 @@ Future /* <http.Response> */  post(
   )
       .then((value) {
     // process the further request
+    if (context != null && !context.mounted) return value;
     _thenProcessing(value, inputData, onSuccess, context, thenCallback, onError,
         failedCallbackAction: onFailed);
     return value;
@@ -84,7 +73,7 @@ Future /* <http.Response> */  post(
 }
 
 // http.Response
-Future get(
+Future<String> get(
   String requestedUrl, {
   BuildContext? context,
   OnCallbackType? onSuccess,
@@ -93,8 +82,7 @@ Future get(
   Map<String, dynamic>? queryParameters,
   OnCallbackType? onFailed,
 }) async {
-  Uri urlToProcess =
-      apiUrl(requestedUrl, queryParameters: queryParameters, context: context);
+  Uri urlToProcess = apiUrl(requestedUrl, queryParameters: queryParameters, context: context);
   pr('http GET request: $urlToProcess', lineNumber: 2);
   var httpResponse = await http
       .get(
@@ -103,17 +91,19 @@ Future get(
   )
       .then((value) {
     // process the further request
+    if (context != null && !context.mounted) return value;
     _thenProcessing(value, {}, onSuccess, context, thenCallback, null,
         failedCallbackAction: onFailed);
     return value;
   }).catchError((error) {
+    if (context != null && !context.mounted) return http.Response(error.toString(), 500);
     if ((context != null) && (app_config.debug == true)) {
       showToastMessage(context, error.toString(), type: 'error');
     }
     pr("error $error");
     _thenProcessing(error.toString(), {}, null, context, thenCallback, onError,
         failedCallbackAction: onFailed);
-    return error;
+    return http.Response(error.toString(), 500);
   });
   return httpResponse.body;
 }
@@ -139,8 +129,7 @@ void uploadFile(String filename, String url,
     '.aac': 'audio/aac',
     '.pdf': 'application/pdf',
     '.doc': 'application/msword',
-    '.docx':
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     '.txt': 'text/plain',
   };
 
@@ -154,13 +143,13 @@ void uploadFile(String filename, String url,
       request.fields.addAll(inputData);
     }
 
-    File file = File(filename);
     request.files.add(await http.MultipartFile.fromPath('filepond', filename,
         contentType: MediaType.parse(mimeType)));
 
     try {
       var response = await request.send();
       var responseFromStream = await http.Response.fromStream(response);
+      if (context != null && !context.mounted) return;
       _thenProcessing(
         responseFromStream,
         fileName,
@@ -184,54 +173,35 @@ void uploadFile(String filename, String url,
   }
 }
 
-void _thenProcessing(
-    dynamic value,
-    dynamic inputData,
-    OnCallbackType? successCallbackAction,
-    BuildContext? context,
-    OnCallbackType? thenCallbackAction,
-    Function? onError,
+void _thenProcessing(dynamic value, dynamic inputData, OnCallbackType? successCallbackAction,
+    BuildContext? context, OnCallbackType? thenCallbackAction, Function? onError,
     {Function? failedCallbackAction}) {
+  if (context != null && !context.mounted) return;
   Map<String, dynamic> responseData;
 
   try {
-
     // Ensure value is of the expected type (e.g., a response object with a body)
     if (value == null || value.body == null) {
-      throw Exception('Invalid response: value or body is null');
+      throw Exception('Invalid response: response body is null or empty');
     }
 
     // Parse the response body as JSON
-    responseData = jsonDecode(value.body);
+    responseData = jsonDecode(value.body) as Map<String, dynamic>;
   } catch (e) {
-    pr("Value or body is null or invalid: $e");
-    pr(e);
-
-    // if (context != null || value.statusCode == 413) {
-    //   showToastMessage(context!, 'Content Too Large', type: 'error');
-    // }
+    pr("Error parsing response: $e");
 
     // Show error message in the UI
     if (context != null) {
-      // pr("statusCode ${value.statusCode}");
-      showToastMessage(context, 'Something went wrong', type: 'error');
+      showToastMessage(context, 'Failed to parse server response', type: 'error');
     }
-
-
 
     // Handle onError callback
     if (onError != null) {
-      if (value is String || value is int) {
-        onError(value); // Pass the raw value to onError
-      } else if (value != null && value.body != null) {
-        onError(value.body); // Pass the body to onError
-      } else {
-        onError(e); // Pass the exception to onError
-      }
+      onError(e.toString());
     }
 
-    // Return a default value or rethrow the error
-    return; // Exit the function if there's an error
+    // Exit the function if there's an error
+    return;
   }
 
   // Process the response data
@@ -250,7 +220,7 @@ void _thenProcessing(
 
   // Set the token if refreshed
   if (responseData['data']?['additional']?['token_refreshed'] != null) {
-    auth.storeAuthToken(responseData['data']['additional']['token_refreshed']);
+    auth.storeAuthToken(responseData['data']?['additional']?['token_refreshed'] as String);
   }
 
   // Check if the user is authenticated
@@ -264,52 +234,55 @@ void _thenProcessing(
     if (thenCallbackAction != null) {
       thenCallbackAction(responseData);
     }
-    if (responseData['reaction'] == 1) {
+
+    final int reaction = responseData['reaction'] as int? ?? 0;
+
+    if (reaction == 1 || reaction == 21) {
       if (successCallbackAction != null) {
         successCallbackAction(responseData);
       }
-      if (context != null) {
-        showSuccessMessage(context, responseData['data']['message']);
+      final String? message = responseData['data']?['message'] as String?;
+      if (context != null && message != null) {
+        showSuccessMessage(context, message);
       }
-    }else if (responseData['reaction'] == 21){
-      if (successCallbackAction != null) {
-        successCallbackAction(responseData);
-      }
-      if (context != null) {
-        showSuccessMessage(context, responseData['data']['message']);
-      }
-    }
-    else {
+    } else {
       if (failedCallbackAction != null) {
         failedCallbackAction(responseData);
       }
-      if (context != null) {
-        showToastMessage(context, responseData['data']['message'],
-            type: 'error');
+      final String? message = responseData['data']?['message'] as String?;
+      if (context != null && message != null) {
+        showToastMessage(context, message, type: 'error');
       }
     }
-  }
-
-  else if (value.statusCode == 422) {
+  } else if (value.statusCode == 422) {
     // Handle validation errors
-    Map<String, dynamic> responseErrors = responseData['errors'];
-    String errorString = responseData['message'];
-    for (String key in responseErrors.keys) {
-      String errorMessage = responseErrors[key][0];
-      if (errorString != errorMessage) errorString += '\n $errorMessage';
-    }
-    if ((errorString != '') && (context != null)) {
-      showToastMessage(context, errorString, type: 'error');
+    final Map<String, dynamic>? errors = responseData['errors'] as Map<String, dynamic>?;
+    final String baseMessage = responseData['message'] as String? ?? 'Validation failed';
+
+    if (errors != null && errors.isNotEmpty) {
+      String errorString = baseMessage;
+      errors.forEach((key, value) {
+        if (value is List && value.isNotEmpty) {
+          String errorMessage = value[0].toString();
+          if (!errorString.contains(errorMessage)) {
+            errorString += '\n$errorMessage';
+          }
+        }
+      });
+
+      if (context != null) {
+        showToastMessage(context, errorString, type: 'error');
+      }
+    } else if (context != null) {
+      showToastMessage(context, baseMessage, type: 'error');
     }
   } else {
     // Handle other errors
     if (context != null) {
-      showToastMessage(context, 'Something went wrong', type: 'error');
+      showToastMessage(context, 'Server error (${value.statusCode})', type: 'error');
     }
     if (onError != null) {
-      onError(responseData); // Pass the response data to onError
+      onError(responseData);
     }
-    throw "DataTransport: Request Failed ${value.body}";
   }
 }
-

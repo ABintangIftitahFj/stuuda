@@ -1,5 +1,5 @@
-import './../components/input_field.dart';
-import './../services/utils.dart';
+import 'package:stundaa/components/input_field.dart';
+import 'package:stundaa/services/utils.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';

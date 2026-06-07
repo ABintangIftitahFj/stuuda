@@ -5,11 +5,10 @@ import "package:video_player/video_player.dart";
 class VideoPlayerControls extends StatefulWidget {
   final VideoPlayerController controller;
 
-  const VideoPlayerControls({Key? key, required this.controller})
-      : super(key: key);
+  const VideoPlayerControls({super.key, required this.controller});
 
   @override
-  _VideoPlayerControlsState createState() => _VideoPlayerControlsState();
+  State<VideoPlayerControls> createState() => _VideoPlayerControlsState();
 }
 
 class _VideoPlayerControlsState extends State<VideoPlayerControls> {
@@ -144,7 +143,7 @@ class FullscreenVideoPlayer extends StatefulWidget {
   const FullscreenVideoPlayer({super.key, required this.controller});
 
   @override
-  _FullscreenVideoPlayerState createState() => _FullscreenVideoPlayerState();
+  State<FullscreenVideoPlayer> createState() => _FullscreenVideoPlayerState();
 }
 
 class _FullscreenVideoPlayerState extends State<FullscreenVideoPlayer> {
@@ -282,7 +281,7 @@ class AudioPlayerWidget extends StatefulWidget {
   const AudioPlayerWidget({super.key, required this.url});
 
   @override
-  _AudioPlayerWidgetState createState() => _AudioPlayerWidgetState();
+  State<AudioPlayerWidget> createState() => _AudioPlayerWidgetState();
 }
 
 class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {

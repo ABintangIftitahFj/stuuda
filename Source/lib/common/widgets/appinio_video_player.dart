@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:appinio_video_player/appinio_video_player.dart';
+import 'package:chewie/chewie.dart';
+import 'package:video_player/video_player.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 
 class AppinioVideoPlayer extends StatefulWidget {
@@ -21,7 +22,8 @@ class AppinioVideoPlayer extends StatefulWidget {
 }
 
 class _AppinioVideoPlayerState extends State<AppinioVideoPlayer> {
-  CustomVideoPlayerController? _videoPlayerController;
+  VideoPlayerController? _videoPlayerController;
+  ChewieController? _chewieController;
   bool _isLoading = true;
   bool _hasError = false;
 
@@ -33,33 +35,33 @@ class _AppinioVideoPlayerState extends State<AppinioVideoPlayer> {
 
   Future<void> _initializePlayer() async {
     try {
-      final videoPlayerController = VideoPlayerController.network(widget.videoUrl);
+      _videoPlayerController = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl));
 
-      await videoPlayerController.initialize();
+      await _videoPlayerController!.initialize();
 
-      _videoPlayerController = CustomVideoPlayerController(
-        context: context,
-        videoPlayerController: videoPlayerController,
-        customVideoPlayerSettings: CustomVideoPlayerSettings(
-          placeholderWidget: Container(
-            color: Colors.black,
-            child: Center(
-              child: LoadingAnimationWidget.hexagonDots(
-                color: Colors.white,
-                size: 30,
-              ),
+      _chewieController = ChewieController(
+        videoPlayerController: _videoPlayerController!,
+        autoPlay: widget.autoPlay,
+        looping: widget.looping,
+        aspectRatio: _videoPlayerController!.value.aspectRatio,
+        placeholder: Container(
+          color: Colors.black,
+          child: Center(
+            child: LoadingAnimationWidget.hexagonDots(
+              color: Colors.white,
+              size: 30,
             ),
           ),
-          settingsButtonAvailable: true,
-          // autoPlay: widget.autoPlay,
-          // loopVideo: widget.looping,
-          showFullscreenButton: true,
-          // deviceOrientationsOnFullscreen: [
-          //   DeviceOrientation.landscapeLeft,
-          //   DeviceOrientation.landscapeRight,
-          //   DeviceOrientation.portraitUp,
-          // ],
         ),
+        autoInitialize: true,
+        errorBuilder: (context, errorMessage) {
+          return Center(
+            child: Text(
+              errorMessage,
+              style: const TextStyle(color: Colors.white),
+            ),
+          );
+        },
       );
 
       if (mounted) {
@@ -68,6 +70,7 @@ class _AppinioVideoPlayerState extends State<AppinioVideoPlayer> {
         });
       }
     } catch (e) {
+      debugPrint("Error initializing video player: $e");
       if (mounted) {
         setState(() {
           _hasError = true;
@@ -80,6 +83,7 @@ class _AppinioVideoPlayerState extends State<AppinioVideoPlayer> {
   @override
   void dispose() {
     _videoPlayerController?.dispose();
+    _chewieController?.dispose();
     super.dispose();
   }
 
@@ -98,7 +102,7 @@ class _AppinioVideoPlayerState extends State<AppinioVideoPlayer> {
       );
     }
 
-    if (_hasError) {
+    if (_hasError || _chewieController == null) {
       return Container(
         color: Colors.black,
         height: 200,
@@ -114,7 +118,13 @@ class _AppinioVideoPlayerState extends State<AppinioVideoPlayer> {
               ),
               const SizedBox(height: 10),
               ElevatedButton(
-                onPressed: _initializePlayer,
+                onPressed: () {
+                  setState(() {
+                    _isLoading = true;
+                    _hasError = false;
+                  });
+                  _initializePlayer();
+                },
                 child: const Text('Retry'),
               ),
             ],
@@ -127,9 +137,9 @@ class _AppinioVideoPlayerState extends State<AppinioVideoPlayer> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         AspectRatio(
-          aspectRatio: 16 / 9, // Standard aspect ratio, adjust as needed
-          child: CustomVideoPlayer(
-            customVideoPlayerController: _videoPlayerController!,
+          aspectRatio: _videoPlayerController!.value.aspectRatio,
+          child: Chewie(
+            controller: _chewieController!,
           ),
         ),
         if (widget.caption != null && widget.caption!.isNotEmpty)

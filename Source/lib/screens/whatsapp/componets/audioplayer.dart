@@ -1,4 +1,4 @@
-import '/screens/whatsapp/controller/audio_controller.dart';
+import 'package:stundaa/screens/whatsapp/controller/audio_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 

@@ -1,5 +1,5 @@
-name: "whatsjet_demo"
-description: whatsapp marketing platform
+name: "stundaa"
+description: STUNDAA mobile application
 
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -32,7 +32,7 @@ dependencies:
   animations: ^2.0.11
   audioplayers: ^6.5.0
   badges: ^3.1.2
-  basic_utils: ^5.8.2
+  basic_utils: 5.7.0
   cached_network_image: ^3.4.1
   cupertino_icons: ^1.0.8
   custom_timer: ^0.2.3
@@ -44,6 +44,7 @@ dependencies:
   fbroadcast: ^2.0.0
   file_picker: ^10.2.0
   flutter_facebook_auth: ^7.1.2
+  flutter_callkit_incoming: ^2.0.2
   flutter_localizations:
     sdk: flutter
   flutter_map: ^8.1.1
@@ -57,13 +58,15 @@ dependencies:
   http: ^1.4.0
   intl: any
   open_filex: ^4.7.0
-  permission_handler: ^12.0.1
-  pointycastle: ^4.0.0
+  permission_handler: ^11.0.1
+  flutter_webrtc: ^0.12.5
+  pointycastle: ^3.6.2
   progress_loading_button: ^2.0.2
   provider: ^6.1.5
   pusher_channels_flutter: ^2.4.0
   shared_preferences: ^2.5.3
   social_login_buttons: ^1.0.7
+  universal_io: ^2.2.2
   url_launcher: ^6.3.2
   webview_flutter: ^4.13.0
   curved_navigation_bar: ^1.0.6
@@ -74,6 +77,8 @@ dependencies:
   video_player: ^2.10.0
   chewie: ^1.12.1
   appinio_video_player:
+    # Web platform fix: This package has platform-specific issues
+    # The video player is only used on mobile platforms
   just_audio: ^0.10.4
   smooth_list_view: ^2.0.2
   flutter_colorpicker: ^1.1.0
@@ -84,6 +89,7 @@ dependencies:
   html: ^0.15.6
   qr_flutter: ^4.1.0
   rename_app: ^1.6.5
+  uuid: ^4.0.0
 
 dependency_overrides: null
 # added to fix the issue on ios - 28JUN2023
@@ -155,7 +161,7 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/images/icon.png"
+  image_path: "assets/images/icon_stundaa.png"
   #  min_sdk_android: 21 # android min sdk min:16, default 21
   # Icons with alpha channel are not allowed in the Apple App Store.
   remove_alpha_ios: true
@@ -182,14 +188,14 @@ flutter_native_splash:
   # png file and should be sized for 4x pixel density.
 
 #  image: assets/images/logo.png
-  image: assets/images/splash_whatsjet.png
+  image: assets/images/splash_stundaa.png
 #  image: assets/images/whatsjet.svg
 #  image: assets/images/logo_image.png
 
   # The branding property allows you to specify an image used as branding in the splash screen.
   # It must be a png file. It is supported for Android, iOS and the Web.  For Android 12,
   # see the Android 12 section below.
-  branding: assets/images/logo-livelyworks-on-black.png
+  branding: assets/images/branding_stundaa.png
 
   # To position the branding image at the bottom of the screen you can use bottom, bottomRight,
   # and bottomLeft. The default values is bottom if not specified or specified something else.
@@ -215,7 +221,7 @@ flutter_native_splash:
     # App icon without an icon background: This should be 1152×1152 pixels, and fit within a circle
     # 768 pixels in diameter.
 
-    image: assets/images/splash_android_12.png
+    image: assets/images/splash_stundaa_android_12.png
 #    image: assets/images/whatsjet.png
 #    image: assets/images/whatsjet.svg
 #    image: assets/images/android12splash.png
@@ -226,7 +232,7 @@ flutter_native_splash:
     icon_background_color: "#000000"
 
     # The branding property allows you to specify an image used as branding in the splash screen.
-    branding: assets/images/logo-livelyworks-on-black.png
+    branding: assets/images/branding_stundaa.png
     # The image_dark, color_dark, icon_background_color_dark, and branding_dark set values that
     # apply when the device is in dark mode. If they are not specified, the app will use the
     # parameters from above.

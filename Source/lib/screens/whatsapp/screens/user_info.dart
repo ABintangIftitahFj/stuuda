@@ -1,15 +1,18 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:provider/provider.dart';
-import '../../../components/dropdown.dart';
-import '../../../provider/contacts_provider.dart';
-import '../../../services/utils.dart';
-import '../controller/chatbox_controller.dart';
-import '/support/app_theme.dart' as app_theme;
+import 'package:stundaa/common/widgets/common.dart';
+import 'package:stundaa/components/dropdown.dart';
+import 'package:stundaa/provider/contacts_provider.dart';
+import 'package:stundaa/services/utils.dart';
+import 'package:stundaa/screens/whatsapp/controller/chatbox_controller.dart';
+import 'package:stundaa/support/app_theme.dart' as app_theme;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../controller/user_info_controller.dart';
+import 'package:stundaa/screens/whatsapp/controller/user_info_controller.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
-import '/services/data_transport.dart' as data_transport;
+import 'package:stundaa/services/data_transport.dart' as data_transport;
+import 'package:stundaa/services/whatsapp_call_service.dart';
 
 class UserInfo extends StatefulWidget {
   final String username;
@@ -18,7 +21,12 @@ class UserInfo extends StatefulWidget {
   final bool? enableReplyBot;
   final List<int>? assignedLabelIds;
   const UserInfo(
-      {super.key, required this.username, this.userId, this.assignedLabelIds,this.enableAiBot,this.enableReplyBot});
+      {super.key,
+      required this.username,
+      this.userId,
+      this.assignedLabelIds,
+      this.enableAiBot,
+      this.enableReplyBot});
 
   @override
   State<UserInfo> createState() => _UserInfoState();
@@ -57,8 +65,6 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
 
   Future<void> updateNotesApi() async {
     final Map<String, dynamic> payload = {
-
-
       'contactIdOrUid': userId,
       'contact_notes': controller.notesController.text.trim(),
     };
@@ -67,12 +73,11 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
         'vendor/whatsapp/contact/chat/update-notes',
         inputData: payload,
         context: context,
-        onSuccess: (responseData) async {
-        },
-        onFailed: (responseData) {
-        },
+        onSuccess: (responseData) async {},
+        onFailed: (responseData) {},
       );
     } catch (e) {
+      pr("Update notes failed: $e");
     } finally {
       setState(() {
         isEdit = false;
@@ -80,15 +85,15 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
     }
   }
 
-
   Future<void> addLableApi({
     required String label,
     required Color textColor,
     required Color bgColor,
   }) async {
     String toHex(Color color) {
-      return '#${color.value.toRadixString(16).substring(2, 8)}';
+      return '#${color.toARGB32().toRadixString(16).substring(2, 8)}';
     }
+
     final Map<String, dynamic> payload = {
       'title': label,
       'text_color': toHex(textColor),
@@ -102,11 +107,10 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
         onSuccess: (responseData) async {
           controller.getChatLabels();
         },
-        onFailed: (responseData) {
-
-        },
+        onFailed: (responseData) {},
       );
     } catch (e) {
+      pr("Add label failed: $e");
     }
   }
 
@@ -117,12 +121,13 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
     required Color bgColor,
   }) async {
     String toHex(Color color) {
-      return '#${color.value.toRadixString(16).substring(2, 8)}';
+      return '#${color.toARGB32().toRadixString(16).substring(2, 8)}';
     }
+
     final Map<String, dynamic> payload = {
       'labelUid': uid,
       'title': label,
-      'text_color':  toHex(textColor),
+      'text_color': toHex(textColor),
       'bg_color': toHex(bgColor),
     };
 
@@ -134,10 +139,10 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
         onSuccess: (responseData) async {
           controller.getChatLabels();
         },
-        onFailed: (responseData) {
-        },
+        onFailed: (responseData) {},
       );
     } catch (e) {
+      pr("Edit label failed: $e");
     }
   }
 
@@ -153,10 +158,10 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
           controller.getChatLabels();
           Navigator.pop(context);
         },
-        onFailed: (responseData) {
-        },
+        onFailed: (responseData) {},
       );
     } catch (e) {
+      pr("Delete label failed: $e");
     }
   }
 
@@ -181,7 +186,6 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
             isAssignUserLoader = false;
             chatController.getUserChat();
           });
-
         },
         onFailed: (responseData) {
           setState(() {
@@ -230,17 +234,13 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(context.lwTranslate.userInformation,style: TextStyle(color: Colors.white),),
-        elevation: 0,
-        centerTitle: true,
-        backgroundColor: app_theme.primary,
-        iconTheme: IconThemeData(color: Colors.white),
+      backgroundColor: app_theme.backgroundColor,
+      appBar: innerAppBar(
+        title: context.lwTranslate.userInformation,
+        context: context,
       ),
-      body:
-
-      SingleChildScrollView(
-        padding: EdgeInsets.all(16),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -265,69 +265,71 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
   }
 
   Widget _buildProfileCard(BuildContext context) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+    return Container(
+      decoration: app_theme.insetPanelDecoration(radius: 24).copyWith(
+        gradient: app_theme.cardGradient,
       ),
       child: Column(
         children: [
           Container(
             height: 120,
             decoration: BoxDecoration(
-              color: app_theme.primary,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+              gradient: app_theme.primaryGradient,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(20)),
             ),
             child: Center(
               child: Obx(() => Stack(
-                alignment: Alignment.center,
-                children: [
-                  CircleAvatar(
-                    radius: 40,
-                    backgroundColor: Colors.white,
-                    child: Icon(
-                      Icons.person,
-                      size: 50,
-                      color: app_theme.primary,
-                    ),
-                  ),
-                  if (controller.isLoading.value)
-                    Positioned.fill(
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation(Colors.white),
+                    alignment: Alignment.center,
+                    children: [
+                      CircleAvatar(
+                        radius: 40,
+                        backgroundColor: app_theme.surfaceMuted,
+                        child: Icon(
+                          CupertinoIcons.person,
+                          size: 50,
+                          color: app_theme.iceBlue,
                         ),
                       ),
-                    ),
-                ],
-              )),
+                      if (controller.isLoading.value)
+                        Positioned.fill(
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              valueColor:
+                                  const AlwaysStoppedAnimation(app_theme.black),
+                            ),
+                          ),
+                        ),
+                    ],
+                  )),
             ),
           ),
           Padding(
-            padding: EdgeInsets.all(16),
+            padding: const EdgeInsets.all(16),
             child: Obx(() => Column(
-              children: [
-                Text(
-                  controller.firstName.value.isNotEmpty
-                      ? controller.firstName.value
-                      : context.lwTranslate.loading,
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  controller.waId.value.isNotEmpty
-                      ? controller.waId.value
-                      : '',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ],
-            )),
+                  children: [
+                    Text(
+                      controller.firstName.value.isNotEmpty
+                          ? controller.firstName.value
+                          : context.lwTranslate.loading,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: app_theme.lavenderWhite,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      controller.waId.value.isNotEmpty
+                          ? controller.waId.value
+                          : '',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: app_theme.secondary,
+                      ),
+                    ),
+                  ],
+                )),
           ),
         ],
       ),
@@ -335,13 +337,10 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
   }
 
   Widget _buildUserDetailsSection(BuildContext context) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+    return Container(
+      decoration: app_theme.insetPanelDecoration(radius: 24),
       child: Padding(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -366,37 +365,44 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
               return Column(
                 children: [
                   _buildDetailItem(
-                    icon: Icons.person,
+                    icon: CupertinoIcons.person,
                     label: context.lwTranslate.name,
-                    value:controller.firstName.value.isNotEmpty
-                        ?  controller.firstName.value
+                    value: controller.firstName.value.isNotEmpty
+                        ? controller.firstName.value
                         : context.lwTranslate.loading,
                   ),
-                  Divider(height: 24),
+                  const Divider(
+                      height: 24, color: Color.fromRGBO(167, 223, 255, 0.12)),
                   _buildDetailItem(
-                    icon: Icons.call,
+                    icon: CupertinoIcons.phone,
                     label: context.lwTranslate.phone,
                     value: controller.waId.value.isNotEmpty
                         ? controller.waId.value
                         : context.lwTranslate.loading,
+                    onTap: () {
+                      if (userId != null) {
+                        WhatsAppCallService.startCall(context, userId!);
+                      }
+                    },
                   ),
-                  Divider(height: 24),
+                  const Divider(
+                      height: 24, color: Color.fromRGBO(167, 223, 255, 0.12)),
                   _buildDetailItem(
-                    icon: Icons.email,
+                    icon: CupertinoIcons.mail,
                     label: context.lwTranslate.email,
                     value: controller.emailV.value.isNotEmpty
                         ? controller.emailV.value
                         : "...",
                   ),
-                  Divider(height: 24),
+                  const Divider(
+                      height: 24, color: Color.fromRGBO(167, 223, 255, 0.12)),
                   _buildDetailItem(
-                    icon: Icons.language,
+                    icon: CupertinoIcons.globe,
                     label: context.lwTranslate.language,
                     value: controller.languageCode.value.isNotEmpty
                         ? controller.languageCode.value
                         : "...",
                   ),
-
                 ],
               );
             }),
@@ -406,44 +412,64 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildDetailItem({required IconData icon, required String label, required String value}) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 24, color: app_theme.primary),
-        SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                ),
-              ),
-              SizedBox(height: 4),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
+  Widget _buildDetailItem(
+      {required IconData icon,
+      required String label,
+      required String value,
+      VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: app_theme.surfaceMuted,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, size: 20, color: app_theme.primary),
           ),
-        ),
-      ],
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: app_theme.secondary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: app_theme.lavenderWhite,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildAssignSection(BuildContext context) {
     final provider = Provider.of<ContactProvider>(context, listen: false);
     return Card(
-      elevation: 2,
+      color: app_theme.surface,
+      elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(20),
+        side: const BorderSide(
+          color: Color.fromRGBO(167, 223, 255, 0.16),
+        ),
       ),
       child: Padding(
         padding: EdgeInsets.all(16),
@@ -471,13 +497,11 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
                     children: [
                       Checkbox(
                         value: isCheckedAI,
-                        activeColor: Colors.blue,
+                        activeColor: app_theme.cyanGlow,
                         onChanged: (bool? value) {
                           setState(() {
                             isCheckedAI = value ?? false;
-
                           });
-
                         },
                       ),
                       Flexible(
@@ -487,7 +511,7 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
                               isCheckedAI = !isCheckedAI;
                             });
                           },
-                          child:Text(
+                          child: Text(
                             context.lwTranslate.enableAIbot,
                             style: TextStyle(
                               fontSize: 14,
@@ -505,24 +529,21 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
                     children: [
                       Checkbox(
                         value: isCheckedReply,
-                        activeColor: Colors.blue,
+                        activeColor: app_theme.cyanGlow,
                         onChanged: (bool? value) {
                           setState(() {
                             isCheckedReply = value ?? false;
-
                           });
-
                         },
                       ),
                       Flexible(
-
                         child: GestureDetector(
                           onTap: () {
                             setState(() {
                               isCheckedReply = !isCheckedReply;
                             });
                           },
-                          child:Text(
+                          child: Text(
                             context.lwTranslate.enableReplybot,
                             style: TextStyle(
                               fontSize: 14,
@@ -539,60 +560,56 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
             ),
             SizedBox(height: 8),
 
-
             Obx(() {
               if (controller.isLoading.value) {
                 return Center(child: CircularProgressIndicator());
               }
-              return
-                CustomDropdown(
-                  labelText: context.lwTranslate.teamMember,
-                  onChanged: (value) {
-                    setState(() {
-                      if (value == 'no_one') {
-                        controller.assignedUserId.value = 'no_one';
-                        controller.selectedUserName.value = context.lwTranslate.unassignedFilter;
-                        selectedUserUid = null;
-                      } else {
-                        controller.assignedUserId.value = value!;
-                        final selectedUser = controller.vendorMessagingUsers
-                            .firstWhereOrNull((user) => user['id'] == value);
-                        controller.selectedUserName.value =
-                            selectedUser?['value'] ?? '';
-                        selectedUserUid = selectedUser?['_uid'];
-                      }
-                    });
+              return CustomDropdown(
+                labelText: context.lwTranslate.teamMember,
+                onChanged: (value) {
+                  setState(() {
+                    if (value == 'no_one') {
+                      controller.assignedUserId.value = 'no_one';
+                      controller.selectedUserName.value =
+                          context.lwTranslate.unassignedFilter;
+                      selectedUserUid = null;
+                    } else {
+                      controller.assignedUserId.value = value!;
+                      final selectedUser = controller.vendorMessagingUsers
+                          .firstWhereOrNull((user) => user['id'] == value);
+                      controller.selectedUserName.value =
+                          selectedUser?['value'] ?? '';
+                      selectedUserUid = selectedUser?['_uid'];
+                    }
+                  });
+                },
+                listItems: [
+                  {
+                    'id': 'no_one',
+                    'value': context.lwTranslate.unassignedFilter
                   },
-                  listItems: [
-                    {'id': 'no_one', 'value': context.lwTranslate.unassignedFilter},
-                    ...controller.vendorMessagingUsers,
-                  ],
-                  optionKeyName: 'id',
-                  optionLabelName: 'value',
-                  value: controller.assignedUserId.value.isEmpty
-                      ? 'no_one'
-                      : controller.assignedUserId.value,
-                  padding: EdgeInsets.zero,
-                );
-               
-
+                  ...controller.vendorMessagingUsers,
+                ],
+                optionKeyName: 'id',
+                optionLabelName: 'value',
+                value: controller.assignedUserId.value.isEmpty
+                    ? 'no_one'
+                    : controller.assignedUserId.value,
+                padding: EdgeInsets.zero,
+              );
             }),
             SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: app_theme.primary,
+                    backgroundColor: app_theme.cyanGlow,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
                     padding: EdgeInsets.symmetric(vertical: 12),
                   ),
                   onPressed: () {
-
-                    print('AI Bot Enabled: $isCheckedAI');
-                    print('Reply Bot Enabled: $isCheckedReply');
-
                     if (controller.assignedUserId.value.isEmpty ||
                         controller.assignedUserId.value == 'no_one') {
                       assignUserApi('no_one');
@@ -600,36 +617,34 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
                     }
 
                     if (selectedUserUid == null || selectedUserUid!.isEmpty) {
-                      final selectedUser = controller.vendorMessagingUsers.firstWhereOrNull(
-                              (user) => user['id'] == controller.assignedUserId.value
-                      );
+                      final selectedUser = controller.vendorMessagingUsers
+                          .firstWhereOrNull((user) =>
+                              user['id'] == controller.assignedUserId.value);
                       if (selectedUser != null) {
                         setState(() {
                           selectedUserUid = selectedUser['_uid']?.toString();
                         });
                       }
                     }
-                    if (selectedUserUid != null && selectedUserUid!.isNotEmpty) {
+                    if (selectedUserUid != null &&
+                        selectedUserUid!.isNotEmpty) {
                       assignUserApi(selectedUserUid!);
                     } else {
                       assignUserApi('no_one');
                     }
                   },
-
-                  child: isAssignUserLoader ?
-                  SizedBox(
-                      height: 15,
-                      width: 15,
-                      child:
-                      const CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      )) :
-                  Text(
-                    context.lwTranslate.save,
-                    style: TextStyle(color: Colors.white),
-                  )
-              ),
+                  child: isAssignUserLoader
+                      ? SizedBox(
+                          height: 15,
+                          width: 15,
+                          child: const CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ))
+                      : Text(
+                          context.lwTranslate.save,
+                          style: TextStyle(color: Colors.white),
+                        )),
             ),
             SizedBox(height: 24),
 
@@ -637,9 +652,12 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
             Row(
               children: [
                 _buildSectionTitle(context.lwTranslate.lablesTags),
-                SizedBox(width: 8,),
+                SizedBox(
+                  width: 8,
+                ),
                 PopupMenuButton<String>(
-                  icon: Icon(Icons.settings, color: Colors.blue.shade800, size: 17),
+                  icon: Icon(Icons.settings,
+                      color: Colors.blue.shade800, size: 17),
                   itemBuilder: (BuildContext context) => [
                     PopupMenuItem<String>(
                       value: 'add',
@@ -659,42 +677,64 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
                             builder: (context, setState) {
                               return AlertDialog(
                                 insetPadding: EdgeInsets.all(5),
-                                title: Text(context.lwTranslate.addLabel, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                                title: Text(context.lwTranslate.addLabel,
+                                    style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold)),
                                 content: Form(
-                                  key: _formKey, // Add this to your widget's state: final _formKey = GlobalKey<FormState>();
+                                  key:
+                                      _formKey, // Add this to your widget's state: final _formKey = GlobalKey<FormState>();
                                   child: Container(
-                                    width: MediaQuery.of(context).size.width * 0.8,
+                                    width:
+                                        MediaQuery.of(context).size.width * 0.8,
                                     decoration: BoxDecoration(
-                                      border: Border.all(color: Colors.grey.shade300, width: 1),
+                                      border: Border.all(
+                                          color: Colors.grey.shade300,
+                                          width: 1),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     padding: EdgeInsets.all(8),
                                     child: Column(
                                       mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        Text(context.lwTranslate.newLabel, style: TextStyle(fontSize: 16, color: Colors.grey[700])),
+                                        Text(context.lwTranslate.newLabel,
+                                            style: TextStyle(
+                                                fontSize: 16,
+                                                color: Colors.grey[700])),
                                         SizedBox(height: 12),
 
                                         // Label name text field with validation
                                         TextFormField(
                                           controller: textController,
                                           decoration: InputDecoration(
-                                            hintText: context.lwTranslate.newLabel,
-                                            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-                                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                            hintText:
+                                                context.lwTranslate.newLabel,
+                                            hintStyle: TextStyle(
+                                                color: Colors.grey.shade400,
+                                                fontSize: 14),
+                                            contentPadding:
+                                                EdgeInsets.symmetric(
+                                                    horizontal: 12,
+                                                    vertical: 12),
                                             border: OutlineInputBorder(
-                                              borderRadius: BorderRadius.circular(8),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
                                             ),
                                             enabledBorder: OutlineInputBorder(
-                                              borderSide: BorderSide(color: Colors.grey.shade300),
-                                              borderRadius: BorderRadius.circular(8),
+                                              borderSide: BorderSide(
+                                                  color: Colors.grey.shade300),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
                                             ),
                                             errorStyle: TextStyle(fontSize: 12),
                                           ),
                                           validator: (value) {
-                                            if (value == null || value.isEmpty) {
-                                              return context.lwTranslate.pleaseEnterLabel;
+                                            if (value == null ||
+                                                value.isEmpty) {
+                                              return context
+                                                  .lwTranslate.pleaseEnterLabel;
                                             }
                                             return null;
                                           },
@@ -703,7 +743,10 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
                                         SizedBox(height: 16),
 
                                         // Color selection section (no validation)
-                                        Text(context.lwTranslate.labelColors, style: TextStyle(fontSize: 16, color: Colors.grey[700])),
+                                        Text(context.lwTranslate.labelColors,
+                                            style: TextStyle(
+                                                fontSize: 16,
+                                                color: Colors.grey[700])),
                                         SizedBox(height: 8),
 
                                         Row(
@@ -711,18 +754,29 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
                                             // Text Color
                                             Expanded(
                                               child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
                                                 children: [
-                                                  Text(context.lwTranslate.textColors, style: TextStyle(fontSize: 14)),
+                                                  Text(
+                                                      context.lwTranslate
+                                                          .textColors,
+                                                      style: TextStyle(
+                                                          fontSize: 14)),
                                                   SizedBox(height: 4),
                                                   _buildColorSquareWithLabel(
-                                                      color1,
-                                                      "Text",
-                                                          () async {
-                                                        final selectedColor = await showColorPicker(context, color1, context.lwTranslate.selectTextColors, setState);
-                                                        if (selectedColor != null) setState(() => color1 = selectedColor);
-                                                      }
-                                                  ),
+                                                      color1, "Text", () async {
+                                                    final selectedColor =
+                                                        await showColorPicker(
+                                                            context,
+                                                            color1,
+                                                            context.lwTranslate
+                                                                .selectTextColors,
+                                                            setState);
+                                                    if (selectedColor != null) {
+                                                      setState(() => color1 =
+                                                          selectedColor);
+                                                    }
+                                                  }),
                                                 ],
                                               ),
                                             ),
@@ -732,18 +786,29 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
                                             // Background Color
                                             Expanded(
                                               child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
                                                 children: [
-                                                  Text(context.lwTranslate.backgroundColor, style: TextStyle(fontSize: 14)),
+                                                  Text(
+                                                      context.lwTranslate
+                                                          .backgroundColor,
+                                                      style: TextStyle(
+                                                          fontSize: 14)),
                                                   SizedBox(height: 4),
                                                   _buildColorSquareWithLabel(
-                                                      color2,
-                                                      "BG",
-                                                          () async {
-                                                        final selectedColor = await showColorPicker(context, color2, context.lwTranslate.selectBackgroundColor,setState);
-                                                        if (selectedColor != null) setState(() => color2 = selectedColor);
-                                                      }
-                                                  ),
+                                                      color2, "BG", () async {
+                                                    final selectedColor =
+                                                        await showColorPicker(
+                                                            context,
+                                                            color2,
+                                                            context.lwTranslate
+                                                                .selectBackgroundColor,
+                                                            setState);
+                                                    if (selectedColor != null) {
+                                                      setState(() => color2 =
+                                                          selectedColor);
+                                                    }
+                                                  }),
                                                 ],
                                               ),
                                             ),
@@ -758,7 +823,9 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
                                     mainAxisAlignment: MainAxisAlignment.end,
                                     children: [
                                       TextButton(
-                                        child: Text(context.lwTranslate.cancel, style: TextStyle(color: Colors.grey[700])),
+                                        child: Text(context.lwTranslate.cancel,
+                                            style: TextStyle(
+                                                color: Colors.grey[700])),
                                         onPressed: () {
                                           textController.clear();
                                           Navigator.of(context).pop();
@@ -773,13 +840,18 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: app_theme.primary,
                                           shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(6),
+                                            borderRadius:
+                                                BorderRadius.circular(6),
                                           ),
-                                          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                                          padding: EdgeInsets.symmetric(
+                                              horizontal: 24, vertical: 10),
                                         ),
-                                        child: Text(context.lwTranslate.create, style: TextStyle(color: Colors.white)),
+                                        child: Text(context.lwTranslate.create,
+                                            style:
+                                                TextStyle(color: Colors.white)),
                                         onPressed: () {
-                                          if (_formKey.currentState!.validate()) {
+                                          if (_formKey.currentState!
+                                              .validate()) {
                                             addLableApi(
                                               label: textController.text,
                                               textColor: color1,
@@ -808,8 +880,7 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
                           color2 = Colors.black;
                         });
                       });
-                    }
-                    else if (value == 'edit') {
+                    } else if (value == 'edit') {
                       _showAllLabelsEditDialog(context);
                     }
                   },
@@ -819,14 +890,11 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
             SizedBox(height: 8),
             CustomMultiDropdown(
               items: controller.labelsDropdownItems,
-              selectedValues: widget.assignedLabelIds!
-                  .map((id) => id.toString())
-                  .toList(),
+              selectedValues:
+                  widget.assignedLabelIds!.map((id) => id.toString()).toList(),
               onSelectionChanged: (selected) {
                 setState(() {
-                  selectedLabelIds = selected
-                      .map((e) => e.toString())
-                      .toList();
+                  selectedLabelIds = selected.map((e) => e.toString()).toList();
                 });
               },
             ),
@@ -844,7 +912,9 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
                 onPressed: () async {
                   final labelsToSave = selectedLabelIds.isNotEmpty
                       ? selectedLabelIds
-                      : widget.assignedLabelIds!.map((id) => id.toString()).toList();
+                      : widget.assignedLabelIds!
+                          .map((id) => id.toString())
+                          .toList();
 
                   assignLableApi(labelsToSave);
 
@@ -853,19 +923,18 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
                   chatController.getUserChat();
                   await provider.getUser(isRefresh: true, assigned: '');
                 },
-                child: isAssignLableLoader ?
-                SizedBox(
-                    height: 15,
-                    width: 15,
-                    child:
-                    const CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    )) :
-                Text(
-                  context.lwTranslate.save,
-                  style: TextStyle(color: Colors.white),
-                ),
+                child: isAssignLableLoader
+                    ? SizedBox(
+                        height: 15,
+                        width: 15,
+                        child: const CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ))
+                    : Text(
+                        context.lwTranslate.save,
+                        style: const TextStyle(color: app_theme.black),
+                      ),
               ),
             ),
           ],
@@ -875,13 +944,10 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
   }
 
   Widget _buildNotesSection(BuildContext context) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+    return Container(
+      decoration: app_theme.insetPanelDecoration(radius: 24),
       child: Padding(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -898,7 +964,10 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
                 ),
                 if (!isEdit)
                   IconButton(
-                    icon: Icon(Icons.edit, color: app_theme.primary),
+                    icon: const Icon(
+                      CupertinoIcons.pencil,
+                      color: app_theme.primary,
+                    ),
                     onPressed: () => setState(() => isEdit = true),
                   ),
               ],
@@ -906,19 +975,22 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
             SizedBox(height: 16),
             Container(
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade300),
-                borderRadius: BorderRadius.circular(8),
-                color: Colors.grey.shade50,
+                border: Border.all(
+                  color: const Color.fromRGBO(167, 223, 255, 0.18),
+                ),
+                borderRadius: BorderRadius.circular(18),
+                color: app_theme.surfaceElevated,
               ),
               child: TextField(
                 controller: controller.notesController,
                 readOnly: !isEdit,
                 maxLines: 5,
                 minLines: 5,
+                style: const TextStyle(color: app_theme.lavenderWhite),
                 decoration: InputDecoration(
                   hintText: context.lwTranslate.notesDot,
-                  hintStyle: TextStyle(color: Colors.grey),
-                  contentPadding: EdgeInsets.all(12),
+                  hintStyle: const TextStyle(color: app_theme.secondary),
+                  contentPadding: const EdgeInsets.all(12),
                   border: InputBorder.none,
                 ),
               ),
@@ -930,22 +1002,28 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
                   Expanded(
                     child: OutlinedButton(
                       style: OutlinedButton.styleFrom(
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                        // side: BorderSide(color: app_theme.primary),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        side: const BorderSide(color: app_theme.secondary),
                       ),
                       onPressed: () => setState(() => isEdit = false),
-                      child: Text(context.lwTranslate.cancel),
+                      child: Text(
+                        context.lwTranslate.cancel,
+                        style: const TextStyle(color: app_theme.secondary),
+                      ),
                     ),
                   ),
                   SizedBox(width: 16),
                   Expanded(
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: app_theme.primary,
-                        padding: EdgeInsets.symmetric(vertical: 12),
+                        backgroundColor: app_theme.cyanGlow,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
                       onPressed: updateNotesApi,
-                      child: Text(context.lwTranslate.save,style: TextStyle(color: Colors.white),),
+                      child: Text(
+                        context.lwTranslate.save,
+                        style: const TextStyle(color: app_theme.black),
+                      ),
                     ),
                   ),
                 ],
@@ -962,7 +1040,7 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
       style: TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.w600,
-        color: Colors.grey[800],
+        color: app_theme.iceBlue,
       ),
     );
   }
@@ -971,7 +1049,8 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
     return dateString;
   }
 
-  Widget _buildColorSquareWithLabel(Color color, String label, VoidCallback onTap) {
+  Widget _buildColorSquareWithLabel(
+      Color color, String label, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -985,12 +1064,13 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
     );
   }
 
-  Future<Color?> showColorPicker(BuildContext context,
-      Color initialColor, String title,Function setState) async {
+  Future<Color?> showColorPicker(BuildContext context, Color initialColor,
+      String title, Function setState) async {
     Color selectedColor = initialColor;
     return await showDialog<Color>(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: app_theme.surface,
         title: Text(title, style: TextStyle(fontSize: 17)),
         content: SingleChildScrollView(
           child: ColorPicker(
@@ -998,7 +1078,6 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
             onColorChanged: (color) {
               selectedColor = color;
             },
-            showLabel: true,
             pickerAreaHeightPercent: 0.8,
           ),
         ),
@@ -1013,12 +1092,11 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
                 setState(() {});
                 Navigator.of(context).pop(selectedColor);
               } // Return the selected color
-          ),
+              ),
         ],
       ),
     );
   }
-
 
   void _showAllLabelsEditDialog(BuildContext context) {
     final controllers = controller.labelsDropdownItems.map((label) {
@@ -1028,7 +1106,6 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
         'bgColor': TextEditingController(text: label['bgColor']),
         'id': label['id'],
         '_uid': label['_uid'],
-
       };
     }).toList();
 
@@ -1038,8 +1115,9 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              insetPadding: EdgeInsets.symmetric(vertical: 5,horizontal: 10),
-              title:  Text(context.lwTranslate.editLabel),
+              backgroundColor: app_theme.surface,
+              insetPadding: EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+              title: Text(context.lwTranslate.editLabel),
               content: SizedBox(
                 width: double.maxFinite,
                 height: MediaQuery.of(context).size.height * 0.55,
@@ -1055,13 +1133,14 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
                               // Label Title
                               TextFormField(
                                 controller: controllers[i]['title'],
-                                decoration:  InputDecoration(
+                                decoration: InputDecoration(
                                   labelText: '',
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   enabledBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(color: Colors.grey.shade300),
+                                    borderSide:
+                                        BorderSide(color: Colors.grey.shade300),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                 ),
@@ -1078,20 +1157,27 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
                                       onTap: () => _showColorPicker(
                                           context,
                                           controllers[i]['textColor']!,
-                                          setState
-                                      ),
+                                          setState),
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [ Text(context.lwTranslate.textColors, style: TextStyle(fontSize: 10)),
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(context.lwTranslate.textColors,
+                                              style: const TextStyle(
+                                                  fontSize: 10,
+                                                  color: app_theme.secondary)),
                                           SizedBox(height: 4),
                                           Container(
                                             height: 40,
                                             decoration: BoxDecoration(
-                                              color: _parseColor(controllers[i]['textColor']!.text),
-                                              border: Border.all(color: Colors.grey),
-                                              borderRadius: BorderRadius.circular(4),
+                                              color: _parseColor(controllers[i]
+                                                      ['textColor']!
+                                                  .text),
+                                              border: Border.all(
+                                                  color: Colors.grey),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
                                             ),
-
                                           ),
                                         ],
                                       ),
@@ -1102,22 +1188,27 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
                                   // Background Color Square
                                   Expanded(
                                     child: GestureDetector(
-                                      onTap: () => _showColorPicker(
-                                          context,
-                                          controllers[i]['bgColor']!,
-                                          setState
-                                      ),
+                                      onTap: () => _showColorPicker(context,
+                                          controllers[i]['bgColor']!, setState),
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
-                                          Text(context.lwTranslate.bgColor, style: TextStyle(fontSize: 10)),
+                                          Text(context.lwTranslate.bgColor,
+                                              style: const TextStyle(
+                                                  fontSize: 10,
+                                                  color: app_theme.secondary)),
                                           SizedBox(height: 4),
                                           Container(
                                             height: 40,
                                             decoration: BoxDecoration(
-                                              color: _parseColor(controllers[i]['bgColor']!.text),
-                                              border: Border.all(color: Colors.grey),
-                                              borderRadius: BorderRadius.circular(4),
+                                              color: _parseColor(controllers[i]
+                                                      ['bgColor']!
+                                                  .text),
+                                              border: Border.all(
+                                                  color: Colors.grey),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
                                             ),
                                           ),
                                         ],
@@ -1130,19 +1221,28 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
                                       Text("", style: TextStyle(fontSize: 10)),
                                       ElevatedButton(
                                         style: ElevatedButton.styleFrom(
-                                          backgroundColor:app_theme.primary,
+                                          backgroundColor: app_theme.cyanGlow,
                                           shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(6),
+                                            borderRadius:
+                                                BorderRadius.circular(6),
                                           ),
-                                          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                                          padding: EdgeInsets.symmetric(
+                                              horizontal: 24, vertical: 10),
                                         ),
-                                        child: Text(context.lwTranslate.save, style: TextStyle(color: Colors.white)),
+                                        child: Text(context.lwTranslate.save,
+                                            style: const TextStyle(
+                                                color: app_theme.black)),
                                         onPressed: () {
                                           editLableApi(
                                             uid: controllers[i]['_uid'],
-                                            label: controllers[i]['title']!.text,
-                                            textColor:  _parseColor(controllers[i]['textColor']!.text),
-                                            bgColor:_parseColor(controllers[i]['bgColor']!.text),
+                                            label:
+                                                controllers[i]['title']!.text,
+                                            textColor: _parseColor(
+                                                controllers[i]['textColor']!
+                                                    .text),
+                                            bgColor: _parseColor(controllers[i]
+                                                    ['bgColor']!
+                                                .text),
                                           );
                                         },
                                       ),
@@ -1157,7 +1257,8 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
                                         height: 40,
                                         decoration: BoxDecoration(
                                           border: Border.all(color: Colors.red),
-                                          borderRadius: BorderRadius.circular(4),
+                                          borderRadius:
+                                              BorderRadius.circular(4),
                                         ),
                                         child: IconButton(
                                           icon: Icon(
@@ -1171,73 +1272,116 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
                                               builder: (context) => Dialog(
                                                 elevation: 24,
                                                 shape: RoundedRectangleBorder(
-                                                  borderRadius: BorderRadius.circular(16),
+                                                  borderRadius:
+                                                      BorderRadius.circular(16),
                                                 ),
+                                                backgroundColor:
+                                                    app_theme.surface,
                                                 child: Padding(
-                                                  padding: const EdgeInsets.all(24),
+                                                  padding:
+                                                      const EdgeInsets.all(24),
                                                   child: Column(
-                                                    mainAxisSize: MainAxisSize.min,
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
                                                     children: [
                                                       // Animated error icon
                                                       Icon(
                                                         Icons.error_outline,
-                                                        color: Colors.orange.shade900,
+                                                        color:
+                                                            app_theme.warning,
                                                         size: 45,
                                                       ),
 
-                                                      const SizedBox(height: 16),
+                                                      const SizedBox(
+                                                          height: 16),
 
                                                       // Title
                                                       Text(
-                                                        context.lwTranslate.areYoySureDeleteLabel,
+                                                        context.lwTranslate
+                                                            .areYoySureDeleteLabel,
                                                         style: Theme.of(context)
                                                             .textTheme
                                                             .headlineSmall
                                                             ?.copyWith(
-                                                            color: Colors.black,
-                                                            fontWeight: FontWeight.bold,
-                                                            fontSize: 14),
-                                                        textAlign: TextAlign.center,
+                                                                color: app_theme
+                                                                    .lavenderWhite,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                                fontSize: 14),
+                                                        textAlign:
+                                                            TextAlign.center,
                                                       ),
 
-                                                      const SizedBox(height: 24),
+                                                      const SizedBox(
+                                                          height: 24),
 
                                                       // Action button
                                                       SizedBox(
                                                         width: double.infinity,
                                                         child: Row(
                                                           mainAxisAlignment:
-                                                          MainAxisAlignment.spaceEvenly,
+                                                              MainAxisAlignment
+                                                                  .spaceEvenly,
                                                           children: [
                                                             ElevatedButton(
-                                                              style: ElevatedButton.styleFrom(
-                                                                backgroundColor: Colors.red[700],
-                                                                foregroundColor: Colors.white,
-                                                                shape: RoundedRectangleBorder(
-                                                                  borderRadius: BorderRadius.circular(12),
+                                                              style:
+                                                                  ElevatedButton
+                                                                      .styleFrom(
+                                                                backgroundColor:
+                                                                    Colors.red[
+                                                                        700],
+                                                                foregroundColor:
+                                                                    Colors
+                                                                        .white,
+                                                                shape:
+                                                                    RoundedRectangleBorder(
+                                                                  borderRadius:
+                                                                      BorderRadius
+                                                                          .circular(
+                                                                              12),
                                                                 ),
                                                               ),
                                                               onPressed: () {
                                                                 deleteLableApi(
-                                                                  uid: controllers[i]['_uid'],
+                                                                  uid: controllers[
+                                                                          i]
+                                                                      ['_uid'],
                                                                 );
                                                                 setState(() {});
-                                                                Navigator.pop(context);
+                                                                Navigator.pop(
+                                                                    context);
                                                               },
-                                                              child: Text(
-                                                                  context.lwTranslate.yes.toUpperCase()),
+                                                              child: Text(context
+                                                                  .lwTranslate
+                                                                  .yes
+                                                                  .toUpperCase()),
                                                             ),
                                                             ElevatedButton(
-                                                              style: ElevatedButton.styleFrom(
-                                                                backgroundColor: Colors.grey[400],
-                                                                foregroundColor: Colors.white,
-                                                                shape: RoundedRectangleBorder(
-                                                                  borderRadius: BorderRadius.circular(12),
+                                                              style:
+                                                                  ElevatedButton
+                                                                      .styleFrom(
+                                                                backgroundColor:
+                                                                    app_theme
+                                                                        .surfaceElevated,
+                                                                foregroundColor:
+                                                                    Colors
+                                                                        .white,
+                                                                shape:
+                                                                    RoundedRectangleBorder(
+                                                                  borderRadius:
+                                                                      BorderRadius
+                                                                          .circular(
+                                                                              12),
                                                                 ),
                                                               ),
-                                                              onPressed: () => Navigator.pop(context),
-                                                              child: Text(
-                                                                  context.lwTranslate.no.toUpperCase()),
+                                                              onPressed: () =>
+                                                                  Navigator.pop(
+                                                                      context),
+                                                              child: Text(context
+                                                                  .lwTranslate
+                                                                  .no
+                                                                  .toUpperCase()),
                                                             ),
                                                           ],
                                                         ),
@@ -1265,13 +1409,14 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
               actions: [
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.grey,
+                    backgroundColor: app_theme.surfaceElevated,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(6),
                     ),
                     padding: EdgeInsets.symmetric(horizontal: 24, vertical: 10),
                   ),
-                  child: Text(context.lwTranslate.close, style: TextStyle(color: Colors.white)),
+                  child: Text(context.lwTranslate.close,
+                      style: const TextStyle(color: Colors.white)),
                   onPressed: () {
                     Navigator.of(context).pop();
                   },
@@ -1280,11 +1425,10 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
             );
           },
         );
-
-
       },
     );
   }
+
   Color _parseColor(String colorString) {
     try {
       if (colorString.startsWith('#')) {
@@ -1296,18 +1440,20 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
       return Colors.black;
     }
   }
+
   Future<void> _showColorPicker(
-      BuildContext context,
-      TextEditingController controller,
-      Function setState,
-      ) async {
+    BuildContext context,
+    TextEditingController controller,
+    Function setState,
+  ) async {
     final initialColor = _parseColor(controller.text);
     Color selectedColor = initialColor; // Local variable to track selection
 
     await showDialog<Color>(
       context: context,
       builder: (context) => AlertDialog(
-        title:  Text(context.lwTranslate.pickColor),
+        backgroundColor: app_theme.surface,
+        title: Text(context.lwTranslate.pickColor),
         content: SingleChildScrollView(
           child: ColorPicker(
             pickerColor: initialColor,
@@ -1324,7 +1470,8 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
           TextButton(
             child: Text(context.lwTranslate.ok),
             onPressed: () {
-              controller.text = '#${selectedColor.value.toRadixString(16).substring(2)}';
+              controller.text =
+                  '#${selectedColor.toARGB32().toRadixString(16).substring(2)}';
               setState(() {});
               Navigator.pop(context);
             },

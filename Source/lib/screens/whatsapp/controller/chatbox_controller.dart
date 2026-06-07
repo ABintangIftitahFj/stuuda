@@ -1,15 +1,16 @@
 import 'dart:convert';
 
 import 'package:intl/intl.dart';
-import '../../../services/utils.dart';
-import '/services/auth.dart';
+import 'package:stundaa/services/utils.dart';
+import 'package:stundaa/services/auth.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '/services/data_transport.dart' as data_transport;
+import 'package:stundaa/services/data_transport.dart' as data_transport;
 
 // class ChatboxController extends GetxController {
-class ChatboxController extends ChangeNotifier {  // Existing variables
+class ChatboxController extends ChangeNotifier {
+  // Existing variables
   var holduser = <Map<String, dynamic>>[].obs;
   var emojiShowing = false.obs;
   var iscurrentUser = false.obs;
@@ -19,26 +20,101 @@ class ChatboxController extends ChangeNotifier {  // Existing variables
   ScrollController scrollController = ScrollController();
   final AudioPlayer _player = AudioPlayer();
   String? userId;
-  var _isDataCached = false.obs;
+  final _isDataCached = false.obs;
 
   var isLoading = false.obs;
   var isInitialLoading = false.obs;
   var hasMoreMessages = true.obs;
-
 
   var enableAiBot = false.obs;
   var replyAEnableBot = false.obs;
   // bool _isDataCached = false;
 
   // Cache variables
-  var _cachedMessages = <Map<String, dynamic>>[].obs;
-// Flag to check if data is cached
+  final _cachedMessages = <Map<String, dynamic>>[].obs;
+  // Flag to check if data is cached
+
+  // Reply chat states
+  var selectedReplyMessage = Rxn<Map<String, dynamic>>();
+  static final RegExp _htmlTagPattern = RegExp(r'<[^>]*>');
+
+  void setReplyMessage(Map<String, dynamic> message) {
+    selectedReplyMessage.value = message;
+    notifyListeners();
+  }
+
+  void clearReplyMessage() {
+    selectedReplyMessage.value = null;
+    notifyListeners();
+  }
+
+  void addQuotedMessageWamid(Map<String, dynamic> payload) {
+    final quotedMessageWamid =
+        selectedReplyMessage.value?['wamid']?.toString() ?? '';
+    if (quotedMessageWamid.isNotEmpty) {
+      payload['quoted_message_wamid'] = quotedMessageWamid;
+    }
+  }
+
+  bool canReplyToMessage(Map<String, dynamic> message) {
+    if (message['isSystem'] == true) {
+      return false;
+    }
+
+    final wamid = message['wamid']?.toString() ?? '';
+    return wamid.isNotEmpty;
+  }
+
+  String buildReplyPreviewText(Map<String, dynamic>? message,
+      {String fallback = 'Message'}) {
+    if (message == null) {
+      return fallback;
+    }
+
+    final content = message['content']?.toString() ?? '';
+    final plainText = content.replaceAll(_htmlTagPattern, '').trim();
+    if (plainText.isNotEmpty) {
+      return plainText;
+    }
+
+    final media = message['media'] as Map<String, dynamic>? ?? const {};
+    return mediaTypeLabel(media['type']?.toString() ?? '', fallback: fallback);
+  }
+
+  String mediaTypeLabel(String mediaType, {String fallback = 'Media'}) {
+    switch (mediaType.toLowerCase()) {
+      case 'image':
+        return 'Photo';
+      case 'video':
+        return 'Video';
+      case 'audio':
+        return 'Audio';
+      case 'document':
+        return 'Document';
+      default:
+        return fallback;
+    }
+  }
+
+  Map<String, dynamic>? findMessageByUid(String? messageUid) {
+    if (messageUid == null || messageUid.isEmpty) {
+      return null;
+    }
+
+    for (final message in holduser) {
+      if (message['uid'] == messageUid) {
+        return message;
+      }
+    }
+
+    return null;
+  }
 
   void setUserId(String id) {
     userId = id;
   }
 
-  void toggleEmojiShowing(BuildContext context) {
+  void toggleEmojiShowing() {
     emojiShowing.value = !emojiShowing.value;
   }
 
@@ -83,6 +159,7 @@ class ChatboxController extends ChangeNotifier {  // Existing variables
         'filename': filename,
         'filetype': filetype,
         'isIncoming': false,
+        'repliedToMessageUid': selectedReplyMessage.value?['uid'] ?? '',
         'formattedMessagedAt': formattedDate,
       });
       _player.play(AssetSource('audio/sendsound.mp3'));
@@ -101,10 +178,9 @@ class ChatboxController extends ChangeNotifier {  // Existing variables
         onSuccess: (responseData) {
           getUserChatSend();
         },
-        onFailed: (responseData) {
-        },
+        onFailed: (responseData) {},
       );
-    } catch (e, stack) {
+    } catch (e) {
       pr("Error in ClearHistory: $e");
     }
     // _cachedMessages.clear(); // Clear cache when chat history is cleared
@@ -124,7 +200,6 @@ class ChatboxController extends ChangeNotifier {  // Existing variables
       await data_transport.get(
         'vendor/whatsapp/contact/chat/$userId?assigned=',
         onSuccess: (response) {
-
           _handleSuccessResponse(response);
         },
         onError: (error) {
@@ -146,7 +221,7 @@ class ChatboxController extends ChangeNotifier {  // Existing variables
 
   void _handleSuccessResponse(dynamic responseData) {
     try {
-      holduser.value.clear();
+      holduser.clear();
       if (responseData == null) {
         return;
       }
@@ -156,7 +231,8 @@ class ChatboxController extends ChangeNotifier {  // Existing variables
       }
 
       // Safely parse the response
-      final clientModels = responseData['client_models'] as Map<String, dynamic>?;
+      final clientModels =
+          responseData['client_models'] as Map<String, dynamic>?;
       if (clientModels == null) {
         return;
       }
@@ -164,8 +240,8 @@ class ChatboxController extends ChangeNotifier {  // Existing variables
       final replyAEnableBotValue = clientModels['isReplyBotEnable'] ?? false;
 
       enableAiBot.value = enableAiBotValue is bool ? enableAiBotValue : false;
-      replyAEnableBot.value = replyAEnableBotValue is bool ? replyAEnableBotValue : false;
-
+      replyAEnableBot.value =
+          replyAEnableBotValue is bool ? replyAEnableBotValue : false;
 
       // Parse message logs
       final messageLogs = clientModels['whatsappMessageLogs'];
@@ -193,7 +269,6 @@ class ChatboxController extends ChangeNotifier {  // Existing variables
 
   void _handleFailedResponse(dynamic failedResponse) {
     try {
-
       if (failedResponse == null) {
         pr("Failed response is null");
         return;
@@ -201,7 +276,6 @@ class ChatboxController extends ChangeNotifier {  // Existing variables
 
       if (failedResponse is Map<String, dynamic>) {
         pr("Failure details: ${failedResponse['failed'] ?? 'No failure details'}");
-      } else {
       }
     } catch (e) {
       pr("Error processing failed response: ${e.toString()}");
@@ -225,14 +299,16 @@ class ChatboxController extends ChangeNotifier {  // Existing variables
         onSuccess: (responseData) {
           holduser.clear();
           if (responseData is Map<String, dynamic>) {
-            _parseAndAddMessages(responseData['client_models']?['whatsappMessageLogs']);
+            _parseAndAddMessages(
+                responseData['client_models']?['whatsappMessageLogs']);
             // Update cache
-            _cachedMessages.value = holduser.value;
+            _cachedMessages.assignAll(holduser);
             _isDataCached.value = true;
           }
         },
       ).catchError((error) {
         pr("catchError $error");
+        return "";
       });
     } catch (error) {
       pr("catch $error");
@@ -242,7 +318,6 @@ class ChatboxController extends ChangeNotifier {  // Existing variables
       }
     }
   }
-
 
   int currentPage = 2;
   Future<void> loadMoreMessages2() async {
@@ -256,13 +331,18 @@ class ChatboxController extends ChangeNotifier {  // Existing variables
         onSuccess: (responseData) {
           if (responseData is Map<String, dynamic>) {
             // _handleSuccessResponse(responseData);
-            _parseAndAddMessages(responseData['client_models']?['whatsappMessageLogs']);
+            _parseAndAddMessages(
+                responseData['client_models']?['whatsappMessageLogs']);
           } else {
             hasMoreMessages.value = false;
           }
         },
-      ).catchError((error) {});
+      ).catchError((error) {
+        pr("loadMoreMessages2 catchError $error");
+        return "";
+      });
     } catch (error) {
+      pr("loadMoreMessages2 catch $error");
     } finally {
       isLoading.value = false;
       currentPage++;
@@ -276,17 +356,6 @@ class ChatboxController extends ChangeNotifier {  // Existing variables
     required BuildContext context,
     String? label,
   }) async {
-    final Map<String, dynamic> mediaData = {
-      "message": data?["message"] ?? "File uploaded successfully.",
-      "path": data?["path"],
-      "original_filename": data?["original_filename"],
-      "fileName": "67973476ee536---jpeg-20250127-125329-419887063546126133.jpg",
-      "fileMimeType": data?["fileMimeType"],
-      "fileExtension": data?["fileExtension"],
-      "realPath": data?["realPath"],
-      "incident": data?["incident"],
-    };
-
     final Map<String, dynamic> payload = {
       "contact_uid": userId,
       "filepond": "undefined",
@@ -295,6 +364,7 @@ class ChatboxController extends ChangeNotifier {  // Existing variables
       "raw_upload_data": jsonEncode(data),
       "caption": caption,
     };
+    addQuotedMessageWamid(payload);
 
     try {
       await data_transport.post(
@@ -302,20 +372,19 @@ class ChatboxController extends ChangeNotifier {  // Existing variables
         inputData: payload,
         context: context,
         onSuccess: (responseData) async {
+          clearReplyMessage();
           Navigator.pop(context);
           _player.play(AssetSource('audio/sendsound.mp3'));
           if (userId != null && userId!.isNotEmpty) {
             getUserChatSend();
           }
         },
-        onFailed: (responseData) {
-        },
+        onFailed: (responseData) {},
       );
-    } catch (e, stack) {
+    } catch (e) {
       pr("Error in sendMedia: $e");
     }
   }
-
 
   void _parseAndAddMessages(Map<dynamic, dynamic>? whatsappMessageLogs) {
     if (whatsappMessageLogs == null) {
@@ -337,28 +406,32 @@ class ChatboxController extends ChangeNotifier {  // Existing variables
 
         final isSystemMessage = value['is_system_message'] == 1;
 
-
         // Safely extract all fields with null checks
         // final mediaValues = (value['__data'] as Map<String, dynamic>?)?['media_values']
         // as Map<String, dynamic>?;
 
-        dynamic __data = value['__data'];
+        final dynamic rawData = value['__data'];
         Map<String, dynamic>? mediaValues;
 
-        if (__data is Map<String, dynamic>) {
-          mediaValues = __data['media_values'] as Map<String, dynamic>?;
-        } else if (__data is List) {
+        if (rawData is Map<String, dynamic>) {
+          mediaValues = rawData['media_values'] as Map<String, dynamic>?;
+        } else if (rawData is List) {
           // Handle case where __data is a list (you might want to process it differently)
           mediaValues = null;
         }
 
         newMessages.add({
+          'uid': value['_uid']?.toString() ?? key.toString(),
+          'wamid': value['wamid']?.toString() ?? '',
+          'repliedToMessageUid':
+              value['replied_to_whatsapp_message_logs__uid']?.toString() ?? '',
           'content': message,
           'isIncoming': isIncomingMessage,
           'isSystem': isSystemMessage,
           'status': value['status']?.toString() ?? 'unknown',
           'messagedAt': value['messaged_at']?.toString() ?? '',
-          'formattedMessagedAt': value['formatted_message_time']?.toString() ?? '',
+          'formattedMessagedAt':
+              value['formatted_message_time']?.toString() ?? '',
           'templateMessage': value['template_message']?.toString() ?? '',
           'whatsAppError': value['whatsapp_message_error']?.toString() ?? '',
           '__data': value['__data'] ?? {},
@@ -368,7 +441,8 @@ class ChatboxController extends ChangeNotifier {  // Existing variables
             'caption': mediaValues?['caption']?.toString() ?? '',
             'fileName': mediaValues?['file_name']?.toString() ?? '',
             'mimeType': mediaValues?['mime_type']?.toString() ?? '',
-            'originalFileName': mediaValues?['original_filename']?.toString() ?? '',
+            'originalFileName':
+                mediaValues?['original_filename']?.toString() ?? '',
           },
         });
       } catch (e) {
@@ -383,7 +457,6 @@ class ChatboxController extends ChangeNotifier {  // Existing variables
     }
   }
 
-
   Future<void> loadMessagesWithAppendLogic() async {
     try {
       isLoading.value = true;
@@ -391,11 +464,16 @@ class ChatboxController extends ChangeNotifier {  // Existing variables
         'vendor/whatsapp/contact/contacts-data/$userId?way=append&request_contact=$userId&=&assigned=',
         onSuccess: (responseData) {
           if (responseData is Map<String, dynamic>) {
-            _parseAndAddMessages(responseData['client_models']?['whatsappMessageLogs']);
+            _parseAndAddMessages(
+                responseData['client_models']?['whatsappMessageLogs']);
           }
         },
-      ).catchError((error) {});
+      ).catchError((error) {
+        pr("loadMessagesWithAppendLogic catchError $error");
+        return "";
+      });
     } catch (e) {
+      pr("loadMessagesWithAppendLogic catch $e");
     } finally {
       isLoading.value = false;
     }
@@ -412,9 +490,10 @@ class ChatboxController extends ChangeNotifier {  // Existing variables
     clearCache();
     await getUserChat();
   }
+
   @override
   void dispose() {
-   currentPage = 2;
+    currentPage = 2;
     super.dispose();
   }
 }

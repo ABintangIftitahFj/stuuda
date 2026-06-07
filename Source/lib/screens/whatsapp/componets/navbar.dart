@@ -1,5 +1,6 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import '/support/app_theme.dart' as app_theme;
+import 'package:stundaa/support/app_theme.dart' as app_theme;
 
 class ChatNavbar extends StatefulWidget {
   final String? username;
@@ -20,9 +21,7 @@ class _ChatNavbarState extends State<ChatNavbar> {
   Widget build(BuildContext context) {
     return Container(
       height: 70,
-      decoration: const BoxDecoration(
-        color: app_theme.primary,
-      ),
+      decoration: app_theme.topBarDecoration(radius: 0),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 10),
         child: Row(
@@ -33,18 +32,18 @@ class _ChatNavbarState extends State<ChatNavbar> {
                 Navigator.pop(context);
               },
               icon: const Icon(
-                Icons.arrow_back,
-                color: Colors.white,
+                CupertinoIcons.back,
+                color: app_theme.lavenderWhite,
               ),
             ),
             Expanded(
               child: Row(
                 children: [
                   const CircleAvatar(
-                    backgroundColor: Colors.green,
+                    backgroundColor: app_theme.surfaceMuted,
                     child: Icon(
-                      Icons.person,
-                      color: Colors.white,
+                      CupertinoIcons.person,
+                      color: app_theme.iceBlue,
                     ),
                   ),
                   const SizedBox(
@@ -56,11 +55,16 @@ class _ChatNavbarState extends State<ChatNavbar> {
                     children: [
                       Text(
                         widget.username as String,
-                        style: const TextStyle(color: Colors.white),
+                        style: const TextStyle(
+                          color: app_theme.lavenderWhite,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                       Text(
                         widget.lastseen as String,
-                        style: const TextStyle(color: Colors.white),
+                        style: const TextStyle(
+                          color: app_theme.secondary,
+                        ),
                       ),
                     ],
                   ),

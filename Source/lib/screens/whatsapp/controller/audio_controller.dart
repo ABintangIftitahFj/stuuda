@@ -57,8 +57,8 @@ class MessageAudioController extends GetxController {
 
   void playNotificationSound() async {
     if (!isChatboxScreenActive) {
-      final AudioPlayer _player = AudioPlayer();
-      await _player.play(AssetSource('audio/receivesound.mp3'));
+      final AudioPlayer player = AudioPlayer();
+      await player.play(AssetSource('audio/receivesound.mp3'));
     }
   }
 }

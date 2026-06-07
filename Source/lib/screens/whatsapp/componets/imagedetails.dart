@@ -1,7 +1,8 @@
-import 'dart:io';
+import 'package:universal_io/io.dart';
 
 import 'package:flutter/material.dart';
-import 'package:whatsjet_demo/services/utils.dart';
+import 'package:stundaa/services/utils.dart';
+import 'package:stundaa/support/app_theme.dart' as app_theme;
 
 // ignore: must_be_immutable
 class Imagedetails extends StatefulWidget {
@@ -23,7 +24,8 @@ class _ImagedetailsState extends State<Imagedetails> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color.fromRGBO(0, 128, 105, 1),
+        backgroundColor: app_theme.backgroundColor,
+        foregroundColor: app_theme.lavenderWhite,
         automaticallyImplyLeading: false,
         centerTitle: false,
         leading: IconButton(
@@ -32,19 +34,29 @@ class _ImagedetailsState extends State<Imagedetails> {
           },
           icon: const Icon(
             Icons.arrow_back,
-            color: Colors.white,
+            color: app_theme.lavenderWhite,
           ),
         ),
       ),
-      body: Center(
-        child: Hero(
-          tag: context.lwTranslate.image,
-          child: ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: Image.file(
-                File(widget.filepath),
-                fit: BoxFit.cover,
-              )),
+      body: Container(
+        decoration: app_theme.appBackgroundDecoration(),
+        child: Center(
+          child: Hero(
+            tag: context.lwTranslate.image,
+            child: ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: const Color.fromRGBO(167, 223, 255, 0.16),
+                    ),
+                  ),
+                  child: Image.file(
+                    File(widget.filepath),
+                    fit: BoxFit.cover,
+                  ),
+                )),
+          ),
         ),
       ),
     );

@@ -1,20 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:whatsjet_demo/screens/user/register.dart';
-import '../../components/input_field.dart';
-import '../../services/globalurls.dart';
-import '../../services/utils.dart';
-import '../../services/data_transport.dart' as data_transport;
-import '../../services/auth.dart' as auth;
-import '../../support/app_theme.dart' as app_theme;
-import '../../common/widgets/common.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:stundaa/screens/user/register.dart';
+import 'package:stundaa/components/input_field.dart';
+import 'package:stundaa/services/globalurls.dart';
+import 'package:stundaa/services/utils.dart';
+import 'package:stundaa/services/data_transport.dart' as data_transport;
+import 'package:stundaa/services/auth.dart' as auth;
+import 'package:stundaa/support/app_theme.dart' as app_theme;
+import 'package:stundaa/common/widgets/common.dart';
 import 'package:form_validator/form_validator.dart';
-
-/// The scopes required by this application.
-const List<String> scopes = <String>[
-  'email',
-  // 'https://www.googleapis.com/auth/contacts.readonly',
-];
 
 class LoginPage extends StatefulWidget {
   final void Function()? ontap;
@@ -31,12 +25,6 @@ class _LoginPageState extends State<LoginPage> {
   bool _isLoading = false;
   bool _isLoadingForDemo = false;
   bool isPasswordVisible = false;
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    // Optional clientId
-    clientId:
-        isIOSPlatform() ? configItem('social_logins.google.client_id') : null,
-    scopes: scopes,
-  );
 
   void login() async {
     _formKey.currentState?.save();
@@ -95,238 +83,281 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(children: [
-        SizedBox.expand(
-          child: Image.asset(
-            'assets/images/ic_background.png',
-            fit: BoxFit.cover,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: app_theme.appBackgroundDecoration(),
+            ),
           ),
-        ),
-        Center(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(10.0),
-              child: Column(
-                mainAxisAlignment:
-                    MainAxisAlignment.center, // Centers vertically
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(15),
-                      color: Colors.white,
-                    ),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: app_theme.glowOrbDecoration(),
+              ),
+            ),
+          ),
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 460),
+                  child: Container(
+                    decoration: app_theme.glassCardDecoration(radius: 30),
                     child: Padding(
-                      padding: const EdgeInsets.only(
-                          top: 30, bottom: 40, right: 15, left: 15),
+                      padding: const EdgeInsets.fromLTRB(22, 28, 22, 28),
                       child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const AppLogo(
-                            height: 75,
-                          ),
-                          Center(
+                          const AppLogo(height: 92),
+                          const SizedBox(height: 18),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 7),
+                            decoration: BoxDecoration(
+                              color: const Color.fromRGBO(255, 255, 255, 0.05),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(color: app_theme.outlineSoft),
+                            ),
                             child: Text(
-                              context.lwTranslate.login,
-                              style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.grey[700]),
+                              'Focus workspace',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: app_theme.iceBlue,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.6,
+                                  ),
                             ),
                           ),
-                          const SizedBox(height: 50),
-                          const SizedBox(
-                            height: 20,
+                          const SizedBox(height: 18),
+                          Text(
+                            'Welcome Back',
+                            style: Theme.of(context)
+                                .textTheme
+                                .headlineMedium
+                                ?.copyWith(
+                                  fontSize: 28,
+                                ),
+                            textAlign: TextAlign.center,
                           ),
-                          Column(
-                            children: [
-                              Form(
-                                  key: _formKey,
-                                  child: Column(
-                                    children: [
-                                      InputField(
-                                        labelText:
-                                            context.lwTranslate.emailOrUsername,
-                                        prefixIcon: const Icon(Icons.person),
-                                        onSaved: (String? value) {
-                                          formInputData['email'] = value;
-                                        },
-                                        validation: ValidationBuilder()
-                                            .minLength(3)
-                                            .build(),
-                                      ),
-                                      InputField(
-                                        placeholder:
-                                            context.lwTranslate.password,
-                                        labelText: context.lwTranslate.password,
-                                        password: !isPasswordVisible,
-                                        validation: ValidationBuilder()
-                                            .minLength(6)
-                                            .build(),
-                                        prefixIcon: const Icon(Icons.key),
-                                        onSaved: (String? value) {
-                                          formInputData['password'] = value;
-                                        },
-                                        suffixIcon: IconButton(
-                                          icon: Icon(
-                                            isPasswordVisible
-                                                ? Icons.visibility
-                                                : Icons.visibility_off,
-                                            color:
-                                                Theme.of(context).primaryColor,
-                                          ),
-                                          onPressed: () {
-                                            setState(() {
-                                              isPasswordVisible =
-                                                  !isPasswordVisible;
-                                            });
-                                          },
-                                        ),
-                                      ),
-                                    ],
-                                  )),
-                              const SizedBox(
-                                height: 30,
-                              ),
-                              GestureDetector(
-                                onTap: login,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 15.0),
-                                  width: double.infinity,
-                                  alignment: Alignment.center,
-                                  decoration: const BoxDecoration(
-                                    color: app_theme.primary,
-                                    borderRadius: BorderRadius.all(
-                                      Radius.circular(8),
-                                    ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Continue your focus journey with STUNDAA.',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  fontSize: 14,
+                                  color: app_theme.iceBlue,
+                                ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 28),
+                          Form(
+                            key: _formKey,
+                            child: Column(
+                              children: [
+                                InputField(
+                                  labelText:
+                                      context.lwTranslate.emailOrUsername,
+                                  prefixIcon: const Icon(
+                                    CupertinoIcons.person_crop_circle,
+                                    color: app_theme.iceBlue,
                                   ),
-                                  child: Center(
-                                    child: !_isLoading
-                                        ? Text(
-                                            context.lwTranslate.login,
-                                            style: const TextStyle(
-                                              fontSize: 18,
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          )
-                                        : const Center(
-                                            child: CircularProgressIndicator(
-                                              color: Colors.white,
-                                            ),
-                                          ),
+                                  onSaved: (String? value) {
+                                    formInputData['email'] = value;
+                                  },
+                                  validation:
+                                      ValidationBuilder().minLength(3).build(),
+                                ),
+                                const SizedBox(height: 14),
+                                InputField(
+                                  placeholder: context.lwTranslate.password,
+                                  labelText: context.lwTranslate.password,
+                                  password: !isPasswordVisible,
+                                  validation:
+                                      ValidationBuilder().minLength(6).build(),
+                                  prefixIcon: const Icon(
+                                    CupertinoIcons.lock_shield,
+                                    color: app_theme.iceBlue,
+                                  ),
+                                  onSaved: (String? value) {
+                                    formInputData['password'] = value;
+                                  },
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      isPasswordVisible
+                                          ? CupertinoIcons.eye
+                                          : CupertinoIcons.eye_slash,
+                                      color: app_theme.iceBlue,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        isPasswordVisible = !isPasswordVisible;
+                                      });
+                                    },
                                   ),
                                 ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          GestureDetector(
+                            onTap: login,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              width: double.infinity,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                gradient: app_theme.primaryGradient,
+                                borderRadius: BorderRadius.circular(18),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color.fromRGBO(29, 161, 255, 0.45),
+                                    blurRadius: 24,
+                                    offset: Offset(0, 10),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(
-                                height: 10,
-                              ),
-                              if (configItem('demoMode',
-                                      fallbackValue: false) ==
-                                  true)
-                                Column(
-                                  children: [
-                                    Text(
-                                      context.lwTranslate.or,
+                                child: !_isLoading
+                                  ? Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                      context.lwTranslate.login,
                                       style: const TextStyle(
                                         fontSize: 18,
-                                        color: Colors.black,
+                                        color: app_theme.black,
                                         fontWeight: FontWeight.bold,
                                       ),
-                                    ),
-                                    const SizedBox(
-                                      height: 10,
-                                    ),
-                                    GestureDetector(
-                                      onTap: demoLogin,
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 15.0),
-                                        width: double.infinity,
-                                        alignment: Alignment.center,
-                                        decoration: const BoxDecoration(
-                                          color: app_theme.primary,
-                                          borderRadius: BorderRadius.all(
-                                            Radius.circular(8),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Container(
+                                          width: 28,
+                                          height: 28,
+                                          decoration: BoxDecoration(
+                                            color: Colors.black.withValues(
+                                                alpha: 0.10),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Icon(
+                                            CupertinoIcons.arrow_up_right,
+                                            size: 15,
+                                            color: app_theme.black,
                                           ),
                                         ),
-                                        child: Center(
-                                          child: !_isLoadingForDemo
-                                              ? Text(
-                                                  context.lwTranslate
-                                                      .demoCompanyLogin,
-                                                  style: const TextStyle(
-                                                    fontSize: 18,
-                                                    color: Colors.white,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                )
-                                              : const Center(
-                                                  child:
-                                                      CircularProgressIndicator(
-                                                    color: Colors.white,
-                                                  ),
-                                                ),
+                                      ],
+                                    )
+                                  : const SizedBox(
+                                      height: 24,
+                                      width: 24,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.2,
+                                        color: app_theme.black,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                          if (configItem('demoMode', fallbackValue: false) ==
+                              true) ...[
+                            const SizedBox(height: 18),
+                            Text(
+                              context.lwTranslate.or,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: app_theme.secondary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 18),
+                            GestureDetector(
+                              onTap: demoLogin,
+                              child: Container(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
+                                width: double.infinity,
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color:
+                                      const Color.fromRGBO(255, 255, 255, 0.06),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: const Color.fromRGBO(
+                                        167, 223, 255, 0.24),
+                                  ),
+                                ),
+                                child: !_isLoadingForDemo
+                                    ? Text(
+                                        context.lwTranslate.demoCompanyLogin,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          color: app_theme.lavenderWhite,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      )
+                                    : const SizedBox(
+                                        height: 24,
+                                        width: 24,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2.2,
+                                          color: app_theme.cyanGlow,
                                         ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                              const SizedBox(
-                                height: 10,
                               ),
-                              Text(
-                                  context.lwTranslate.dontHaveAcc,
-                                  style: TextStyle(
-                                      color: Colors.grey, fontSize: 13),
-                                  textAlign: TextAlign.center),
-                              const SizedBox(
-                                height: 10,
-                              ),
-                              GestureDetector(
-                                onTap: () {
-                                  navigatePage(
-                                    context,
-                                    RegisterPage(
-                                      // skipMobileDialog: true,
-                                    ),
-                                  );
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 15.0),
-                                  width:
-                                      MediaQuery.of(context).size.width * 0.6,
-                                  alignment: Alignment.center,
-                                  decoration: BoxDecoration(
-                                    color: Colors.yellow.shade800,
-                                    borderRadius: BorderRadius.all(
-                                      Radius.circular(8),
-                                    ),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      context.lwTranslate.createNewAcc,
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    )
-                                  ),
+                            ),
+                          ],
+                          const SizedBox(height: 22),
+                          Text(
+                            context.lwTranslate.dontHaveAcc,
+                            style: const TextStyle(
+                              color: app_theme.secondary,
+                              fontSize: 13,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 12),
+                          GestureDetector(
+                            onTap: () {
+                              navigatePage(context, RegisterPage());
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 15),
+                              width: double.infinity,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color:
+                                    const Color.fromRGBO(255, 255, 255, 0.05),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color:
+                                      const Color.fromRGBO(167, 223, 255, 0.24),
                                 ),
                               ),
-                            ],
+                              child: Text(
+                                context.lwTranslate.createNewAcc,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  color: app_theme.lavenderWhite,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
                           ),
                         ],
                       ),
                     ),
                   ),
-                ],
+                ),
               ),
             ),
           ),
-        ),
-      ]),
+        ],
+      ),
     );
   }
 }

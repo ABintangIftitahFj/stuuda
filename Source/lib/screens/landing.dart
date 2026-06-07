@@ -893,105 +893,101 @@ class _LandingPageState extends State<LandingPage> with WidgetsBindingObserver {
           backgroundColor: app_theme.backgroundColor,
           appBar: PreferredSize(
             preferredSize: const Size.fromHeight(68),
-            child: AppBar(
-              backgroundColor: app_theme.deepNavy,
-              elevation: 0,
-              titleSpacing: 0,
-              title: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text(
-                    'STUNDAA',
-                    style: TextStyle(
-                      color: app_theme.iceBlue,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.4,
-                    ),
-                  ),
-                  tabTitle ??
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Container(
+                decoration: app_theme.topBarDecoration(radius: 28),
+                child: AppBar(
+                  backgroundColor: Colors.transparent,
+                  elevation: 0,
+                  titleSpacing: 0,
+                  title: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
                       const Text(
-                        'Inbox',
+                        'STUNDAA',
                         style: TextStyle(
-                          color: app_theme.lavenderWhite,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
+                          color: app_theme.iceBlue,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.8,
                         ),
                       ),
-                ],
-              ),
-              iconTheme: const IconThemeData(color: app_theme.lavenderWhite),
-              actions: [
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    return SizedBox(
-                      width: 48,
-                      height: 48,
-                      child: PopupMenuButton<String>(
-                        offset: const Offset(0, 30),
-                        color: app_theme.surface,
-                        icon: const Icon(
-                          Icons.more_vert,
-                          color: app_theme.lavenderWhite,
-                        ),
-                        onSelected: (value) {},
-                        itemBuilder: (BuildContext context) => [
-                          PopupMenuItem<String>(
-                            value: 'profile',
-                            onTap: () async {
-                              await Future.microtask(() {
-                                if (context.mounted) {
-                                  navigatePage(context, const MyProfile());
-                                }
-                              });
-                            },
-                            child: Text(context.lwTranslate.profile),
-                          ),
-
-                          // PopupMenuItem<String>(
-                          //   value: 'profile',
-                          //   onTap: () async {
-                          //     await Future.microtask(() {
-                          //       if (context.mounted) {
-                          //         navigatePage(context, const MyProfile());
-                          //       }
-                          //     });
-                          //   },
-                          //   child: Text(context.lwTranslate.profile),
-                          // ),
-
-                          PopupMenuItem<String>(
-                            value: 'settings',
-                            onTap: () async {
-                              await Future.microtask(() {
-                                if (context.mounted) {
-                                  navigatePage(context, const Settings());
-                                }
-                              });
-                            },
-                            child: Text(context.lwTranslate.settings),
-                          ),
-                          if (configItem('demoMode', fallbackValue: false) ==
-                              true)
-                            PopupMenuItem<String>(
-                              value: 'addNumber',
-                              onTap: () async {
-                                await Future.microtask(() {
-                                  if (context.mounted) {
-                                    DemoDialogs.showMobileNumberDialog(context,
-                                        showSavedNumber: true);
-                                  }
-                                });
-                              },
-                              child: Text(context.lwTranslate.addNumberForTest),
+                      tabTitle ??
+                          const Text(
+                            'Inbox',
+                            style: TextStyle(
+                              color: app_theme.lavenderWhite,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
                             ),
-                        ],
-                      ),
-                    );
-                  },
+                          ),
+                    ],
+                  ),
+                  iconTheme:
+                      const IconThemeData(color: app_theme.lavenderWhite),
+                  actions: [
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        return SizedBox(
+                          width: 48,
+                          height: 48,
+                          child: PopupMenuButton<String>(
+                            offset: const Offset(0, 30),
+                            color: app_theme.surface,
+                            icon: const Icon(
+                              CupertinoIcons.ellipsis_circle,
+                              color: app_theme.lavenderWhite,
+                            ),
+                            onSelected: (value) {},
+                            itemBuilder: (BuildContext context) => [
+                              PopupMenuItem<String>(
+                                value: 'profile',
+                                onTap: () async {
+                                  await Future.microtask(() {
+                                    if (context.mounted) {
+                                      navigatePage(context, const MyProfile());
+                                    }
+                                  });
+                                },
+                                child: Text(context.lwTranslate.profile),
+                              ),
+                              PopupMenuItem<String>(
+                                value: 'settings',
+                                onTap: () async {
+                                  await Future.microtask(() {
+                                    if (context.mounted) {
+                                      navigatePage(context, const Settings());
+                                    }
+                                  });
+                                },
+                                child: Text(context.lwTranslate.settings),
+                              ),
+                              if (configItem('demoMode', fallbackValue: false) ==
+                                  true)
+                                PopupMenuItem<String>(
+                                  value: 'addNumber',
+                                  onTap: () async {
+                                    await Future.microtask(() {
+                                      if (context.mounted) {
+                                        DemoDialogs.showMobileNumberDialog(
+                                            context,
+                                            showSavedNumber: true);
+                                      }
+                                    });
+                                  },
+                                  child:
+                                      Text(context.lwTranslate.addNumberForTest),
+                                ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
           body: _pages[_currentIndex],

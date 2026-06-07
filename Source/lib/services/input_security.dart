@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:basic_utils/basic_utils.dart';
 import 'package:flutter/services.dart';
 import 'package:pointycastle/export.dart';
-import '../../support/app_config.dart' as app_config;
+import 'package:stundaa/support/app_config.dart' as app_config;
 import 'utils.dart';
 
 // ref https://stackoverflow.com/questions/67829870/how-to-implement-rsa-encryption-in-dart-using-encrypt

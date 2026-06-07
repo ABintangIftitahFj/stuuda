@@ -1,14 +1,14 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:form_validator/form_validator.dart';
 import 'package:progress_loading_button/progress_loading_button.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../components/input_field.dart';
-import '../services/auth.dart' as auth;
-import '../services/auth.dart';
-import '../support/app_theme.dart' as app_theme;
-import '../services/utils.dart';
-import '../common/widgets/common.dart';
-import '/services/data_transport.dart' as data_transport;
+import 'package:stundaa/components/input_field.dart';
+import 'package:stundaa/services/auth.dart' as auth;
+import 'package:stundaa/support/app_theme.dart' as app_theme;
+import 'package:stundaa/services/utils.dart';
+import 'package:stundaa/common/widgets/common.dart';
+import 'package:stundaa/services/data_transport.dart' as data_transport;
 
 class MyProfile extends StatefulWidget {
   const MyProfile({super.key});
@@ -27,7 +27,6 @@ class MyProfileState extends State<MyProfile>
   final _mobileNumberController = TextEditingController();
   final _emailController = TextEditingController();
   late SharedPreferences _prefs;
-  String? _uuid;
 
   @override
   void initState() {
@@ -36,18 +35,16 @@ class MyProfileState extends State<MyProfile>
       _initializePrefs();
     });
 
-    _uuid = auth.getAuthInfo('uuid');
     _firstNameController.text = auth.getAuthInfo('first_name') ?? '';
     _lastNameController.text = auth.getAuthInfo('last_name') ?? '';
     _mobileNumberController.text = auth.getAuthInfo('mobile_number') ?? '';
     _emailController.text = auth.getAuthInfo('email') ?? '';
-
   }
+
   Future<void> _initializePrefs() async {
     _prefs = await SharedPreferences.getInstance();
     _loadProfileData();
   }
-
 
   Future<void> _saveProfileDataToPrefs() async {
     await _prefs.setString('first_name', _firstNameController.text);
@@ -55,13 +52,19 @@ class MyProfileState extends State<MyProfile>
     await _prefs.setString('mobile_number', _mobileNumberController.text);
     await _prefs.setString('email', _emailController.text);
   }
+
   Future<void> _loadProfileData() async {
     setState(() {
-      _firstNameController.text = _prefs.getString('first_name') ?? auth.getAuthInfo('first_name') ?? '';
-      _lastNameController.text = _prefs.getString('last_name') ?? auth.getAuthInfo('last_name') ?? '';
-      _mobileNumberController.text = _prefs.getString('mobile_number') ?? auth.getAuthInfo('mobile_number') ?? '';
-      _emailController.text = _prefs.getString('email') ?? auth.getAuthInfo('email') ?? '';
-      _uuid = auth.getAuthInfo('uuid');
+      _firstNameController.text = _prefs.getString('first_name') ??
+          auth.getAuthInfo('first_name') ??
+          '';
+      _lastNameController.text =
+          _prefs.getString('last_name') ?? auth.getAuthInfo('last_name') ?? '';
+      _mobileNumberController.text = _prefs.getString('mobile_number') ??
+          auth.getAuthInfo('mobile_number') ??
+          '';
+      _emailController.text =
+          _prefs.getString('email') ?? auth.getAuthInfo('email') ?? '';
     });
   }
 
@@ -70,14 +73,14 @@ class MyProfileState extends State<MyProfile>
       'first_name': _firstNameController.text,
       'last_name': _lastNameController.text,
       'mobile_number': _mobileNumberController.text,
-      'email':   _emailController.text,
+      'email': _emailController.text,
     };
     try {
       await data_transport.post(
         'user/profile-update',
         inputData: payload,
         context: context,
-        onSuccess: (responseData)  {
+        onSuccess: (responseData) {
           _saveProfileDataToPrefs();
           // Navigator.pop(context);
         },
@@ -86,10 +89,9 @@ class MyProfileState extends State<MyProfile>
         },
       );
     } catch (e) {
-    } finally {
-    }
+      pr("Profile update failed: $e");
+    } finally {}
   }
-
 
   @override
   Future<void> dispose() async {
@@ -104,20 +106,10 @@ class MyProfileState extends State<MyProfile>
   Widget build(BuildContext context) {
     return Scaffold(
       key: scaffoldKey,
+      backgroundColor: app_theme.backgroundColor,
       appBar: innerAppBar(
         title: context.lwTranslate.myProfile,
         context: context,
-      ),
-      floatingActionButton: isEditable ? Container():
-      FloatingActionButton(
-        backgroundColor: app_theme.primary,
-        // child: Icon(isEditable ? Icons.check : Icons.edit),
-        child: Icon( Icons.edit),
-        onPressed: () {
-          setState(() {
-            isEditable = !isEditable;
-          });
-        },
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
@@ -127,27 +119,70 @@ class MyProfileState extends State<MyProfile>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Personal workspace details',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: app_theme.iceBlue,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ),
+                  if (!isEditable)
+                    FilledButton.tonal(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: app_theme.surfaceMuted,
+                        foregroundColor: app_theme.iceBlue,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          isEditable = true;
+                        });
+                      },
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(CupertinoIcons.pencil, size: 15),
+                          SizedBox(width: 8),
+                          Text('Edit'),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
               // User Information Container
               Container(
                 padding: const EdgeInsets.all(16.0),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
+                decoration: app_theme.insetPanelDecoration(radius: 24).copyWith(
+                  gradient: app_theme.cardGradient,
                 ),
                 child: Column(
                   children: [
                     ListTile(
                       leading: const CircleAvatar(
-                        backgroundColor: app_theme.primary,
+                        backgroundColor: app_theme.surfaceMuted,
                         radius: 25,
-                        child: Icon(Icons.person, color: Colors.white),
+                        child:
+                            Icon(CupertinoIcons.person, color: app_theme.iceBlue),
                       ),
                       title: Text(
                         '${auth.getAuthInfo('username')}',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: app_theme.lavenderWhite,
+                        ),
                       ),
-                      subtitle: Text(_emailController.text ?? auth.getAuthInfo('email') ?? '',
-                          style: const TextStyle(fontSize: 10)),
+                      subtitle: Text(_emailController.text,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: app_theme.secondary,
+                          )),
                       // subtitle: Text(auth.getAuthInfo('email'),
                       //     style: const TextStyle(fontSize: 10)),
                     ),
@@ -171,14 +206,13 @@ class MyProfileState extends State<MyProfile>
                 isEditable: isEditable,
               ),
               _buildProfileField(
-                label: context.lwTranslate.mobileNumber,
-                // label: "Full Name",
-                // initialValue: auth.getAuthInfo('mobile_number'),
-                controller: _mobileNumberController,
-                isEditable: isEditable,
-                maxLength: 40,
-                keyboardType: TextInputType.phone
-              ),
+                  label: context.lwTranslate.mobileNumber,
+                  // label: "Full Name",
+                  // initialValue: auth.getAuthInfo('mobile_number'),
+                  controller: _mobileNumberController,
+                  isEditable: isEditable,
+                  maxLength: 40,
+                  keyboardType: TextInputType.phone),
               _buildProfileField(
                 label: context.lwTranslate.email,
                 // initialValue: auth.getAuthInfo('email'),
@@ -187,17 +221,16 @@ class MyProfileState extends State<MyProfile>
               ),
               if (isEditable)
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 0.0),
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
                   child: LoadingButton(
-                    defaultWidget:  Text(
-                        context.lwTranslate.save,
-                        style: TextStyle(color: Colors.white)),
-                    color: app_theme.primary,
+                    defaultWidget: Text(context.lwTranslate.save,
+                        style: const TextStyle(color: app_theme.black)),
+                    color: app_theme.cyanGlow,
                     width: MediaQuery.of(context).size.width,
                     onPressed: () async {
                       _formKey.currentState?.save();
                       if (_formKey.currentState!.validate()) {
-                      savePfofileUpdate();
+                        savePfofileUpdate();
                         setState(() {
                           isEditable = false;
                         });
@@ -223,9 +256,11 @@ class MyProfileState extends State<MyProfile>
     return InputField(
       focusborder: const OutlineInputBorder(
         borderSide: BorderSide(color: app_theme.primary),
+        borderRadius: BorderRadius.all(Radius.circular(18)),
       ),
       unfocusborder: const OutlineInputBorder(
-        borderSide: BorderSide(color: Color.fromRGBO(212, 212, 212, 1)),
+        borderSide: BorderSide(color: app_theme.outlineSoft),
+        borderRadius: BorderRadius.all(Radius.circular(18)),
       ),
       labelText: label,
       controller: controller,

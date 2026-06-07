@@ -1,29 +1,29 @@
-import 'dart:io';
+import 'package:universal_io/io.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:progress_loading_button/progress_loading_button.dart';
-import '../controller/user_info_controller.dart';
+import 'package:stundaa/screens/whatsapp/controller/user_info_controller.dart';
 
-import '/common/widgets/common.dart';
-import '/screens/whatsapp/controller/audio_controller.dart';
-import '/screens/whatsapp/screens/user_info.dart';
-import '/screens/whatsapp/componets/documents_picker.dart';
-import '/screens/whatsapp/componets/message_bubble.dart';
-import '/screens/whatsapp/componets/audioplayer.dart';
-import '/screens/whatsapp/componets/imagedetails.dart';
-import '/screens/whatsapp/controller/chatbox_controller.dart';
-import '/services/utils.dart';
+import 'package:stundaa/screens/whatsapp/controller/audio_controller.dart';
+import 'package:stundaa/screens/whatsapp/screens/user_info.dart';
+import 'package:stundaa/screens/whatsapp/componets/documents_picker.dart';
+import 'package:stundaa/screens/whatsapp/componets/message_bubble.dart';
+import 'package:stundaa/screens/whatsapp/componets/audioplayer.dart';
+import 'package:stundaa/screens/whatsapp/componets/imagedetails.dart';
+import 'package:stundaa/screens/whatsapp/controller/chatbox_controller.dart';
+import 'package:stundaa/services/utils.dart';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import '/support/app_theme.dart' as app_theme;
-import '/services/data_transport.dart' as data_transport;
-import '/services/auth.dart' as auth;
+import 'package:stundaa/support/app_theme.dart' as app_theme;
+import 'package:stundaa/services/data_transport.dart' as data_transport;
+import 'package:stundaa/services/auth.dart' as auth;
+import 'package:stundaa/services/whatsapp_call_service.dart';
 import 'package:path/path.dart' as path;
 import 'package:shimmer/shimmer.dart';
 import 'package:smooth_list_view/smooth_list_view.dart';
-
 
 class ChatboxScreen extends StatefulWidget {
   final dynamic contactdetails;
@@ -34,6 +34,9 @@ class ChatboxScreen extends StatefulWidget {
 }
 
 class _ChatboxScreenState extends State<ChatboxScreen> {
+  static const Color _chatBlue = Color(0xFF59AFFF);
+  static const Color _chatBlueDeep = Color(0xFF142B68);
+  static const Color _chatBlueDark = Color(0xFF07152F);
   String? userId = "";
   final ChatboxController controller = Get.put(ChatboxController());
   final Userinfocontroller controllerUser = Get.put(Userinfocontroller());
@@ -45,6 +48,8 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
   List<int> assignedLabelIds = [];
   String? uploadingFileName;
   Map<String, dynamic>? uploadedData;
+  final Map<String, GlobalKey> _messageKeys = {};
+  String? _highlightedMessageUid;
 
   @override
   void initState() {
@@ -87,19 +92,29 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
   }
 
   Future<void> sendMessage() async {
+    final messageBody = controller.messageController.text.trim();
+    if (messageBody.isEmpty) {
+      return;
+    }
+
     final Map<String, dynamic> payload = {
       'contact_uid': userId,
-      'message_body': controller.messageController.text.trim(),
+      'message_body': messageBody,
     };
+
+    controller.addQuotedMessageWamid(payload);
+
     try {
       await data_transport.post(
         'vendor/whatsapp/contact/chat/send',
         inputData: payload,
         context: context,
         onSuccess: (responseData) async {
+          controller.addMessage(messageBody);
+          controller.clearReplyMessage();
+
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (userId != null && userId!.isNotEmpty) {
-              // controller.getUserChatSend();
               Future.delayed(const Duration(seconds: 3), () {
                 controller.getUserChatSend();
               });
@@ -127,10 +142,8 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
       onSuccess: (responseData) {
         uploadTitle = responseData?['data']?['uploadTitle'];
       },
-      onError: (error) {
-      },
-      onFailed: (failedResponse) {
-      },
+      onError: (error) {},
+      onFailed: (failedResponse) {},
     );
 
     return uploadTitle;
@@ -164,10 +177,63 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
         child: Stack(
           children: [
             SizedBox.expand(
-              child: Image.asset(
-                // 'assets/images/ic_background.png',
-                'assets/images/whatsapp_Back.png',
-                fit: BoxFit.cover,
+              child: DecoratedBox(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      _chatBlueDark,
+                      _chatBlueDeep,
+                      Color(0xFF123D87),
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                ),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Opacity(
+                      opacity: 0.1,
+                      child: Image.asset(
+                        'assets/images/whatsapp_Back.png',
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    Align(
+                      alignment: const Alignment(0.9, -0.95),
+                      child: Container(
+                        width: 180,
+                        height: 180,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: RadialGradient(
+                            colors: [
+                              Colors.white.withValues(alpha: 0.42),
+                              _chatBlue.withValues(alpha: 0.22),
+                              Colors.transparent,
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    Align(
+                      alignment: const Alignment(-0.95, 0.45),
+                      child: Container(
+                        width: 220,
+                        height: 220,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: RadialGradient(
+                            colors: [
+                              _chatBlue.withValues(alpha: 0.22),
+                              Colors.transparent,
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             Column(
@@ -175,6 +241,9 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                 Expanded(
                   child: _buildMessageList(formattedTime),
                 ),
+                Obx(() => controller.selectedReplyMessage.value != null
+                    ? _buildReplyPreviewBar()
+                    : const SizedBox.shrink()),
                 _buildMessageInput(context),
                 Obx(() => controller.emojiShowing.value
                     ? _buildEmojiPicker()
@@ -190,103 +259,154 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
   AppBar _buildAppBar(BuildContext context, String formattedTime) {
     return AppBar(
       automaticallyImplyLeading: false,
-      backgroundColor: app_theme.primary,
-      actions: [
-        IconButton(
-          onPressed: () {
-            setState(() {
-              controller.isLoading = false.obs;
-            });
-            Navigator.pop(context);
-          },
-          icon: const Icon(
-            Icons.arrow_back,
-            color: Colors.white,
-          ),
-        ),
-        Expanded(
-          child: GestureDetector(
-            onTap: () {
-              audioController.stop();
-              navigatePage(
-                context,
-                UserInfo(
-                  username: widget.contactdetails['full_name'],
-                  userId: userId,
-                  enableAiBot: controller.enableAiBot.value,  // Pass the value
-                  enableReplyBot: controller.replyAEnableBot.value,
-                  assignedLabelIds: controller.assignedLabelIds,
-                ),
-              );
-            },
-            child: Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: app_theme.green,
-                  child: Text(
-                    widget.contactdetails['name_initials'].toString(),
-                    style: const TextStyle(
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      widget.contactdetails['full_name'].toString(),
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                    Text(
-                      widget.contactdetails['last_message']
-                          ['formatted_message_time'],
-                      style: const TextStyle(color: Colors.white, fontSize: 10),
-                    ),
-                  ],
-                ),
-                const Spacer(),
-              ],
+      elevation: 0,
+      backgroundColor: Colors.transparent,
+      flexibleSpace: Container(
+        margin: const EdgeInsets.fromLTRB(12, 8, 12, 6),
+        decoration: app_theme.topBarDecoration(radius: 30),
+      ),
+      titleSpacing: 0,
+      leadingWidth: 0,
+      title: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: Row(
+          children: [
+            IconButton(
+              onPressed: () {
+                setState(() {
+                  controller.isLoading = false.obs;
+                });
+                Navigator.pop(context);
+              },
+              icon: const Icon(
+                CupertinoIcons.back,
+                color: Colors.white,
+              ),
             ),
-          ),
-        ),
-        PopupMenuButton<String>(
-          color: app_theme.primary,
-          offset: const Offset(-25, 55),
-          icon: const Icon(Icons.more_vert, color: Colors.white),
-          itemBuilder: (BuildContext context) {
-            return [
-              PopupMenuItem(
-                onTap: () async {
+            Expanded(
+              child: GestureDetector(
+                onTap: () {
                   audioController.stop();
-                  await controllerUser.getUserInfo();
-
                   navigatePage(
                     context,
                     UserInfo(
                       username: widget.contactdetails['full_name'],
                       userId: userId,
-                          enableAiBot: controller.enableAiBot.value,  // Pass the value
-                          enableReplyBot: controller.replyAEnableBot.value,
+                      enableAiBot: controller.enableAiBot.value,
+                      enableReplyBot: controller.replyAEnableBot.value,
                       assignedLabelIds: controller.assignedLabelIds,
                     ),
                   );
                 },
                 child: Row(
                   children: [
-                    Icon(Icons.person, color: Colors.white),
-                    Text(
-                      context.lwTranslate.userInformation,
-                      style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white),
+                    CircleAvatar(
+                      backgroundColor: Colors.white.withValues(alpha: 0.10),
+                      child: Text(
+                        widget.contactdetails['name_initials'].toString(),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            widget.contactdetails['full_name'].toString(),
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          Text(
+                            widget.contactdetails['last_message']
+                                ['formatted_message_time'],
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.72),
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () {
+                        if (userId != null) {
+                          WhatsAppCallService.startCall(context, userId!);
+                        }
+                      },
+                      icon: const Icon(
+                        CupertinoIcons.phone,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () {
+                        if (userId != null) {
+                          WhatsAppCallService.startCall(context, userId!);
+                        }
+                      },
+                      icon: const Icon(
+                        CupertinoIcons.video_camera,
+                        color: Colors.white,
+                        size: 22,
+                      ),
                     ),
                   ],
                 ),
               ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        PopupMenuButton<String>(
+          color: app_theme.surface,
+          offset: const Offset(-25, 55),
+          icon: const Icon(CupertinoIcons.ellipsis, color: Colors.white),
+          itemBuilder: (BuildContext context) {
+            return [
+              PopupMenuItem(
+                onTap: () async {
+                  audioController.stop();
+                  await controllerUser.getUserInfo();
+                  if (!context.mounted) {
+                    return;
+                  }
 
+                  navigatePage(
+                    context,
+                    UserInfo(
+                      username: widget.contactdetails['full_name'],
+                      userId: userId,
+                      enableAiBot:
+                          controller.enableAiBot.value, // Pass the value
+                      enableReplyBot: controller.replyAEnableBot.value,
+                      assignedLabelIds: controller.assignedLabelIds,
+                    ),
+                  );
+                },
+                child: Row(
+                  children: [
+                    const Icon(CupertinoIcons.person, color: app_theme.iceBlue),
+                    const SizedBox(width: 8),
+                    Text(
+                      context.lwTranslate.userInformation,
+                      style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: app_theme.lavenderWhite),
+                    ),
+                  ],
+                ),
+              ),
               PopupMenuItem(
                 onTap: () {
                   showDialog(
@@ -294,8 +414,9 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                     builder: (context) => Dialog(
                       elevation: 24,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(24),
                       ),
+                      backgroundColor: app_theme.surface,
                       child: Padding(
                         padding: const EdgeInsets.all(24),
                         child: Column(
@@ -303,8 +424,8 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                           children: [
                             // Animated error icon
                             Icon(
-                              Icons.error_outline,
-                              color: Colors.orange.shade900,
+                              CupertinoIcons.exclamationmark_triangle,
+                              color: app_theme.warning,
                               size: 45,
                             ),
 
@@ -318,7 +439,7 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                                   .textTheme
                                   .headlineSmall
                                   ?.copyWith(
-                                      color: Colors.black,
+                                      color: app_theme.lavenderWhite,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 14),
                               textAlign: TextAlign.center,
@@ -333,7 +454,7 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                                   .textTheme
                                   .bodyMedium
                                   ?.copyWith(
-                                      color: Colors.orange.shade900,
+                                      color: app_theme.secondary,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 14),
                               textAlign: TextAlign.center,
@@ -350,7 +471,7 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                                 children: [
                                   ElevatedButton(
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.red[700],
+                                      backgroundColor: app_theme.error,
                                       foregroundColor: Colors.white,
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12),
@@ -365,7 +486,8 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                                   ),
                                   ElevatedButton(
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.grey[400],
+                                      backgroundColor:
+                                          app_theme.surfaceElevated,
                                       foregroundColor: Colors.white,
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12),
@@ -397,12 +519,13 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                 },
                 child: Row(
                   children: [
-                    Icon(Icons.delete, color: Colors.white),
+                    const Icon(Icons.delete, color: app_theme.error),
+                    const SizedBox(width: 8),
                     Text(context.lwTranslate.deleteAllChatHistory,
-                        style: TextStyle(
+                        style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
-                            color: Colors.white)),
+                            color: app_theme.lavenderWhite)),
                   ],
                 ),
               ),
@@ -419,16 +542,16 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
       return controller.isInitialLoading.value
           ? buildShimmerLoader()
           : Column(
-            children: [
-              Expanded(
-                child: SmoothListView.builder(
-                // child: ListView.builder(
-                  duration: const Duration(milliseconds: 200),
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.only(bottom: 8),
-                  addAutomaticKeepAlives: true,
-                  addRepaintBoundaries: true,
-                  controller: controller.scrollController,
+              children: [
+                Expanded(
+                  child: SmoothListView.builder(
+                    // child: ListView.builder(
+                    duration: const Duration(milliseconds: 200),
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.only(bottom: 8),
+                    addAutomaticKeepAlives: true,
+                    addRepaintBoundaries: true,
+                    controller: controller.scrollController,
                     itemCount: reversedList.length + 1,
                     reverse: true,
                     itemBuilder: (context, index) {
@@ -468,73 +591,202 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                       final whatsAppError =
                           (messageData['whatsAppError'] as String?) ?? "";
                       final data = messageData['__data'] ?? {};
-                      final errorDetails =
-                          messageData['errorDetails'] as String? ?? '';
-                      final statusCode = messageData['statusCode'] as String? ?? '';
+                      final repliedToMessageUid =
+                          messageData['repliedToMessageUid'] as String? ?? '';
+                      final quotedMessage =
+                          controller.findMessageByUid(repliedToMessageUid);
+                      final quotedSenderName = quotedMessage == null
+                          ? null
+                          : quotedMessage['isIncoming'] == true
+                              ? (widget.contactdetails['first_name'] ??
+                                  'Contact')
+                              : 'You';
+                      final messageUid = messageData['uid']?.toString() ?? '';
+                      final messageKey = messageUid.isEmpty
+                          ? null
+                          : _messageKeys.putIfAbsent(messageUid, GlobalKey.new);
 
-                      return Padding(
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                        child: Row(
-                          mainAxisAlignment: !isIncoming
-                              ? isSystem ? MainAxisAlignment.center
-                         :
-                          MainAxisAlignment.end
-                              : MainAxisAlignment.start,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (!isIncoming) ...[
-                              const Expanded(flex: 0, child: SizedBox())
+                      return AnimatedContainer(
+                        key: messageKey,
+                        duration: const Duration(milliseconds: 250),
+                        color: _highlightedMessageUid == messageUid
+                            ? app_theme.primary.withValues(alpha: 0.16)
+                            : Colors.transparent,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 10),
+                          child: Row(
+                            mainAxisAlignment: !isIncoming
+                                ? isSystem
+                                    ? MainAxisAlignment.center
+                                    : MainAxisAlignment.end
+                                : MainAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (!isIncoming) ...[
+                                const Expanded(flex: 0, child: SizedBox())
+                              ],
+                              if (isSystem) ...[
+                                const Expanded(flex: 0, child: SizedBox())
+                              ],
+                              Expanded(
+                                flex: isSystem ? 0 : 6,
+                                child: GestureDetector(
+                                  onLongPress: () {
+                                    if (controller
+                                        .canReplyToMessage(messageData)) {
+                                      controller.setReplyMessage(messageData);
+                                    }
+                                  },
+                                  child: isFile
+                                      ? _buildFileMessageBubble(
+                                          messageContent,
+                                          formattedTime,
+                                          filename,
+                                          filetype,
+                                          controller.iscurrentUser.value)
+                                      : MessageBubble(
+                                          message: messageContent,
+                                          formattedTime: formattedTime,
+                                          isCurrentUser:
+                                              controller.iscurrentUser.value,
+                                          isIncoming: isIncoming,
+                                          isSystem: isSystem,
+                                          status: status,
+                                          messagedAt: messagedAt,
+                                          formattedMessagedAt:
+                                              formattedMessagedAt,
+                                          templateMessage: templateMessage,
+                                          whatsAppError: whatsAppError,
+                                          errorDetails: "",
+                                          statusCode: "",
+                                          mediaLink: link,
+                                          mediaType: type,
+                                          mediaCaption: caption,
+                                          mediaFileName: fileName,
+                                          mediaMimeType: mimeType,
+                                          mediaoOriginalFileName:
+                                              originalFileName,
+                                          media: media,
+                                          data: data.isEmpty ? {} : data,
+                                          quotedMessage: quotedMessage,
+                                          quotedSenderName: quotedSenderName,
+                                          hasQuotedMessage:
+                                              repliedToMessageUid.isNotEmpty,
+                                          onQuotedMessageTap:
+                                              repliedToMessageUid.isEmpty
+                                                  ? null
+                                                  : () => _scrollToMessage(
+                                                      repliedToMessageUid),
+                                        ),
+                                ),
+                              ),
+                              if (!controller.iscurrentUser.value) ...[
+                                const Expanded(flex: 3, child: SizedBox())
+                              ],
                             ],
-
-                            if (isSystem ) ...[
-                              const Expanded(flex: 0,child: SizedBox())
-                            ],
-                            Expanded(
-                              flex: isSystem ?  0:
-                              6,
-                              child: isFile
-                                  ? _buildFileMessageBubble(
-                                      messageContent,
-                                      formattedTime,
-                                      filename,
-                                      filetype,
-                                      controller.iscurrentUser.value)
-                                  : MessageBubble(
-                                      message: messageContent,
-                                      formattedTime: formattedTime,
-                                      isCurrentUser: controller.iscurrentUser.value,
-                                      isIncoming: isIncoming,
-                                      isSystem: isSystem,
-                                      status: status,
-                                      messagedAt: messagedAt,
-                                      formattedMessagedAt: formattedMessagedAt,
-                                      templateMessage: templateMessage,
-                                      whatsAppError: whatsAppError,
-                                      errorDetails: "",
-                                      statusCode: "",
-                                      mediaLink: link,
-                                      mediaType: type,
-                                      mediaCaption: caption,
-                                      mediaFileName: fileName,
-                                      mediaMimeType: mimeType,
-                                      mediaoOriginalFileName: originalFileName,
-                                      media: media,
-                                      data: data.isEmpty ? {} : data,
-                                    ),
-                            ),
-                            if (!controller.iscurrentUser.value) ...[
-                              const Expanded(flex: 3, child: SizedBox())
-                            ],
-                          ],
+                          ),
                         ),
                       );
                     },
                   ),
-              ),
-            ],
-          );
+                ),
+              ],
+            );
     });
+  }
+
+  Future<void> _scrollToMessage(String messageUid) async {
+    final messageContext = _messageKeys[messageUid]?.currentContext;
+    if (messageContext == null) {
+      return;
+    }
+
+    await Scrollable.ensureVisible(
+      messageContext,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+      alignment: 0.5,
+    );
+    if (!mounted) {
+      return;
+    }
+
+    setState(() => _highlightedMessageUid = messageUid);
+    await Future.delayed(const Duration(seconds: 2));
+    if (mounted && _highlightedMessageUid == messageUid) {
+      setState(() => _highlightedMessageUid = null);
+    }
+  }
+
+  Widget _buildReplyPreviewBar() {
+    final message = controller.selectedReplyMessage.value!;
+    final senderName = message['isIncoming'] == true
+        ? (widget.contactdetails['first_name'] ?? 'Contact')
+        : 'You';
+    final contentPreview =
+        controller.buildReplyPreviewText(message, fallback: 'Message');
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+      decoration: BoxDecoration(
+        color: app_theme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: app_theme.cyanGlow.withValues(alpha: 0.22),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: app_theme.cyanGlow.withValues(alpha: 0.10),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 4,
+            height: 42,
+            decoration: BoxDecoration(
+              color: _chatBlue,
+              borderRadius: BorderRadius.circular(999),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Replying to $senderName',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: app_theme.iceBlue,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  contentPreview,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: app_theme.secondary,
+                    height: 1.2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close, size: 20, color: app_theme.secondary),
+            onPressed: () => controller.clearReplyMessage(),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildMessageInput(BuildContext context) {
@@ -557,13 +809,14 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: CircleAvatar(
+                    radius: 28,
+                    backgroundColor: app_theme.cyanGlow,
                     child: IconButton(
                       onPressed: () {
                         sendMessage();
-                        controller
-                            .addMessage(controller.messageController.text);
                       },
-                      icon: const Icon(Icons.send),
+                      icon: const Icon(Icons.send_rounded,
+                          color: app_theme.black),
                     ),
                   ),
                 ),
@@ -578,15 +831,17 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
   Widget _buildTextField(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: Colors.transparent),
-        borderRadius: BorderRadius.circular(8.0),
+        color: app_theme.surface.withValues(alpha: 0.96),
+        border: Border.all(
+          color: app_theme.cyanGlow.withValues(alpha: 0.18),
+        ),
+        borderRadius: BorderRadius.circular(18.0),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
-            spreadRadius: 2,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+            color: app_theme.cyanGlow.withValues(alpha: 0.15),
+            spreadRadius: 1,
+            blurRadius: 18,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -606,22 +861,30 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                 FocusScope.of(context).requestFocus(FocusNode());
               }
             },
-            icon: const Icon(Icons.face_6, color: app_theme.primary),
+            icon: const Icon(Icons.face_6, color: app_theme.iceBlue),
           ),
           suffixIcon: Obx(() {
             return controller.documentsOption.value
                 ? IconButton(
                     onPressed: () => _showAttachmentOptions(context),
-                    icon: const Icon(Icons.attachment_sharp,
-                        color: app_theme.primary),
+                    icon: const Icon(
+                      Icons.attachment_sharp,
+                      color: app_theme.iceBlue,
+                    ),
                   )
                 : const SizedBox.shrink();
           }),
           hintText: context.lwTranslate.typeAMessage,
-          hintStyle: const TextStyle(fontSize: 14, color: Colors.grey),
+          hintStyle: const TextStyle(
+            fontSize: 14,
+            color: app_theme.secondary,
+          ),
           border: const OutlineInputBorder(borderSide: BorderSide.none),
           contentPadding:
               const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        ),
+        style: const TextStyle(
+          color: app_theme.lavenderWhite,
         ),
       ),
     );
@@ -634,6 +897,13 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
       builder: (BuildContext context) {
         return Card(
           margin: const EdgeInsets.all(10),
+          color: app_theme.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+            side: const BorderSide(
+              color: Color.fromRGBO(167, 223, 255, 0.16),
+            ),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Row(
@@ -704,11 +974,16 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
               try {
                 final uploadTitle = await getChatMedia(label);
 
+                if (!mounted) {
+                  return;
+                }
                 Navigator.of(context).pop();
-
                 showCustomDialog(context,
                     uploadTitle: uploadTitle, label: label);
               } catch (e) {
+                if (!mounted) {
+                  return;
+                }
                 Navigator.of(context).pop();
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('Error: $e')),
@@ -912,13 +1187,19 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
+              backgroundColor: app_theme.surface,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8.0),
+                borderRadius: BorderRadius.circular(24.0),
+                side: const BorderSide(
+                  color: Color.fromRGBO(167, 223, 255, 0.16),
+                ),
               ),
-              actionsPadding:   EdgeInsets.symmetric(vertical: 20, horizontal: 15) ,
+              actionsPadding:
+                  const EdgeInsets.symmetric(vertical: 20, horizontal: 15),
               contentPadding:
-                  EdgeInsets.symmetric(vertical: 20, horizontal: 15),
-              insetPadding: EdgeInsets.symmetric(vertical: 20, horizontal: 15),
+                  const EdgeInsets.symmetric(vertical: 20, horizontal: 15),
+              insetPadding:
+                  const EdgeInsets.symmetric(vertical: 20, horizontal: 15),
               content: SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -926,264 +1207,273 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                   children: [
                     Text(
                       context.lwTranslate.sendMedia,
-                      style: TextStyle(
-                          color: Colors.grey.shade800,
+                      style: const TextStyle(
+                          color: app_theme.lavenderWhite,
                           fontSize: 15,
                           fontWeight: FontWeight.w500),
                     ),
-                    SizedBox(height: 5),
+                    const SizedBox(height: 5),
                     Container(
                       alignment: Alignment.center,
                       width: MediaQuery.of(context).size.width,
                       height: MediaQuery.of(context).size.height * 0.08,
                       decoration: BoxDecoration(
-                        color: Colors.grey[200],
+                        color: app_theme.surfaceElevated,
                         borderRadius: BorderRadius.circular(5),
+                        border: Border.all(
+                          color: const Color.fromRGBO(167, 223, 255, 0.16),
+                        ),
                       ),
                       child: selectImageTap == null
                           ? GestureDetector(
-                        onTap: () {
-                          String uploadPath;
-                          String allowedExtensions = "";
-                          switch (label) {
-                            case 'image':
-                              uploadPath =
-                              'media/upload-temp-media/whatsapp_image';
-                              allowedExtensions =
-                              'jpg,jpeg,png,gif'; // Comma-separated string
-                              break;
-                            case 'video':
-                              uploadPath =
-                              'media/upload-temp-media/whatsapp_video';
-                              allowedExtensions =
-                              'mp4,mov,avi,mp3,pdf,doc'; // Multiple file types
-                              break;
-                            case 'document':
-                              uploadPath =
-                              'media/upload-temp-media/whatsapp_document';
-                              allowedExtensions =
-                              'pdf,doc,docx,txt'; // Example extensions
-                              break;
-                            case 'audio':
-                              uploadPath =
-                              'media/upload-temp-media/whatsapp_audio';
-                              allowedExtensions =
-                              'mp3,wav,aac'; // Example extensions
-                              break;
-                            default:
-                              uploadPath =
-                              'media/upload-temp-media/whatsapp_other';
-                              allowedExtensions =
-                              '*'; // Wildcard for all types
-                              break;
-                          }
-                          pickAndUploadFile(
-                            context,
-                            uploadPath,
-                            allowMultiple: (label ==
-                                'video'),
-                            selectImageTap: false,
-                            allowedExtensions:
-                            allowedExtensions, // Pass as a string
-                            onStart: (fileSelected) {
-                              setState(() {
-                                selectImageTap = false;
-                                uploadingFileName =
-                                    path.basename(fileSelected);
-                              });
-                            },
-                            onSuccess: (value, data) {
-                              setState(() {
-                                selectImageTap = true;
-                              });
-                            },
-                            onError: (error) {
-                              setState(() {
-                                selectImageTap = null;
-                              });
-                              pr(error);
-                            },
-                          );
-                        },
-                        child: Container(
-                            padding: EdgeInsets.all(5),
-                            alignment: Alignment.center,
-                            height: MediaQuery.of(context).size.height *
-                                0.05,
-                            child: Text(
-                              uploadTitle == null
-                                  ? 'Loading...'
-                                  : uploadTitle.toString(),
-                              style: TextStyle(
-                                  color: uploadTitle == null
-                                      ? Colors.grey
-                                      .shade400 // Lighter color for loading text
-                                      : Colors.grey.shade600,
-                                  fontWeight: FontWeight.w500),
-                            )),
-                      )
+                              onTap: () {
+                                String uploadPath;
+                                String allowedExtensions = "";
+                                switch (label) {
+                                  case 'image':
+                                    uploadPath =
+                                        'media/upload-temp-media/whatsapp_image';
+                                    allowedExtensions =
+                                        'jpg,jpeg,png,gif'; // Comma-separated string
+                                    break;
+                                  case 'video':
+                                    uploadPath =
+                                        'media/upload-temp-media/whatsapp_video';
+                                    allowedExtensions =
+                                        'mp4,mov,avi,mp3,pdf,doc'; // Multiple file types
+                                    break;
+                                  case 'document':
+                                    uploadPath =
+                                        'media/upload-temp-media/whatsapp_document';
+                                    allowedExtensions =
+                                        'pdf,doc,docx,txt'; // Example extensions
+                                    break;
+                                  case 'audio':
+                                    uploadPath =
+                                        'media/upload-temp-media/whatsapp_audio';
+                                    allowedExtensions =
+                                        'mp3,wav,aac'; // Example extensions
+                                    break;
+                                  default:
+                                    uploadPath =
+                                        'media/upload-temp-media/whatsapp_other';
+                                    allowedExtensions =
+                                        '*'; // Wildcard for all types
+                                    break;
+                                }
+                                pickAndUploadFile(
+                                  context,
+                                  uploadPath,
+                                  allowMultiple: (label == 'video'),
+                                  selectImageTap: false,
+                                  allowedExtensions:
+                                      allowedExtensions, // Pass as a string
+                                  onStart: (fileSelected) {
+                                    setState(() {
+                                      selectImageTap = false;
+                                      uploadingFileName =
+                                          path.basename(fileSelected);
+                                    });
+                                  },
+                                  onSuccess: (value, data) {
+                                    setState(() {
+                                      selectImageTap = true;
+                                    });
+                                  },
+                                  onError: (error) {
+                                    setState(() {
+                                      selectImageTap = null;
+                                    });
+                                    pr(error);
+                                  },
+                                );
+                              },
+                              child: Container(
+                                  padding: EdgeInsets.all(5),
+                                  alignment: Alignment.center,
+                                  height:
+                                      MediaQuery.of(context).size.height * 0.05,
+                                  child: Text(
+                                    uploadTitle == null
+                                        ? 'Loading...'
+                                        : uploadTitle.toString(),
+                                    style: TextStyle(
+                                        color: uploadTitle == null
+                                            ? app_theme.secondary.withValues(
+                                                alpha: 0.72,
+                                              )
+                                            : app_theme.secondary,
+                                        fontWeight: FontWeight.w500),
+                                  )),
+                            )
                           : selectImageTap == false
-                          ? Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 7),
-                        child: Container(
-                          padding: EdgeInsets.all(4),
-                          alignment: Alignment.center,
-                          height:
-                          MediaQuery.of(context).size.height *
-                              0.06,
-                          decoration: BoxDecoration(
-                            color: Colors.grey,
-                            borderRadius: BorderRadius.circular(5),
-                          ),
-                          child: Row(
-                            mainAxisAlignment:
-                            MainAxisAlignment.spaceEvenly,
-                            crossAxisAlignment:
-                            CrossAxisAlignment.center,
-                            children: [
-                              Flexible(
-                                flex: 4,
-                                child: Text(
-                                  uploadingFileName ??
-                                      context.lwTranslate.uploading,
-                                  style: TextStyle(
-                                      color: Colors.black,
-                                      fontWeight: FontWeight.w500,
-                                      fontSize: 9),
-                                  textAlign: TextAlign.left,
-                                ),
-                              ),
-                              Flexible(flex: 1, child: Container()),
-                              SizedBox(
-                                width: 10,
-                              ),
-                              Flexible(
-                                flex: 2,
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        context
-                                            .lwTranslate.uploading,
-                                        style: TextStyle(
-                                            color: Colors.white,
-                                            fontWeight:
-                                            FontWeight.w600,
-                                            fontSize: 7),
+                              ? Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(horizontal: 7),
+                                  child: Container(
+                                    padding: EdgeInsets.all(4),
+                                    alignment: Alignment.center,
+                                    height: MediaQuery.of(context).size.height *
+                                        0.06,
+                                    decoration: BoxDecoration(
+                                      color: app_theme.surface,
+                                      borderRadius: BorderRadius.circular(5),
+                                      border: Border.all(
+                                        color: const Color.fromRGBO(
+                                            167, 223, 255, 0.16),
                                       ),
                                     ),
-                                    SizedBox(
-                                      width: 3,
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceEvenly,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
+                                      children: [
+                                        Flexible(
+                                          flex: 4,
+                                          child: Text(
+                                            uploadingFileName ??
+                                                context.lwTranslate.uploading,
+                                            style: TextStyle(
+                                                color: app_theme.lavenderWhite,
+                                                fontWeight: FontWeight.w500,
+                                                fontSize: 9),
+                                            textAlign: TextAlign.left,
+                                          ),
+                                        ),
+                                        Flexible(flex: 1, child: Container()),
+                                        SizedBox(
+                                          width: 10,
+                                        ),
+                                        Flexible(
+                                          flex: 2,
+                                          child: Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  context.lwTranslate.uploading,
+                                                  style: TextStyle(
+                                                      color:
+                                                          app_theme.secondary,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      fontSize: 7),
+                                                ),
+                                              ),
+                                              SizedBox(
+                                                width: 3,
+                                              ),
+                                              SizedBox(
+                                                height: 15,
+                                                width: 15,
+                                                child: LoadingAnimationWidget
+                                                    .inkDrop(
+                                                  color: app_theme.cyanGlow,
+                                                  size: 20,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    SizedBox(
-                                      height: 15,
-                                      width: 15,
-                                      child: LoadingAnimationWidget
-                                          .inkDrop(
-                                        color: Colors.white,
-                                        size: 20,
-                                      ),
+                                  ),
+                                )
+                              : Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(horizontal: 7),
+                                  child: Container(
+                                    padding: EdgeInsets.all(4),
+                                    alignment: Alignment.center,
+                                    height: MediaQuery.of(context).size.height *
+                                        0.06,
+                                    decoration: BoxDecoration(
+                                      color: app_theme.cyanGlow,
+                                      borderRadius: BorderRadius.circular(5),
                                     ),
-                                  ],
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceEvenly,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
+                                      children: [
+                                        Flexible(
+                                          flex: 4,
+                                          child: Text(
+                                            uploadingFileName ??
+                                                context.lwTranslate.uploading,
+                                            style: TextStyle(
+                                                color: app_theme.black,
+                                                fontWeight: FontWeight.w500,
+                                                fontSize: 9),
+                                            textAlign: TextAlign.left,
+                                          ),
+                                        ),
+                                        Flexible(flex: 1, child: Container()),
+                                        SizedBox(
+                                          width: 10,
+                                        ),
+                                        Flexible(
+                                          flex: 2,
+                                          child: Row(
+                                            children: [
+                                              Text(
+                                                context
+                                                    .lwTranslate.uploadComplete,
+                                                style: TextStyle(
+                                                    color: app_theme.black,
+                                                    fontWeight: FontWeight.w500,
+                                                    fontSize: 7),
+                                              ),
+                                              SizedBox(
+                                                width: 3,
+                                              ),
+                                              Icon(
+                                                Icons.check_circle,
+                                                color: app_theme.black,
+                                                size: 20,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                          : Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 7),
-                        child: Container(
-                          padding: EdgeInsets.all(4),
-                          alignment: Alignment.center,
-                          height:
-                          MediaQuery.of(context).size.height *
-                              0.06,
-                          decoration: BoxDecoration(
-                            color: app_theme.primary,
-                            borderRadius: BorderRadius.circular(5),
-                          ),
-                          child: Row(
-                            mainAxisAlignment:
-                            MainAxisAlignment.spaceEvenly,
-                            crossAxisAlignment:
-                            CrossAxisAlignment.center,
-                            children: [
-                              Flexible(
-                                flex: 4,
-                                child: Text(
-                                  uploadingFileName ??
-                                      context.lwTranslate.uploading,
-                                  style: TextStyle(
-                                      color: Colors.black,
-                                      fontWeight: FontWeight.w500,
-                                      fontSize: 9),
-                                  textAlign: TextAlign.left,
-                                ),
-                              ),
-                              Flexible(flex: 1, child: Container()),
-                              SizedBox(
-                                width: 10,
-                              ),
-                              Flexible(
-                                flex: 2,
-                                child: Row(
-                                  children: [
-                                    Text(
-                                      context.lwTranslate
-                                          .uploadComplete,
-                                      style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight:
-                                          FontWeight.w500,
-                                          fontSize: 7),
-                                    ),
-                                    SizedBox(
-                                      width: 3,
-                                    ),
-                                    Icon(
-                                      Icons.check_circle,
-                                      color: Colors.white,
-                                      size: 20,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
                     ),
-                    SizedBox(height: 16.0),
+                    const SizedBox(height: 16.0),
                     Text(
                       context.lwTranslate.captionText,
-                      style: TextStyle(
-                          color: Colors.grey.shade800,
+                      style: const TextStyle(
+                          color: app_theme.lavenderWhite,
                           fontSize: 15,
                           fontWeight: FontWeight.w500),
                     ),
-                    SizedBox(height: 5),
+                    const SizedBox(height: 5),
                     Container(
                       decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.shade300),
+                        border: Border.all(
+                          color: const Color.fromRGBO(167, 223, 255, 0.18),
+                        ),
                         borderRadius: BorderRadius.circular(4),
-                        color: Colors.white,
+                        color: app_theme.surfaceElevated,
                       ),
                       child: TextField(
                         controller: textController,
                         autofocus: false,
-                        style: TextStyle(fontSize: 13, color: Colors.black),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: app_theme.lavenderWhite,
+                        ),
                         maxLines: null,
                         minLines: 8,
                         decoration: InputDecoration(
                           hintText: context.lwTranslate.addACaption,
-                          hintStyle: TextStyle(
-                              fontSize: 12, color: Colors.grey.shade500),
-                          contentPadding: EdgeInsets.symmetric(
+                          hintStyle: const TextStyle(
+                              fontSize: 12, color: app_theme.secondary),
+                          contentPadding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 8.0),
-                          border: OutlineInputBorder(
+                          border: const OutlineInputBorder(
                             borderSide: BorderSide.none,
                             borderRadius:
                                 BorderRadius.all(Radius.circular(15.0)),
@@ -1198,11 +1488,15 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                 LoadingButton(
                   defaultWidget: Text(
                     context.lwTranslate.send,
-                    style: TextStyle(color: Colors.white, fontSize: 13),
+                    style: const TextStyle(
+                      color: app_theme.black,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   color: selectImageTap == true
-                      ? app_theme.primary
-                      : Colors.green.shade200, // Change color when disabled
+                      ? app_theme.cyanGlow
+                      : app_theme.surfaceElevated,
                   width: 70,
                   height: 35,
                   onPressed: selectImageTap == true
@@ -1226,12 +1520,11 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                         }
                       : null, // Disable button when selectImageTap is not true
                 ),
-
                 LoadingButton(
                   defaultWidget: Text(context.lwTranslate.cancel,
-                      // 'Cancel',
-                      style: TextStyle(color: Colors.white, fontSize: 13)),
-                  color: Colors.grey.shade600,
+                      style:
+                          const TextStyle(color: Colors.white, fontSize: 13)),
+                  color: app_theme.surfaceElevated,
                   width: MediaQuery.of(context).size.width * 0.23,
                   height: MediaQuery.of(context).size.height * 0.045,
                   onPressed: () async {
@@ -1248,7 +1541,6 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
       },
     );
   }
-
 
   void pickAndUploadFile(
     BuildContext context,
@@ -1280,6 +1572,9 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
         onStart(uploadedImageName);
       }
       await Future.delayed(Duration(seconds: 2));
+      if (!context.mounted) {
+        return;
+      }
       data_transport.uploadFile(
         uploadedImageName,
         url,
@@ -1292,21 +1587,26 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
         },
         thenCallback: (data) {},
         onSuccess: (responseData) {
-          if (responseData != null && responseData is Map) {
-            var data = responseData['data'];
-            String fileName = data['fileName'] ?? 'No fileName';
-            uploadingFileName = responseData['data']['fileName'];
-            uploadedData = responseData['data'];
+          if (responseData is Map<String, dynamic>) {
+            final uploadedResponseData = responseData['data'];
+            if (uploadedResponseData is! Map<String, dynamic>) {
+              return;
+            }
+            uploadingFileName = uploadedResponseData['fileName']?.toString();
+            uploadedData = uploadedResponseData;
             if (onSuccess != null) {
               onSuccess(responseData, null);
             }
-          } else {}
+          }
         },
       );
     } catch (e) {
       pr("Error during upload: $e");
       if (onError != null) {
         onError(e);
+      }
+      if (!context.mounted) {
+        return;
       }
       showToastMessage(context, context.lwTranslate.uploadFailed,
           type: context.lwTranslate.error);
@@ -1320,25 +1620,25 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
         child: Obx(() {
           return controller.isLoading.value
               ? Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                LoadingAnimationWidget.discreteCircle(
-                  color: Colors.grey,
-                  size: 25,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  context.lwTranslate.pleaseWait,
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 14,
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      LoadingAnimationWidget.discreteCircle(
+                        color: Colors.grey,
+                        size: 25,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        context.lwTranslate.pleaseWait,
+                        style: TextStyle(
+                          color: Colors.grey,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                            ],
-                          ),
-              )
+                )
               : const SizedBox.shrink();
         }),
       ),

@@ -2,7 +2,7 @@
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import '/support/app_theme.dart' as app_theme;
+import 'package:stundaa/support/app_theme.dart' as app_theme;
 
 class SelectField extends StatelessWidget {
   final String labelText;
@@ -59,7 +59,7 @@ class SelectField extends StatelessWidget {
           ),
         ),
         isExpanded: true,
-        value: value,
+        initialValue: value,
         icon: const Icon(
           CupertinoIcons.chevron_down,
           size: 18,

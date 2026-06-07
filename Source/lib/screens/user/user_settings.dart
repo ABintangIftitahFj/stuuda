@@ -1,16 +1,12 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:form_validator/form_validator.dart';
-import '../../components/AppBar.dart';
-import '../../components/input_field.dart';
-import '../../services/auth.dart' as auth;
-import '../../services/locale_model.dart';
-import '../../services/utils.dart';
-import '../../common/widgets/common.dart';
-import '../../services/data_transport.dart' as data_transport;
-import '../../support/app_locales.dart';
-import '../../support/app_theme.dart' as app_theme;
-import '../landing.dart';
+import 'package:stundaa/common/widgets/common.dart';
+import 'package:stundaa/services/locale_model.dart';
+import 'package:stundaa/services/utils.dart';
+import 'package:stundaa/support/app_locales.dart';
+import 'package:stundaa/support/app_theme.dart' as app_theme;
+import 'package:stundaa/screens/landing.dart';
 
 class UserSettingsPage extends StatefulWidget {
   const UserSettingsPage({
@@ -66,90 +62,138 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: app_theme.backgroundColor,
       appBar: innerAppBar(
         title: context.lwTranslate.settings,
         context: context,
       ),
       body: Padding(
-        padding: const EdgeInsets.only(
-          left: 32,
-          right: 32,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 22),
         child: Padding(
           padding: const EdgeInsets.only(top: 30),
           child: SingleChildScrollView(
             child: Form(
               key: _formKey,
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: Column(
+              child: Container(
+                padding: const EdgeInsets.all(22),
+                decoration: app_theme.insetPanelDecoration(radius: 24).copyWith(
+                  gradient: app_theme.cardGradient,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        Text(context.lwTranslate.selectLanguage),
-                        SizedBox(height: 10,),
-                        Consumer<LocaleModel>(
-                          builder: (context, localeModel, child) => Container(
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade100,
-                              borderRadius: BorderRadius.all(Radius.circular(5)),
-                              border: Border(
-                                bottom: BorderSide(color: Color.fromRGBO(212, 212, 212, 1)),
-                                top: BorderSide(color: Color.fromRGBO(212, 212, 212, 1)),
-                                right: BorderSide(color: Color.fromRGBO(212, 212, 212, 1)),
-                                left: BorderSide(color: Color.fromRGBO(212, 212, 212, 1)),
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: app_theme.surfaceMuted,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Icon(
+                            CupertinoIcons.globe,
+                            color: app_theme.iceBlue,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                context.lwTranslate.settings,
+                                style: Theme.of(context).textTheme.titleLarge,
                               ),
-                            ),
-                            padding: EdgeInsets.only(left: 5),
-
-                            child: DropdownButton(
-                              underline: SizedBox(),
-                              isExpanded: true,
-                              value: selectedLocale,
-                              items: localesDropdownItems,
-                              onChanged: (String? value) {
-                                if (value != null) {
-                                  localeModel.set(Locale(value));
-                                  Navigator.of(context).pushAndRemoveUntil(
-                                      MaterialPageRoute(
-                                          builder: (context) =>
-                                              const LandingPage(
-                                                skipMobileDialog: true,
-                                              )),
-                                      (route) => false);
-                                }
-                              },
-                            ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Language and regional preferences',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(color: app_theme.iceBlue),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 16.0),
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                    const SizedBox(height: 22),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            context.lwTranslate.selectLanguage,
+                            style: const TextStyle(
+                              color: app_theme.lavenderWhite,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                          foregroundColor: app_theme.white,
-                        ),
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
-                        child: Text(
-                          context.lwTranslate.goBack,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.black,
+                          const SizedBox(
+                            height: 10,
+                          ),
+                          Consumer<LocaleModel>(
+                            builder: (context, localeModel, child) => Container(
+                              decoration:
+                                  app_theme.insetPanelDecoration(radius: 18),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 12),
+                              child: DropdownButton(
+                                dropdownColor: app_theme.surface,
+                                style: const TextStyle(
+                                    color: app_theme.lavenderWhite),
+                                iconEnabledColor: app_theme.iceBlue,
+                                underline: const SizedBox(),
+                                isExpanded: true,
+                                value: selectedLocale,
+                                items: localesDropdownItems,
+                                onChanged: (String? value) {
+                                  if (value != null) {
+                                    localeModel.set(Locale(value));
+                                    Navigator.of(context).pushAndRemoveUntil(
+                                        MaterialPageRoute(
+                                            builder: (context) =>
+                                                const LandingPage(
+                                                  skipMobileDialog: true,
+                                                )),
+                                        (route) => false);
+                                  }
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 16.0),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: app_theme.surfaceMuted,
+                            foregroundColor: app_theme.lavenderWhite,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                          child: Text(
+                            context.lwTranslate.goBack,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: app_theme.lavenderWhite,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

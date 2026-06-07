@@ -1,10 +1,8 @@
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
-import 'package:path/path.dart';
-import '../services/auth.dart';
-import '../services/data_transport.dart' as data_transport;
-import '../services/utils.dart';
-import 'dart:developer';
+import 'package:stundaa/services/auth.dart';
+import 'package:stundaa/services/data_transport.dart' as data_transport;
+import 'package:stundaa/services/utils.dart';
 
 class ContactProvider with ChangeNotifier {
   List<MapEntry<String, dynamic>> contactsList = [];
@@ -17,7 +15,6 @@ class ContactProvider with ChangeNotifier {
   int currentPage = 1;
   int totalPages = 5;
 
-
   bool _isTabLoading = false;
 
   bool get isTabLoading => _isTabLoading;
@@ -27,121 +24,16 @@ class ContactProvider with ChangeNotifier {
     notifyListeners();
   }
 
-
-  // Future<void> getUser({bool isRefresh = true, String assigned = ''}) async {
-  //   if (isLoading || (isLoadingMore && !isRefresh)) return;
-  //   if (isRefresh) {
-  //     currentPage = 1;
-  //     contactsList.clear();
-  //     originalContactsList.clear();
-  //   }
-  //   isLoading = isRefresh;
-  //   isLoadingMore = !isRefresh;
-  //   WidgetsBinding.instance.addPostFrameCallback((_) {
-  //     notifyListeners();
-  //   });
-  //   try {
-  //     // this loading-true not work in notification listeners ,when scroll down it shows in center not in bottom
-  //     isLoading = true;
-  //     isLoadingMore = true;
-  //     final responseData = await data_transport
-  //         // .get('vendor/contact/contacts-data?page=$currentPage');
-  //         .get(
-  //             'vendor/contact/contacts-data?page=$currentPage&=&assigned=$assigned');
-  //     if (responseData != null) {
-  //       var clientContacts =
-  //           getItemValue(responseData, 'client_models.contacts');
-  //       unreadMsgCount =
-  //           getItemValue(responseData, 'client_models.unreadMessagesCount') ?? 0;
-  //       var newContacts = clientContacts.entries;
-  //       for (var entry in newContacts) {
-  //         if (!contactsList.any((e) => e.key == entry.key)) {
-  //           contactsList.add(entry);
-  //           originalContactsList.add(entry);
-  //         }
-  //       }
-  //
-  //       if (!isRefresh) {
-  //         currentPage++;
-  //       }
-  //     }
-  //   } catch (e) {
-  //   } finally {
-  //     isLoading = false;
-  //     isLoadingMore = false;
-  //     notifyListeners();
-  //   }
-  // }
-
-
   bool hasReachedMax = false;
   bool hasError = false;
   String errorMessage = '';
-
-  // Future<void> getUser({bool isRefresh = true, String assigned = ''}) async {
-  //   if ((isLoading && isRefresh) || (isLoadingMore && !isRefresh)) return;
-  //   if (!isRefresh && hasReachedMax) return;
-  //   if (isRefresh) {
-  //     currentPage = 1;
-  //     contactsList.clear();
-  //     originalContactsList.clear();
-  //   }
-  //   isLoading = isRefresh;
-  //   isLoadingMore = !isRefresh;
-  //   WidgetsBinding.instance.addPostFrameCallback((_) {
-  //     notifyListeners();
-  //   });
-  //   // notifyListeners();
-  //
-  //   try {
-  //     final response = await data_transport.get(
-  //         'vendor/contact/contacts-data?page=$currentPage&assigned=$assigned'
-  //     );
-  //
-  //     if (response != null) {
-  //       final clientContacts = getItemValue(response, 'client_models.contacts');
-  //       unreadMsgCount = getItemValue(response, 'client_models.unreadMessagesCount') ?? 0;
-  //
-  //       if (clientContacts.isEmpty) {
-  //         hasReachedMax = true;
-  //       } else {
-  //         final newContacts = clientContacts.entries;
-  //         if (isRefresh) {
-  //           contactsList.clear();
-  //           originalContactsList.clear();
-  //         }
-  //
-  //         for (var entry in newContacts) {
-  //           if (!contactsList.any((e) => e.key == entry.key)) {
-  //             contactsList.add(entry);
-  //             originalContactsList.add(entry);
-  //           }
-  //         }
-  //
-  //         if (!isRefresh) {
-  //           currentPage++;
-  //         }
-  //       }
-  //     }
-  //   } catch (e) {
-  //     errorMessage = 'Failed to load contacts';
-  //     hasError = true;
-  //   } finally {
-  //     isLoading = false;
-  //     isLoadingMore = false;
-  //     WidgetsBinding.instance.addPostFrameCallback((_) {
-  //       notifyListeners();
-  //     });
-  //     // notifyListeners();
-  //   }
-  // }
 
   Future<void> getUser({bool isRefresh = true, String assigned = ''}) async {
     // Prevent duplicate calls
     if ((isLoading && isRefresh) || (isLoadingMore && !isRefresh)) return;
     if (!isRefresh && hasReachedMax) return;
 
-    // Update state without notifying listeners yet
+    // Update state
     isLoading = isRefresh;
     isLoadingMore = !isRefresh;
 
@@ -165,21 +57,19 @@ class ContactProvider with ChangeNotifier {
           'vendor/contact/contacts-data?page=$currentPage&assigned=$assigned'
       );
 
-      if (response != null) {
-        final clientContacts = getItemValue(response, 'client_models.contacts');
-        unreadMsgCount = getItemValue(response, 'client_models.unreadMessagesCount') ?? 0;
+      final clientContacts = getItemValue(response, 'client_models.contacts');
+      unreadMsgCount = getItemValue(response, 'client_models.unreadMessagesCount') ?? 0;
 
-        if (clientContacts.isEmpty) {
-          hasReachedMax = true;
-          if (!isRefresh) currentPage--;
-        } else {
-          final newContacts = clientContacts.entries.toList();
+      if (clientContacts.isEmpty) {
+        hasReachedMax = true;
+        if (!isRefresh) currentPage--;
+      } else {
+        final newContacts = clientContacts.entries.toList();
 
-          for (var entry in newContacts) {
-            if (!contactsList.any((e) => e.key == entry.key)) {
-              contactsList.add(entry);
-              originalContactsList.add(entry);
-            }
+        for (var entry in newContacts) {
+          if (!contactsList.any((e) => e.key == entry.key)) {
+            contactsList.add(entry);
+            originalContactsList.add(entry);
           }
         }
       }
@@ -196,6 +86,7 @@ class ContactProvider with ChangeNotifier {
       });
     }
   }
+
   Future<void> getUserLable({bool isRefresh = false, int? labelId}) async {
     if (isLoading || (isLoadingMore && !isRefresh)) return;
     if (isRefresh) {
@@ -212,28 +103,26 @@ class ContactProvider with ChangeNotifier {
     try {
       final responseData = await data_transport
           .get('vendor/contact/contacts-data?page=$currentPage');
-      if (responseData != null) {
-        var clientContacts =
-            getItemValue(responseData, 'client_models.contacts');
-        unreadMsgCount =
-            getItemValue(responseData, 'client_models.unreadMessagesCount') ??
-                0;
-        var newContacts = clientContacts.entries;
+      var clientContacts =
+          getItemValue(responseData, 'client_models.contacts');
+      unreadMsgCount =
+          getItemValue(responseData, 'client_models.unreadMessagesCount') ??
+              0;
+      var newContacts = clientContacts.entries;
 
-        for (var entry in newContacts) {
-          if (!contactsList.any((e) => e.key == entry.key)) {
-            if (labelId == null ||
-                (entry.value['labels'] as List)
-                    .any((label) => label['_id'] == labelId)) {
-              contactsList.add(entry);
-              originalContactsList.add(entry);
-            }
+      for (var entry in newContacts) {
+        if (!contactsList.any((e) => e.key == entry.key)) {
+          if (labelId == null ||
+              (entry.value['labels'] as List)
+                  .any((label) => label['_id'] == labelId)) {
+            contactsList.add(entry);
+            originalContactsList.add(entry);
           }
         }
+      }
 
-        if (!isRefresh) {
-          currentPage++;
-        }
+      if (!isRefresh) {
+        currentPage++;
       }
     } catch (e) {
       // Handle error
@@ -255,26 +144,23 @@ class ContactProvider with ChangeNotifier {
         'vendor/contact/contacts-data/$vendorUid?way=append&request_contact=$contactUid&assigned=',
       );
 
-      if (response != null) {
-        final clientContacts = getItemValue(response, 'client_models.contacts');
-        final newUnreadCount = getItemValue(response, 'client_models.unreadMessagesCount') ?? 0;
+      final clientContacts = getItemValue(response, 'client_models.contacts');
+      final newUnreadCount = getItemValue(response, 'client_models.unreadMessagesCount') ?? 0;
 
-        unreadMsgCount = newUnreadCount;
+      unreadMsgCount = newUnreadCount;
 
-        for (var entry in clientContacts.entries) {
-          if (!contactsList.any((e) => e.key == entry.key)) {
-            contactsList.add(entry);
-            originalContactsList.add(entry);
-          }
+      for (var entry in clientContacts.entries) {
+        if (!contactsList.any((e) => e.key == entry.key)) {
+          contactsList.add(entry);
+          originalContactsList.add(entry);
         }
-
-        notifyListeners();
       }
+
+      notifyListeners();
     } catch (e) {
-      print('Error fetching single contact: $e');
+      debugPrint('Error fetching single contact: $e');
     }
   }
-
 
   void updateMessageCountToZero(String contactId) {
     int index =
@@ -303,8 +189,6 @@ class ContactProvider with ChangeNotifier {
       }
     }
   }
-
-
 
   void updateContactWithNewMessage(
       BuildContext context,
@@ -345,7 +229,7 @@ class ContactProvider with ChangeNotifier {
       final updatedOriginalContact = {
         ...originalEntry.value,
         'last_message': {
-          'formatted_message_time':context.lwTranslate.justNow,
+          'formatted_message_time': context.lwTranslate.justNow,
           '_uid': lastMessageUid,
         },
         'unread_messages_count':
@@ -357,7 +241,7 @@ class ContactProvider with ChangeNotifier {
     } else {
       final newOriginalContact = MapEntry(contactUid, {
         'last_message': {
-          'formatted_message_time':context.lwTranslate.justNow,
+          'formatted_message_time': context.lwTranslate.justNow,
           '_uid': lastMessageUid,
         },
         'unread_messages_count': 1,

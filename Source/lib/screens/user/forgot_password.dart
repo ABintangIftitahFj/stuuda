@@ -1,11 +1,12 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:progress_loading_button/progress_loading_button.dart';
 import 'package:form_validator/form_validator.dart';
-import '../../components/AppBar.dart';
-import '../../components/input_field.dart';
-import '../../services/utils.dart';
-import '../../services/data_transport.dart' as data_transport;
-import '../../support/app_theme.dart' as app_theme;
+import 'package:stundaa/components/app_bar.dart';
+import 'package:stundaa/components/input_field.dart';
+import 'package:stundaa/services/utils.dart';
+import 'package:stundaa/services/data_transport.dart' as data_transport;
+import 'package:stundaa/support/app_theme.dart' as app_theme;
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -31,13 +32,30 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
           context: context,
           title: context.lwTranslate.forgotPassword,
           actionWidgets: []),
+      backgroundColor: app_theme.backgroundColor,
       body: Padding(
-        padding: const EdgeInsets.only(top: 0, left: 32, right: 32, bottom: 0),
-        child: Padding(
-          padding: const EdgeInsets.only(top: 30),
-          child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(22, 18, 22, 0),
+        child: SingleChildScrollView(
+          child: Container(
+            padding: const EdgeInsets.all(22),
+            decoration: app_theme.insetPanelDecoration(radius: 24).copyWith(
+              gradient: app_theme.cardGradient,
+            ),
             child: Column(
               children: [
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: app_theme.surfaceMuted,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Icon(
+                    CupertinoIcons.lock_rotation,
+                    color: app_theme.iceBlue,
+                  ),
+                ),
+                const SizedBox(height: 16),
                 if (alertMessage != '')
                   Text(
                     alertMessage,
@@ -59,14 +77,22 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                               onSaved: (String? value) {
                                 formInputData['email'] = value;
                               },
+                              prefixIcon: const Icon(
+                                CupertinoIcons.mail,
+                                color: app_theme.iceBlue,
+                              ),
                               validation:
                                   ValidationBuilder().minLength(3).build(),
                             ),
                             LoadingButton(
                               defaultWidget: Text(
                                 context.lwTranslate.sendEmailOtp,
+                                style: const TextStyle(
+                                  color: app_theme.black,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
-                              color: app_theme.white,
+                              color: app_theme.cyanGlow,
                               onPressed: () async {
                                 _requestOtpFormKey.currentState?.save();
                                 if (_requestOtpFormKey.currentState!
@@ -110,6 +136,10 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                               readOnly: true,
                               initialValue: formInputData['email'],
                               labelText:  context.lwTranslate.email,
+                              prefixIcon: const Icon(
+                                CupertinoIcons.mail_solid,
+                                color: app_theme.iceBlue,
+                              ),
                               validation:
                                   ValidationBuilder().minLength(3).build(),
                             ),
@@ -119,12 +149,20 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                               onSaved: (String? value) {
                                 formInputData['otp'] = value;
                               },
+                              prefixIcon: const Icon(
+                                CupertinoIcons.number_circle,
+                                color: app_theme.iceBlue,
+                              ),
                               validation:
                                   ValidationBuilder().minLength(3).build(),
                             ),
                             InputField(
                               labelText: context.lwTranslate.newPassword,
                               password: true,
+                              prefixIcon: const Icon(
+                                CupertinoIcons.lock,
+                                color: app_theme.iceBlue,
+                              ),
                               onSaved: (String? value) {
                                 formInputData['password'] = value;
                               },
@@ -134,6 +172,10 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                             InputField(
                               labelText: context.lwTranslate.confirmNewPassword,
                               password: true,
+                              prefixIcon: const Icon(
+                                CupertinoIcons.lock_shield,
+                                color: app_theme.iceBlue,
+                              ),
                               onSaved: (String? value) {
                                 formInputData['password_confirmation'] = value;
                               },
@@ -143,8 +185,12 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                             LoadingButton(
                               defaultWidget: Text(
                                 context.lwTranslate.submit,
+                                style: const TextStyle(
+                                  color: app_theme.black,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
-                              color: app_theme.white,
+                              color: app_theme.cyanGlow,
                               onPressed: () async {
                                 _resetPasswordFormKey.currentState?.save();
                                 if (_resetPasswordFormKey.currentState!
@@ -176,10 +222,11 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                     width: double.infinity,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
+                        backgroundColor: app_theme.surfaceMuted,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(16),
                         ),
-                        foregroundColor: app_theme.white,
+                        foregroundColor: app_theme.lavenderWhite,
                       ),
                       onPressed: () {
                         Navigator.pop(context);

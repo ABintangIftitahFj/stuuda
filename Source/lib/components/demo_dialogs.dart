@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -118,13 +119,16 @@ class _MobileNumberDialogContentState extends State<MobileNumberDialogContent> {
                   decoration: InputDecoration(
                     labelText: context.lwTranslate.mobileNumber,
                     labelStyle: const TextStyle(color: app_theme.iceBlue),
-                    prefixIcon: const Icon(Icons.phone, color: app_theme.iceBlue),
+                    prefixIcon: const Icon(
+                      CupertinoIcons.phone,
+                      color: app_theme.iceBlue,
+                    ),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(18),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderSide: const BorderSide(color: Color.fromRGBO(167, 223, 255, 0.20)),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(18),
                     ),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                   ),
@@ -160,7 +164,7 @@ class _MobileNumberDialogContentState extends State<MobileNumberDialogContent> {
                   foregroundColor: app_theme.black,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                 ),
                 child: Text(
@@ -198,9 +202,10 @@ class _MobileNumberDialogContentState extends State<MobileNumberDialogContent> {
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: app_theme.surfaceElevated,
+                  foregroundColor: app_theme.lavenderWhite,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                 ),
                 child: Text(
@@ -273,14 +278,9 @@ class QRDialogContent extends StatelessWidget {
                   ),
                   const SizedBox(height: 20),
                   Container(
-                    padding: const EdgeInsets.all(8.0),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: const Color.fromRGBO(167, 223, 255, 0.18),
-                      ),
-                      borderRadius: BorderRadius.circular(8.0),
-                      color: app_theme.backgroundColor,
-                    ),
+                    padding: const EdgeInsets.all(10.0),
+                    decoration: app_theme.insetPanelDecoration(radius: 18)
+                        .copyWith(color: app_theme.backgroundColor),
                     child: Column(
                       children: [
                         const Text(
@@ -327,7 +327,7 @@ class QRDialogContent extends StatelessWidget {
                   backgroundColor: app_theme.primary,
                   padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   minimumSize: const Size(double.infinity, 0),
                 ),

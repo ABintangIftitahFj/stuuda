@@ -1,10 +1,11 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:form_validator/form_validator.dart';
-import '../../common/widgets/common.dart';
-import '../../components/input_field.dart';
-import '../../components/Email_validator.dart';
-import '../../services/utils.dart';
-import '../../support/app_theme.dart' as app_theme;
+import 'package:stundaa/common/widgets/common.dart';
+import 'package:stundaa/components/input_field.dart';
+import 'package:stundaa/components/email_validator.dart';
+import 'package:stundaa/services/utils.dart';
+import 'package:stundaa/support/app_theme.dart' as app_theme;
 
 class ContactUs extends StatefulWidget {
   const ContactUs({super.key});
@@ -19,65 +20,78 @@ class _ContactUsState extends State<ContactUs> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: app_theme.backgroundColor,
       appBar: innerAppBar(
         title: context.lwTranslate.contactUs,
         context: context,
       ),
-      body: Stack(children: [
-        SizedBox.expand(
-          child: Image.asset(
-            'assets/images/ic_background.png',
-            fit: BoxFit.cover,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: app_theme.appBackgroundDecoration(),
+            ),
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: SingleChildScrollView(
-            child: IntrinsicHeight(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  Container(
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 540),
+                  child: Container(
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(15),
-                      color: Colors.white,
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.grey,
-                          offset: Offset(2, 2),
-                          blurRadius: 5,
-                          spreadRadius: 1,
-                        ),
-                      ],
+                      gradient: app_theme.cardGradient,
+                      color: app_theme.surface,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: const Color.fromRGBO(167, 223, 255, 0.16),
+                      ),
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.only(
-                          top: 30, bottom: 40, right: 15, left: 15),
+                      padding: const EdgeInsets.fromLTRB(18, 24, 18, 24),
                       child: Column(
                         children: [
-                          Center(
-                            child: Column(
-                              children: [
-                                Center(
-                                  child: Text(
-                                    context.lwTranslate.contactUs,
-                                    style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.black),
-                                  ),
-                                ),
-                              ],
+                          Container(
+                            width: 52,
+                            height: 52,
+                            decoration: BoxDecoration(
+                              color: app_theme.surfaceMuted,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: const Icon(
+                              CupertinoIcons.chat_bubble_2,
+                              color: app_theme.iceBlue,
                             ),
                           ),
-                          const SizedBox(height: 40),
+                          const SizedBox(height: 14),
+                          Text(
+                            context.lwTranslate.contactUs,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: app_theme.lavenderWhite,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          const Text(
+                            'Tell us what you need. We will answer in the same STUNDAA tone.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: app_theme.secondary,
+                              fontSize: 13,
+                            ),
+                          ),
+                          const SizedBox(height: 28),
                           Form(
                             key: _formKey,
                             child: Column(
                               children: [
                                 InputField(
                                   labelText: context.lwTranslate.fullName,
-                                  prefixIcon: const Icon(Icons.person),
+                                  prefixIcon: const Icon(
+                                    CupertinoIcons.person,
+                                    color: app_theme.iceBlue,
+                                  ),
                                   validation:
                                       ValidationBuilder().minLength(3).build(),
                                 ),
@@ -86,15 +100,20 @@ class _ContactUsState extends State<ContactUs> {
                                   validation: (value) => isValidEmail(value)
                                       ? null
                                       : context.lwTranslate.enterValidAddress,
-                                  prefixIcon: const Icon(Icons.email_outlined),
+                                  prefixIcon: const Icon(
+                                    CupertinoIcons.mail,
+                                    color: app_theme.iceBlue,
+                                  ),
                                   onChanged: (text) {},
                                 ),
                                 InputField(
                                   labelText: context.lwTranslate.subject,
                                   validation:
                                       ValidationBuilder().minLength(6).build(),
-                                  prefixIcon:
-                                      const Icon(Icons.menu_book_outlined),
+                                  prefixIcon: const Icon(
+                                    CupertinoIcons.doc_text,
+                                    color: app_theme.iceBlue,
+                                  ),
                                 ),
                                 InputField(
                                   maxLines: null,
@@ -107,54 +126,53 @@ class _ContactUsState extends State<ContactUs> {
                               ],
                             ),
                           ),
+                          const SizedBox(height: 18),
+                          GestureDetector(
+                            onTap: () async {
+                              _formKey.currentState?.save();
+                              if (_formKey.currentState!.validate()) {}
+                            },
+                            child: Container(
+                              height: 50,
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                gradient: app_theme.primaryGradient,
+                                borderRadius:
+                                    const BorderRadius.all(Radius.circular(14)),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color.fromRGBO(29, 161, 255, 0.35),
+                                    blurRadius: 22,
+                                    offset: Offset(0, 8),
+                                  ),
+                                ],
+                              ),
+                              child: Center(
+                                child: !isLoading
+                                    ? Text(
+                                        context.lwTranslate.submit,
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          color: app_theme.black,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      )
+                                    : const CircularProgressIndicator(
+                                        color: app_theme.black,
+                                      ),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
                   ),
-                ],
+                ),
               ),
             ),
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Align(
-            alignment: Alignment.bottomCenter,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                GestureDetector(
-                  onTap: () async {
-                    _formKey.currentState?.save();
-                    if (_formKey.currentState!.validate()) {}
-                  },
-                  child: Container(
-                    height: 50,
-                    width: double.infinity,
-                    decoration: const BoxDecoration(
-                      color: app_theme.primary,
-                      borderRadius: BorderRadius.all(Radius.circular(10)),
-                    ),
-                    child: Center(
-                      child: !isLoading
-                          ? Text(
-                              context.lwTranslate.submit,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            )
-                          : const CircularProgressIndicator(
-                              color: Colors.white),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ]),
+        ],
+      ),
     );
   }
 }

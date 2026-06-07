@@ -1,10 +1,8 @@
-import 'package:whatsjet_demo/screens/user/login.dart';
-import 'package:whatsjet_demo/services/utils.dart';
-import '/services/auth.dart' as auth;
-import '/components/toggle_page_login_register.dart';
-import '/screens/landing.dart';
-import '/services/auth.dart';
+import 'package:stundaa/screens/user/login.dart';
+import 'package:stundaa/screens/landing.dart';
+import 'package:stundaa/services/auth.dart';
 import 'package:flutter/material.dart';
+import 'package:stundaa/support/app_theme.dart' as app_theme;
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -14,56 +12,50 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  Future? _fetchMyData;
+  late final Future<bool> _fetchMyData;
+
   @override
   void initState() {
-    setState(() {
-      _fetchMyData = checkUserLoggedIn();
-    });
     super.initState();
+    _fetchMyData = checkUserLoggedIn();
   }
 
   Future<bool> checkUserLoggedIn() async {
-    await auth.redirectIfUnauthenticated(context);
     return isLoggedIn();
-  }
-
-  @override
-  dispose() {
-    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder(
       future: _fetchMyData,
-      builder: (BuildContext context, AsyncSnapshot snapshot) {
+      builder: (BuildContext context, AsyncSnapshot<bool> snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        } else if (snapshot.hasError) {
-          return Center(child: Text('An error occurred: ${snapshot.error}'));
-        } else if (snapshot.hasData && snapshot.data == true) {
+          return Scaffold(
+            backgroundColor: app_theme.backgroundColor,
+            body: Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(app_theme.primary),
+              ),
+            ),
+          );
+        }
+
+        if (snapshot.hasData && snapshot.data == true) {
           return const LandingPage();
         } else {
           return const LoginPage();
-          // return const LoginOrRegisterPage();
         }
       },
     );
   }
 }
 
-
-//
-// import 'package:whatsjet_demo/screens/user/login.dart';
-// import 'package:whatsjet_demo/services/utils.dart';
-//
-// import '../services/global.dart';
-// import '/components/toggle_page_login_register.dart';
-// import '/screens/landing.dart';
-// import '/services/auth.dart';
+// import 'package:stundaa/services/global.dart';
+// import 'package:stundaa/components/toggle_page_login_register.dart';
+// import 'package:stundaa/screens/landing.dart';
+// import 'package:stundaa/services/auth.dart';
 // import 'package:flutter/material.dart';
-// import '/support/app_theme.dart' as app_theme;
+// import 'package:stundaa/support/app_theme.dart' as app_theme;
 // class HomePage extends StatefulWidget {
 //   const HomePage({super.key});
 //

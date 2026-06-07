@@ -1,15 +1,16 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import '../../components/input_field.dart';
-import '../../services/globalurls.dart';
-import '../../services/utils.dart';
-import '../../services/data_transport.dart' as data_transport;
-import '../../services/auth.dart' as auth;
-import '../../support/app_theme.dart' as app_theme;
-import '../../common/widgets/common.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:form_validator/form_validator.dart';
-import 'login.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:stundaa/common/widgets/common.dart';
+import 'package:stundaa/components/input_field.dart';
+import 'package:stundaa/services/auth.dart' as auth;
+import 'package:stundaa/services/data_transport.dart' as data_transport;
+import 'package:stundaa/services/globalurls.dart';
+import 'package:stundaa/services/utils.dart';
+import 'package:stundaa/support/app_theme.dart' as app_theme;
+import 'login.dart';
 
 class RegisterPage extends StatefulWidget {
   final void Function()? ontap;
@@ -17,7 +18,7 @@ class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key, this.ontap});
 
   @override
-  _RegisterPageState createState() => _RegisterPageState();
+  State<RegisterPage> createState() => _RegisterPageState();
 }
 
 class _RegisterPageState extends State<RegisterPage> {
@@ -52,8 +53,9 @@ class _RegisterPageState extends State<RegisterPage> {
             onSuccess: (responseData) {
               if (responseData != null) {
                 Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (context) => const LoginPage()),
-                    (route) => false);
+                  MaterialPageRoute(builder: (context) => const LoginPage()),
+                  (route) => false,
+                );
               }
             },
             onFailed: (responseData) {},
@@ -80,501 +82,524 @@ class _RegisterPageState extends State<RegisterPage> {
     isPasswordVisibleCom = false;
   }
 
+  void _openPolicyPage(String title, Uri url) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          appBar: AppBar(title: Text(title)),
+          body: WebViewWidget(
+            controller: WebViewController()
+              ..setJavaScriptMode(JavaScriptMode.unrestricted)
+              ..loadRequest(url),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     auth.redirectIfAuthenticated(context);
     return Scaffold(
-      body: Stack(children: [
-        SizedBox.expand(
-          child: Image.asset(
-            'assets/images/ic_background.png',
-            fit: BoxFit.cover,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: app_theme.appBackgroundDecoration(),
+            ),
           ),
-        ),
-        Center(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(10.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(15),
-                      color: Colors.white,
-                    ),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: app_theme.glowOrbDecoration(
+                  alignment: const Alignment(0, -0.85),
+                  radius: 0.65,
+                ),
+              ),
+            ),
+          ),
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 520),
+                  child: Container(
+                    decoration: app_theme.glassCardDecoration(radius: 30),
                     child: Padding(
-                      padding: const EdgeInsets.only(
-                          top: 30, bottom: 40, right: 15, left: 15),
+                      padding: const EdgeInsets.fromLTRB(22, 28, 22, 28),
                       child: Column(
                         children: [
-                          const AppLogo(
-                            height: 75,
-                          ),
-                          Center(
+                          const AppLogo(height: 92),
+                          const SizedBox(height: 18),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 7),
+                            decoration: BoxDecoration(
+                              color: const Color.fromRGBO(255, 255, 255, 0.05),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(color: app_theme.outlineSoft),
+                            ),
                             child: Text(
-                              context.lwTranslate.registerVendorComp,
-                              style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.grey[700]),
+                              'Premium onboarding',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: app_theme.iceBlue,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.6,
+                                  ),
                             ),
                           ),
-                          const SizedBox(height: 50),
-                          const SizedBox(
-                            height: 20,
+                          const SizedBox(height: 18),
+                          Text(
+                            'Create Account',
+                            style: Theme.of(context)
+                                .textTheme
+                                .headlineMedium
+                                ?.copyWith(
+                                  fontSize: 28,
+                                ),
+                            textAlign: TextAlign.center,
                           ),
-                          Column(
-                            children: [
-                              Form(
-                                  key: _formKey,
-                                  child: Column(
-                                    children: [
-                                      InputField(
-                                        labelText:
-                                            context.lwTranslate.vendorCompName,
-                                        prefixIcon: const Icon(Icons.person),
-                                        onSaved: (String? value) {
-                                          formInputData['vendor_title'] = value;
-                                        },
-                                        validation: (String? value) {
-                                          if (value == null || value.isEmpty) {
-                                            return context
-                                                .lwTranslate.fieldRequired;
-                                          }
-                                          if (value.length < 2) {
-                                            return context
-                                                .lwTranslate.mustBe2Character;
-                                          }
-                                          return null;
-                                        },
-
-                                        // validation: ValidationBuilder()
-                                        //     .minLength(2)
-                                        //     .build(),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Start managing your time better today.',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  fontSize: 14,
+                                  color: app_theme.iceBlue,
+                                ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 24),
+                          Form(
+                            key: _formKey,
+                            child: Column(
+                              children: [
+                                InputField(
+                                  labelText: context.lwTranslate.vendorCompName,
+                                  prefixIcon: const Icon(
+                                    CupertinoIcons.building_2_fill,
+                                    color: app_theme.iceBlue,
+                                  ),
+                                  onSaved: (String? value) {
+                                    formInputData['vendor_title'] = value;
+                                  },
+                                  validation: (String? value) {
+                                    if (value == null || value.isEmpty) {
+                                      return context.lwTranslate.fieldRequired;
+                                    }
+                                    if (value.length < 2) {
+                                      return context
+                                          .lwTranslate.mustBe2Character;
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 18),
+                                Text(
+                                  context.lwTranslate.adminUserDeta,
+                                  style: const TextStyle(
+                                    color: app_theme.iceBlue,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 14),
+                                InputField(
+                                  labelText: context.lwTranslate.username,
+                                  prefixIcon: const Icon(
+                                    CupertinoIcons.person_crop_circle_badge_plus,
+                                    color: app_theme.iceBlue,
+                                  ),
+                                  onSaved: (String? value) {
+                                    formInputData['username'] = value;
+                                  },
+                                  validation: (String? value) {
+                                    if (value == null || value.isEmpty) {
+                                      return context.lwTranslate.fieldRequired;
+                                    }
+                                    if (value.length < 2) {
+                                      return context
+                                          .lwTranslate.mustBe2Character;
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 14),
+                                InputField(
+                                  labelText: context.lwTranslate.firstName,
+                                  prefixIcon: const Icon(
+                                    CupertinoIcons.person,
+                                    color: app_theme.iceBlue,
+                                  ),
+                                  onSaved: (String? value) {
+                                    formInputData['first_name'] = value;
+                                  },
+                                  validation: (String? value) {
+                                    if (value == null || value.isEmpty) {
+                                      return context.lwTranslate.fieldRequired;
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 14),
+                                InputField(
+                                  labelText: context.lwTranslate.lastName,
+                                  prefixIcon: const Icon(
+                                    Icons.badge_outlined,
+                                    color: app_theme.iceBlue,
+                                  ),
+                                  onSaved: (String? value) {
+                                    formInputData['last_name'] = value;
+                                  },
+                                  validation: (String? value) {
+                                    if (value == null || value.isEmpty) {
+                                      return context.lwTranslate.fieldRequired;
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 14),
+                                InputField(
+                                  labelText: context.lwTranslate.mobileNumber,
+                                  inputType: TextInputType.phone,
+                                  prefixIcon: const Icon(
+                                    Icons.phone_android_outlined,
+                                    color: app_theme.iceBlue,
+                                  ),
+                                  onSaved: (String? value) {
+                                    formInputData['mobile_number'] = value;
+                                  },
+                                  validation: (String? value) {
+                                    if (value == null || value.isEmpty) {
+                                      return context.lwTranslate.fieldRequired;
+                                    }
+                                    if (value.length < 9) {
+                                      return context
+                                          .lwTranslate.mustBe9Character;
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                Padding(
+                                  padding:
+                                      const EdgeInsets.only(top: 8, bottom: 12),
+                                  child: Text(
+                                    context.lwTranslate.mobileNumbCountry,
+                                    style: const TextStyle(
+                                      color: app_theme.secondary,
+                                      fontSize: 11,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                                InputField(
+                                  labelText: context.lwTranslate.email,
+                                  inputType: TextInputType.emailAddress,
+                                  prefixIcon: const Icon(
+                                    Icons.alternate_email,
+                                    color: app_theme.iceBlue,
+                                  ),
+                                  onSaved: (String? value) {
+                                    formInputData['email'] = value;
+                                  },
+                                  validation: ValidationBuilder(
+                                    requiredMessage:
+                                        context.lwTranslate.fieldRequired,
+                                  )
+                                      .email(
+                                          context.lwTranslate.pleaseEntValEmail)
+                                      .build(),
+                                ),
+                                const SizedBox(height: 14),
+                                InputField(
+                                  placeholder: context.lwTranslate.password,
+                                  labelText: context.lwTranslate.password,
+                                  password: !isPasswordVisible,
+                                  validation: (String? value) {
+                                    if (value == null || value.isEmpty) {
+                                      return context.lwTranslate.fieldRequired;
+                                    }
+                                    if (value.length < 8) {
+                                      return context
+                                          .lwTranslate.mustBe8Character;
+                                    }
+                                    return null;
+                                  },
+                                  prefixIcon: const Icon(
+                                    Icons.lock_outline,
+                                    color: app_theme.iceBlue,
+                                  ),
+                                  onSaved: (String? value) {
+                                    formInputData['password'] = value;
+                                  },
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      isPasswordVisible
+                                          ? Icons.visibility
+                                          : Icons.visibility_off,
+                                      color: app_theme.iceBlue,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        isPasswordVisible = !isPasswordVisible;
+                                      });
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+                                InputField(
+                                  placeholder:
+                                      context.lwTranslate.confirmPassword,
+                                  labelText:
+                                      context.lwTranslate.confirmPassword,
+                                  password: !isPasswordVisibleCom,
+                                  validation: (String? value) {
+                                    if (value == null || value.isEmpty) {
+                                      return context.lwTranslate.fieldRequired;
+                                    }
+                                    if (value.length < 8) {
+                                      return context
+                                          .lwTranslate.mustBe8Character;
+                                    }
+                                    if (value != formInputData['password']) {
+                                      return context
+                                          .lwTranslate.passwordConfirMatch;
+                                    }
+                                    return null;
+                                  },
+                                  prefixIcon: const Icon(
+                                    Icons.verified_user_outlined,
+                                    color: app_theme.iceBlue,
+                                  ),
+                                  onSaved: (String? value) {
+                                    formInputData['password_confirmation'] =
+                                        value;
+                                  },
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      isPasswordVisibleCom
+                                          ? Icons.visibility
+                                          : Icons.visibility_off,
+                                      color: app_theme.iceBlue,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        isPasswordVisibleCom =
+                                            !isPasswordVisibleCom;
+                                      });
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Checkbox(
+                                      value: isChecked,
+                                      activeColor: app_theme.primary,
+                                      checkColor: app_theme.black,
+                                      side: const BorderSide(
+                                        color:
+                                            Color.fromRGBO(167, 223, 255, 0.32),
                                       ),
-                                      Text(context.lwTranslate.adminUserDeta,
-                                          // "Admin User Details",
-                                          style: TextStyle(
-                                              color: Colors.grey.shade800,
-                                              fontSize: 14),
-                                          textAlign: TextAlign.center),
-                                      const SizedBox(
-                                        height: 15,
-                                      ),
-                                      InputField(
-                                        labelText: context.lwTranslate.username,
-                                        prefixIcon:
-                                            const Icon(Icons.account_box),
-                                        onSaved: (String? value) {
-                                          formInputData['username'] = value;
-                                        },
-                                        validation: (String? value) {
-                                          if (value == null || value.isEmpty) {
-                                            return context
-                                                .lwTranslate.fieldRequired;
-                                          }
-                                          if (value.length < 2) {
-                                            return context
-                                                .lwTranslate.mustBe2Character;
-                                          }
-
-                                          return null;
-                                        },
-                                      ),
-                                      InputField(
-                                        labelText:
-                                            context.lwTranslate.firstName,
-                                        prefixIcon: const Icon(Icons.person),
-                                        onSaved: (String? value) {
-                                          formInputData['first_name'] = value;
-                                        },
-                                        validation: (String? value) {
-                                        if (value == null || value.isEmpty) {
-                                          return context
-                                              .lwTranslate.fieldRequired;
-                                        }
-
-                                        return null;
-                                      },
-
-                                        // validation: ValidationBuilder()
-                                        //     .minLength(1)
-                                        //     .build(),
-                                      ),
-                                      InputField(
-                                        labelText: context.lwTranslate.lastName,
-                                        prefixIcon: const Icon(Icons.person),
-                                        onSaved: (String? value) {
-                                          formInputData['last_name'] = value;
-                                        },
-                                        validation: (String? value) {
-                                          if (value == null || value.isEmpty) {
-                                            return context
-                                                .lwTranslate.fieldRequired;
-                                          }
-                                          return null;
-                                        },
-                                        // validation: ValidationBuilder()
-                                        //     .minLength(1)
-                                        //     .build(),
-                                      ),
-                                      InputField(
-                                        labelText:
-                                            context.lwTranslate.mobileNumber,
-                                        inputType: TextInputType.phone,
-                                        prefixIcon:
-                                            const Icon(Icons.phone_android),
-                                        onSaved: (String? value) {
-                                          formInputData['mobile_number'] =
-                                              value;
-                                        },
-                                        validation: (String? value) {
-                                          if (value == null || value.isEmpty) {
-                                            return context
-                                                .lwTranslate.fieldRequired;
-                                          }
-                                          if (value.length < 9) {
-                                            return context
-                                                .lwTranslate.mustBe9Character;
-                                          }
-                                          return null;
-                                        },
-                                        // validation: ValidationBuilder()
-                                        //     .minLength(9)
-                                        //     .build(),
-                                      ),
-                                      Padding(
-                                        padding:
-                                            const EdgeInsets.only(bottom: 10),
-                                        child: Text(
-                                            context
-                                                .lwTranslate.mobileNumbCountry,
-                                            style: TextStyle(
-                                                color: Colors.grey.shade500,
-                                                fontSize: 11),
-                                            textAlign: TextAlign.center),
-                                      ),
-                                      InputField(
-                                        labelText:
-                                            // "Email",
-                                            context.lwTranslate.email,
-                                        inputType: TextInputType.emailAddress,
-                                        prefixIcon:
-                                            const Icon(Icons.alternate_email),
-                                        onSaved: (String? value) {
-                                          formInputData['email'] = value;
-                                        },
-                                        validation: ValidationBuilder(
-                                          requiredMessage: context
-                                              .lwTranslate.fieldRequired,
-                                        )
-                                            .email(context
-                                                .lwTranslate.pleaseEntValEmail)
-                                            .build(),
-                                      ),
-                                      InputField(
-                                        placeholder:
-                                            context.lwTranslate.password,
-                                        labelText: context.lwTranslate.password,
-                                        password: !isPasswordVisible,
-                                        validation: (String? value) {
-                                        if (value == null || value.isEmpty) {
-                                          return context
-                                              .lwTranslate.fieldRequired;
-                                        }
-                                        if (value.length < 8) {
-                                          return context
-                                              .lwTranslate.mustBe8Character;
-                                        }
-
-                                        return null;
-                                      },
-
-                                        // validation: ValidationBuilder()
-                                        //     .minLength(8)
-                                        //     .build(),
-                                        prefixIcon: const Icon(Icons.key),
-                                        onSaved: (String? value) {
-                                          formInputData['password'] = value;
-                                        },
-                                        suffixIcon: IconButton(
-                                          icon: Icon(
-                                            isPasswordVisible
-                                                ? Icons.visibility
-                                                : Icons.visibility_off,
-                                            color:
-                                                Theme.of(context).primaryColor,
-                                          ),
-                                          onPressed: () {
-                                            setState(() {
-                                              isPasswordVisible =
-                                                  !isPasswordVisible;
-                                            });
-                                          },
-                                        ),
-                                      ),
-                                      InputField(
-                                        placeholder:
-                                            context.lwTranslate.confirmPassword,
-                                        labelText:
-                                            context.lwTranslate.confirmPassword,
-                                        password: !isPasswordVisibleCom,
-                                        validation: (String? value) {
-                                          if (value == null || value.isEmpty) {
-                                            return context
-                                                .lwTranslate.fieldRequired;
-                                          }
-                                          if (value.length < 8) {
-                                            return context
-                                                .lwTranslate.mustBe8Character;
-                                          }
-                                          if (value !=
-                                              formInputData['password']) {
-                                            return context.lwTranslate
-                                                .passwordConfirMatch;
-                                          }
-                                          return null;
-                                        },
-                                        prefixIcon: const Icon(Icons.key),
-                                        onSaved: (String? value) {
+                                      onChanged: (bool? value) {
+                                        setState(() {
+                                          isChecked = value ?? false;
                                           formInputData[
-                                              'password_confirmation'] = value;
+                                                  'terms_and_conditions'] =
+                                              isChecked ? 'on' : '';
+                                          _termsError = null;
+                                        });
+                                      },
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Flexible(
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            isChecked = !isChecked;
+                                            formInputData[
+                                                    'terms_and_conditions'] =
+                                                isChecked ? 'on' : '';
+                                            _termsError = null;
+                                          });
                                         },
-                                        suffixIcon: IconButton(
-                                          icon: Icon(
-                                            isPasswordVisibleCom
-                                                ? Icons.visibility
-                                                : Icons.visibility_off,
-                                            color:
-                                                Theme.of(context).primaryColor,
-                                          ),
-                                          onPressed: () {
-                                            setState(() {
-                                              isPasswordVisibleCom =
-                                                  !isPasswordVisibleCom;
-                                            });
-                                          },
-                                        ),
-                                      ),
-                                      Row(
-                                        children: [
-                                          Checkbox(
-                                            value: isChecked,
-                                            onChanged: (bool? value) {
-                                              setState(() {
-                                                isChecked = value ?? false;
-                                                formInputData[
-                                                        'terms_and_conditions'] =
-                                                    isChecked ? 'on' : '';
-                                                _termsError = null;
-                                              });
-                                            },
-                                          ),
-                                          SizedBox(width: 15),
-                                          Flexible(
-                                            child: GestureDetector(
-                                              onTap: () {
-                                                setState(() {
-                                                  isChecked = !isChecked;
-                                                  formInputData[
-                                                          'terms_and_conditions'] =
-                                                      isChecked ? 'on' : '';
-                                                  _termsError = null;
-                                                });
-                                              },
-                                              child: Text.rich(
-                                                TextSpan(
-                                                  text: context
-                                                      .lwTranslate.agreeWith,
-                                                  children: <InlineSpan>[
-                                                    TextSpan(
-                                                      text: context.lwTranslate
-                                                          .userTermsCond,
-                                                      recognizer:
-                                                          TapGestureRecognizer()
-                                                            ..onTap = () {
-                                                              Navigator.push(
-                                                                context,
-                                                                MaterialPageRoute(
-                                                                  builder:
-                                                                      (context) =>
-                                                                          Scaffold(
-                                                                    appBar: AppBar(
-                                                                        title: Text(
-                                                                      context
-                                                                          .lwTranslate
-                                                                          .termsAndCond,
-                                                                    )),
-                                                                    body: WebViewWidget(
-                                                                        controller: WebViewController()
-                                                                          ..setJavaScriptMode(
-                                                                              JavaScriptMode.unrestricted)
-                                                                          ..loadRequest(apiUrl(
-                                                                            'terms-and-policies/user_terms',
-                                                                            useApiUrl:
-                                                                                false,
-                                                                          ))),
-                                                                  ),
-                                                                ),
-                                                              );
-                                                            },
-                                                      style: TextStyle(
-                                                        color: Theme.of(context)
-                                                            .colorScheme
-                                                            .primary,
-                                                        decoration:
-                                                            TextDecoration
-                                                                .underline,
-                                                        decorationThickness: 2,
-                                                        decorationColor:
-                                                            app_theme.primary,
-                                                      ),
-                                                    ),
-                                                    TextSpan(text: " , "),
-                                                    TextSpan(
-                                                      text: context.lwTranslate
-                                                          .privacyCPolicy,
-                                                      recognizer:
-                                                          TapGestureRecognizer()
-                                                            ..onTap = () {
-                                                              Navigator.push(
-                                                                context,
-                                                                MaterialPageRoute(
-                                                                  builder:
-                                                                      (context) =>
-                                                                          Scaffold(
-                                                                    appBar: AppBar(
-                                                                        title: Text(context
-                                                                            .lwTranslate
-                                                                            .privacyCPolicy)),
-                                                                    body: WebViewWidget(
-                                                                        controller: WebViewController()
-                                                                          ..setJavaScriptMode(
-                                                                              JavaScriptMode.unrestricted)
-                                                                          ..loadRequest(apiUrl(
-                                                                            'terms-and-policies/privacy_policy',
-                                                                            useApiUrl:
-                                                                                false,
-                                                                          ))),
-                                                                  ),
-                                                                ),
-                                                              );
-                                                            },
-                                                      style: TextStyle(
-                                                        color: Theme.of(context)
-                                                            .colorScheme
-                                                            .primary,
-                                                        decoration:
-                                                            TextDecoration
-                                                                .underline,
-                                                        decorationThickness: 2,
-                                                        decorationColor:
-                                                            app_theme.primary,
-                                                      ),
-                                                    ),
-                                                  ],
+                                        child: Text.rich(
+                                          TextSpan(
+                                            text: context.lwTranslate.agreeWith,
+                                            style: const TextStyle(
+                                              color: app_theme.secondary,
+                                              height: 1.5,
+                                            ),
+                                            children: <InlineSpan>[
+                                              TextSpan(
+                                                text: context
+                                                    .lwTranslate.userTermsCond,
+                                                recognizer:
+                                                    TapGestureRecognizer()
+                                                      ..onTap = () {
+                                                        _openPolicyPage(
+                                                          context.lwTranslate
+                                                              .termsAndCond,
+                                                          apiUrl(
+                                                            'terms-and-policies/user_terms',
+                                                            useApiUrl: false,
+                                                          ),
+                                                        );
+                                                      },
+                                                style: const TextStyle(
+                                                  color: app_theme.cyanGlow,
+                                                  decoration:
+                                                      TextDecoration.underline,
+                                                  decorationThickness: 1.6,
+                                                  decorationColor:
+                                                      app_theme.cyanGlow,
                                                 ),
                                               ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      if (_termsError != null)
-                                        Padding(
-                                          padding:
-                                              const EdgeInsets.only(top: 4),
-                                          child: Text(
-                                            _termsError!,
-                                            style: TextStyle(
-                                              color: Colors.red,
-                                              fontSize: 12,
-                                            ),
+                                              const TextSpan(text: ' , '),
+                                              TextSpan(
+                                                text: context
+                                                    .lwTranslate.privacyCPolicy,
+                                                recognizer:
+                                                    TapGestureRecognizer()
+                                                      ..onTap = () {
+                                                        _openPolicyPage(
+                                                          context.lwTranslate
+                                                              .privacyCPolicy,
+                                                          apiUrl(
+                                                            'terms-and-policies/privacy_policy',
+                                                            useApiUrl: false,
+                                                          ),
+                                                        );
+                                                      },
+                                                style: const TextStyle(
+                                                  color: app_theme.cyanGlow,
+                                                  decoration:
+                                                      TextDecoration.underline,
+                                                  decorationThickness: 1.6,
+                                                  decorationColor:
+                                                      app_theme.cyanGlow,
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ),
-                                    ],
-                                  )),
-                              const SizedBox(
-                                height: 30,
-                              ),
-                              GestureDetector(
-                                onTap: register,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 15.0),
-                                  width: double.infinity,
-                                  alignment: Alignment.center,
-                                  decoration: const BoxDecoration(
-                                    color: app_theme.primary,
-                                    borderRadius: BorderRadius.all(
-                                      Radius.circular(8),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (_termsError != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Text(
+                                      _termsError!,
+                                      style: const TextStyle(
+                                        color: app_theme.error,
+                                        fontSize: 12,
+                                      ),
                                     ),
                                   ),
-                                  child: Center(
-                                      child: Text(
-                                    // "Create Account",
-                                    context.lwTranslate.createAcc,
-                                    style: const TextStyle(
-                                      fontSize: 18,
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  )),
-                                ),
-                              ),
-                              const SizedBox(
-                                height: 10,
-                              ),
-                              Text(context.lwTranslate.alreadyHaveAnAccount,
-                                  style: TextStyle(
-                                      color: Colors.grey, fontSize: 13),
-                                  textAlign: TextAlign.center),
-                              const SizedBox(
-                                height: 10,
-                              ),
-                              GestureDetector(
-                                onTap: () {
-                                  Navigator.of(context).pushAndRemoveUntil(
-                                      MaterialPageRoute(
-                                          builder: (context) =>
-                                              const LoginPage()),
-                                      (route) => false);
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 15.0),
-                                  width:
-                                      MediaQuery.of(context).size.width * 0.6,
-                                  alignment: Alignment.center,
-                                  decoration: BoxDecoration(
-                                    color: Colors.yellow.shade800,
-                                    borderRadius: BorderRadius.all(
-                                      Radius.circular(8),
-                                    ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 26),
+                          GestureDetector(
+                            onTap: register,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              width: double.infinity,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                gradient: app_theme.primaryGradient,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color.fromRGBO(29, 161, 255, 0.45),
+                                    blurRadius: 24,
+                                    offset: Offset(0, 10),
                                   ),
-                                  child: Center(
-                                      child: Text(
-                                    context.lwTranslate.clickLogin,
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
+                                ],
+                              ),
+                              child: isLoading
+                                  ? const SizedBox(
+                                      height: 24,
+                                      width: 24,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.2,
+                                        color: app_theme.black,
+                                      ),
+                                    )
+                                  : Text(
+                                      context.lwTranslate.createAcc,
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        color: app_theme.black,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
-                                  )),
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          Text(
+                            context.lwTranslate.alreadyHaveAnAccount,
+                            style: const TextStyle(
+                              color: app_theme.secondary,
+                              fontSize: 13,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 12),
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.of(context).pushAndRemoveUntil(
+                                MaterialPageRoute(
+                                  builder: (context) => const LoginPage(),
+                                ),
+                                (route) => false,
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 15),
+                              width: double.infinity,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color:
+                                    const Color.fromRGBO(255, 255, 255, 0.05),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color:
+                                      const Color.fromRGBO(167, 223, 255, 0.24),
                                 ),
                               ),
-                            ],
+                              child: Text(
+                                context.lwTranslate.clickLogin,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  color: app_theme.lavenderWhite,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
                           ),
                         ],
                       ),
                     ),
                   ),
-                ],
+                ),
               ),
             ),
           ),
-        ),
-      ]),
+        ],
+      ),
     );
   }
 }

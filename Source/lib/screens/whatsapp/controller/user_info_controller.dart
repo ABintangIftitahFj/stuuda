@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../../services/utils.dart';
-import '/services/data_transport.dart' as data_transport;
+import 'package:stundaa/services/data_transport.dart' as data_transport;
 
 class Userinfocontroller extends GetxController {
   // RxString name ='Name'.obs;
@@ -121,9 +120,12 @@ class Userinfocontroller extends GetxController {
             }
           }
         },
-        onError: (error) {},
+        onError: (error) {
+          // ignore
+        },
       );
     } catch (error) {
+      // ignore
     } finally {
       isLoading.value = false;
     }

@@ -1,9 +1,8 @@
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
-import '../services/utils.dart';
-import '/services/auth.dart';
-import '/services/data_transport.dart' as data_transport;
+import 'package:stundaa/services/auth.dart';
+import 'package:stundaa/services/data_transport.dart' as data_transport;
 
 class ChatboxProvider with ChangeNotifier {
   List<Map<String, dynamic>> holduser = [];
@@ -127,7 +126,7 @@ class ChatboxProvider with ChangeNotifier {
       );
       return [];
     } catch (error) {
-      print("Error: $error");
+      debugPrint("Error: $error");
       return [];
     } finally {
       isInitialLoading = false;
@@ -155,8 +154,11 @@ class ChatboxProvider with ChangeNotifier {
                 responseData['client_models']?['whatsappMessageLogs']);
           }
         },
-      ).catchError((error) {});
+      ).catchError((error) {
+        return "";
+      });
     } catch (error) {
+      // ignore
     } finally {
       if (scrollController.hasClients) {
         scrollController.jumpTo(scrollController.position.minScrollExtent);
@@ -184,6 +186,7 @@ class ChatboxProvider with ChangeNotifier {
         },
       ).catchError((error) {
         debugPrint("Error loading more messages: $error");
+        return "";
       });
     } finally {
       isLoading = false;

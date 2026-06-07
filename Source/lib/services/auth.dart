@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import './../../screens/landing.dart';
-import '../../screens/user/login.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:stundaa/screens/landing.dart';
+import 'package:stundaa/screens/user/login.dart';
 import 'utils.dart';
 import 'data_transport.dart' as data_transport;
 
@@ -16,6 +17,7 @@ Future redirectIfUnauthenticated(BuildContext context) async {
   await Future.delayed(Duration.zero, () {
     bool isUserLoggedIn = isLoggedIn();
     if (!isUserLoggedIn) {
+      if (!context.mounted) return false;
       Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const LoginPage()),
           (route) => false);
@@ -28,6 +30,7 @@ Future redirectIfUnauthenticated(BuildContext context) async {
 void redirectIfAuthenticated(BuildContext context) {
   Future.delayed(Duration.zero, () {
     if (isLoggedIn() == true) {
+      if (!context.mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const LandingPage()),
           (route) => false);
@@ -84,13 +87,31 @@ void createLoginSession(
   );
 }
 
-String getAuthToken() {
-  fetchAuthInfo();
-  return authToken;
+bool isLoggedIn() {
+  if (authToken.isNotEmpty) return true;
+  // Jika authToken kosong di memori, coba ambil dari cache secara sinkron
+  authToken = sharedPreferencesCache?.getString('authToken') ?? '';
+  return authToken.isNotEmpty;
 }
 
-bool isLoggedIn() {
-  return getAuthToken() != '';
+Future<void> fetchAuthInfo() async {
+  sharedPreferencesCache ??= await SharedPreferences.getInstance();
+  authToken = sharedPreferencesCache!.getString('authToken') ?? '';
+  var localAuthData = sharedPreferencesCache!.getString('userInfo');
+  if (localAuthData != null) {
+    try {
+      userInfo = jsonDecode(localAuthData)[0] ?? {};
+    } catch (e) {
+      userInfo = {};
+    }
+  }
+}
+
+String getAuthToken() {
+  if (authToken.isEmpty) {
+    authToken = sharedPreferencesCache?.getString('authToken') ?? '';
+  }
+  return authToken;
 }
 
 Future logout() async {
@@ -99,7 +120,6 @@ Future logout() async {
 }
 
 Future storeUserInfo(newUserInfo, {String? vendorUid, String? uuid}) async {
-  // sharedPreferencesCache ??= await SharedPreferences.getInstance();
   if (vendorUid != null) {
     newUserInfo[0]['vendor_uid'] = vendorUid;
   }
@@ -107,17 +127,7 @@ Future storeUserInfo(newUserInfo, {String? vendorUid, String? uuid}) async {
     newUserInfo[0]['uuid'] = uuid;
   }
   sharedPreferencesCache!.setString('userInfo', jsonEncode(newUserInfo));
-  getAuthInfo();
-}
-
-Future fetchAuthInfo() async {
-  // sharedPreferencesCache ??= await SharedPreferences.getInstance();
-  authToken = sharedPreferencesCache!.getString('authToken') ?? '';
-  var localAuthData = sharedPreferencesCache!.getString('userInfo');
-  if (localAuthData != null) {
-    userInfo = jsonDecode(localAuthData)[0] ?? {};
-  }
-  return userInfo;
+  await fetchAuthInfo();
 }
 
 dynamic getAuthInfo([String? itemKey, fallbackValue = '']) {
@@ -147,6 +157,7 @@ Future<void> checkAndHandleCSRFExpiry(dynamic error, BuildContext context) async
     await sharedPreferencesCache!.remove('userInfo');
 
     // Redirect to login
+    if (!context.mounted) return;
     if (Navigator.canPop(context)) {
       Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const LoginPage()),
@@ -165,6 +176,7 @@ await sharedPreferencesCache!.remove('authToken');
 await sharedPreferencesCache!.remove('userInfo');
 
 // Redirect to login
+if (!context.mounted) return;
 Navigator.of(context).pushAndRemoveUntil(
 MaterialPageRoute(builder: (context) => const LoginPage()),
 (route) => false

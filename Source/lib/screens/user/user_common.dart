@@ -2,7 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:photo_view/photo_view.dart';
 
-import '../../common/widgets/common.dart';
+import 'package:stundaa/common/widgets/common.dart';
 
 class ProfileImageView extends StatelessWidget {
   const ProfileImageView(

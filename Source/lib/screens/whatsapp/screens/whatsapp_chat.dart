@@ -2,13 +2,13 @@ import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:provider/provider.dart';
-import '../../../provider/contacts_provider.dart';
-import '../../../services/utils.dart';
-import '/screens/whatsapp/screens/chatbox.dart';
+import 'package:stundaa/provider/contacts_provider.dart';
+import 'package:stundaa/services/utils.dart';
+import 'package:stundaa/screens/whatsapp/screens/chatbox.dart';
 import 'package:flutter/material.dart';
-import '../../../model/user.dart';
-import '/support/app_theme.dart' as app_theme;
-import '../controller/user_info_controller.dart';
+import 'package:stundaa/model/user.dart';
+import 'package:stundaa/support/app_theme.dart' as app_theme;
+import 'package:stundaa/screens/whatsapp/controller/user_info_controller.dart';
 
 class WhatsAppChat extends StatefulWidget {
   const WhatsAppChat({super.key});
@@ -19,7 +19,6 @@ class WhatsAppChat extends StatefulWidget {
 
 class _WhatsAppChatState extends State<WhatsAppChat>
     with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
-
   final Userinfocontroller controller = Get.put(Userinfocontroller());
   TextEditingController textController = TextEditingController();
   List<UserDetails> filteredItems = [];
@@ -27,7 +26,7 @@ class _WhatsAppChatState extends State<WhatsAppChat>
   bool isLoadingMore = false;
   bool isSelected = false;
   bool isReadonly = false;
-  bool isReadChat= false;
+  bool isReadChat = false;
   List<String> tabs = ['Unread'];
   Map<String, dynamic> clientcontacts = {};
   String selectedValue = 'Option 1';
@@ -40,9 +39,7 @@ class _WhatsAppChatState extends State<WhatsAppChat>
   late TabController _tabController;
   int? selectedLabelId;
   bool _isTabLoading = false;
-  final ScrollController _scrollController  = ScrollController();
-  bool _isScrollingUp = false;
-  double _previousOffset = 0;
+  final ScrollController _scrollController = ScrollController();
   bool _showAllText = false;
 
   @override
@@ -52,17 +49,25 @@ class _WhatsAppChatState extends State<WhatsAppChat>
     _scrollController.addListener(_scrollListener);
     final provider = Provider.of<ContactProvider>(context, listen: false);
     provider.getUser(isRefresh: true);
+    
+    // Count the current vendorMessagingUsers to set correct initial length
+    final filteredUsers = controller.vendorMessagingUsers
+        .where((user) =>
+            user['vendors__id'] == null || user['vendors__id'] == 'null')
+        .toList();
     _tabController = TabController(
-      length: 3,
+      length: 3 + filteredUsers.length,
       vsync: this,
     );
+    _setupTabListener(provider);
 
     controller.getChatLabels().then((_) {
       if (mounted) {
-        final filteredUsers = controller.vendorMessagingUsers
-            .where((user) => user['vendors__id'] == null || user['vendors__id'] == 'null')
+        final currentFilteredUsers = controller.vendorMessagingUsers
+            .where((user) =>
+                user['vendors__id'] == null || user['vendors__id'] == 'null')
             .toList();
-        int tabCount = 3 + filteredUsers.length;
+        int tabCount = 3 + currentFilteredUsers.length;
 
         if (_tabController.length != tabCount) {
           final oldController = _tabController;
@@ -72,39 +77,45 @@ class _WhatsAppChatState extends State<WhatsAppChat>
             initialIndex: oldController.index.clamp(0, tabCount - 1),
           );
           oldController.dispose();
+          _setupTabListener(provider);
+          setState(() {});
         }
+      }
+    });
+  }
 
-        // Modified tab controller listener
-        _tabController.addListener(() async {
-          if (_tabController.indexIsChanging && !_isTabLoading) {
-            // setState(() => _isTabLoading = true);
-            setState(() {
-              _isTabLoading = true;
-              _showAllText = false;
-            });
-            try {
-              if (_tabController.index == 0) {
-                await provider.getUser(isRefresh: true, assigned: '');
-              } else if (_tabController.index == 1) {
-                await provider.getUser(isRefresh: true, assigned: 'to-me');
-              } else if (_tabController.index == 2) {
-                await provider.getUser(isRefresh: true, assigned: 'unassigned');
-              } else {
-                int userIndex = _tabController.index - 3;
-                if (filteredUsers.isNotEmpty &&
-                    userIndex >= 0 &&
-                    userIndex < filteredUsers.length) {
-                  String assignedId = filteredUsers[userIndex]['id'];
-                  await provider.getUser(isRefresh: true, assigned: assignedId);
-                }
-              }
-            } finally {
-              if (mounted) {
-                setState(() => _isTabLoading = false);
-              }
+  void _setupTabListener(ContactProvider provider) {
+    _tabController.addListener(() async {
+      if (_tabController.indexIsChanging && !_isTabLoading) {
+        setState(() {
+          _isTabLoading = true;
+          _showAllText = false;
+        });
+        try {
+          final currentFilteredUsers = controller.vendorMessagingUsers
+              .where((user) =>
+                  user['vendors__id'] == null || user['vendors__id'] == 'null')
+              .toList();
+          if (_tabController.index == 0) {
+            await provider.getUser(isRefresh: true, assigned: '');
+          } else if (_tabController.index == 1) {
+            await provider.getUser(isRefresh: true, assigned: 'to-me');
+          } else if (_tabController.index == 2) {
+            await provider.getUser(isRefresh: true, assigned: 'unassigned');
+          } else {
+            int userIndex = _tabController.index - 3;
+            if (currentFilteredUsers.isNotEmpty &&
+                userIndex >= 0 &&
+                userIndex < currentFilteredUsers.length) {
+              String assignedId = currentFilteredUsers[userIndex]['id'];
+              await provider.getUser(isRefresh: true, assigned: assignedId);
             }
           }
-        });
+        } finally {
+          if (mounted) {
+            setState(() => _isTabLoading = false);
+          }
+        }
       }
     });
   }
@@ -116,7 +127,8 @@ class _WhatsAppChatState extends State<WhatsAppChat>
         provider.contactsList = provider.originalContactsList;
       });
     } else {
-      final filteredContacts = provider.originalContactsList.where((contactEntry) {
+      final filteredContacts =
+          provider.originalContactsList.where((contactEntry) {
         final contact = contactEntry.value;
         final fullName = contact['full_name'].toLowerCase();
         final waId = contact['wa_id'].toLowerCase();
@@ -133,17 +145,12 @@ class _WhatsAppChatState extends State<WhatsAppChat>
   void dispose() {
     _scrollController.removeListener(_scrollListener);
     _scrollController.dispose();
-    super.dispose();
     _tabController.dispose();
+    super.dispose();
   }
 
   void _scrollListener() {
-    if (_scrollController.offset > _previousOffset) {
-      _isScrollingUp = false;
-    } else if (_scrollController.offset < _previousOffset) {
-      _isScrollingUp = true;
-    }
-    _previousOffset = _scrollController.offset;
+    //
   }
 
   @override
@@ -151,53 +158,60 @@ class _WhatsAppChatState extends State<WhatsAppChat>
     super.build(context);
     final provider = Provider.of<ContactProvider>(context);
     return Scaffold(
+      backgroundColor: app_theme.backgroundColor,
       appBar: PreferredSize(
         preferredSize: Size.fromHeight(80),
         child: Container(
-          color: app_theme.primary,
+          decoration: const BoxDecoration(
+            color: app_theme.deepNavy,
+            border: Border(
+              bottom: BorderSide(
+                color: Color.fromRGBO(167, 223, 255, 0.12),
+              ),
+            ),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [ Padding(
-              padding: const EdgeInsets.only(left: 12),
-              child:
-              Row(
-                children: [
-                  SizedBox(
-                    height: 30,
-                    child:
-                    CupertinoSwitch(
-                      activeTrackColor: Colors.yellow.shade700,
-                      inactiveTrackColor: Colors.white,
-                      value: _showAllText,
-                      onChanged: (bool value) {
-                        setState(() {
-                          _showAllText = value;
-                        });
-                      },
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(left: 12),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      height: 30,
+                      child: CupertinoSwitch(
+                        activeTrackColor: app_theme.cyanGlow,
+                        inactiveTrackColor: app_theme.surfaceElevated,
+                        value: _showAllText,
+                        onChanged: (bool value) {
+                          setState(() {
+                            _showAllText = value;
+                          });
+                        },
+                      ),
                     ),
-                  ),   Expanded(
-                    child: Text(
-                      _showAllText ? "Show unread only" : "Show all",
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500),
+                    Expanded(
+                      child: Text(
+                        _showAllText ? "Show unread only" : "Show all",
+                        style: const TextStyle(
+                            color: app_theme.lavenderWhite,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500),
+                      ),
                     ),
-                  ),
-
-                ],
+                  ],
+                ),
+                // Text(
+                //   context.lwTranslate.all,
+                // ),
               ),
-              // Text(
-              //   context.lwTranslate.all,
-              // ),
-            ),
               Flexible(
                 child: IgnorePointer(
                   ignoring: _isTabLoading,
                   child: AppBar(
-                    elevation: 5,
+                    elevation: 0,
                     toolbarHeight: 0,
-                    backgroundColor: app_theme.primary,
+                    backgroundColor: app_theme.deepNavy,
                     bottom: TabBar(
                       tabAlignment: TabAlignment.start,
                       isScrollable: true,
@@ -205,14 +219,20 @@ class _WhatsAppChatState extends State<WhatsAppChat>
                       indicatorSize: TabBarIndicatorSize.tab,
                       controller: _tabController,
                       indicator: BoxDecoration(
-                        borderRadius: BorderRadius.circular(4.0),
-                        color: app_theme.primary,
-                        // border: Border.all(color: Colors.green.shade900,width: 0.2)
+                        borderRadius: BorderRadius.circular(10.0),
+                        color: app_theme.surfaceElevated,
+                        border: Border.all(
+                          color: const Color.fromRGBO(73, 200, 255, 0.32),
+                        ),
                       ),
-                      labelColor: Colors.white,
-                      labelStyle: TextStyle(fontWeight: FontWeight.w500, fontSize: 15),
-                      unselectedLabelColor:  _isTabLoading ? Colors.grey.shade500 : Colors.grey.shade300,
-                      unselectedLabelStyle: TextStyle(fontWeight: FontWeight.w400, fontSize: 14),
+                      labelColor: app_theme.lavenderWhite,
+                      labelStyle: const TextStyle(
+                          fontWeight: FontWeight.w500, fontSize: 15),
+                      unselectedLabelColor: _isTabLoading
+                          ? app_theme.secondary
+                          : app_theme.iceBlue,
+                      unselectedLabelStyle: const TextStyle(
+                          fontWeight: FontWeight.w400, fontSize: 14),
                       tabs: [
                         // All tab
                         Tab(
@@ -222,49 +242,59 @@ class _WhatsAppChatState extends State<WhatsAppChat>
                               Text(
                                 context.lwTranslate.all,
                               ),
-                              provider.unreadMsgCount > 0 ?
-                              const SizedBox(width: 3) : Container(),
-                              provider.unreadMsgCount > 0 ?
-                              Container(
-                                height: 20,
-                                alignment: Alignment.center,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.white,
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                                  child: Text(
-                                    provider.unreadMsgCount.toString(),
-                                    style: const TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.black,
-                                        fontWeight: FontWeight.w600),
-                                  ),
-                                ),
-                              ) : Container(),
+                              provider.unreadMsgCount > 0
+                                  ? const SizedBox(width: 3)
+                                  : Container(),
+                              provider.unreadMsgCount > 0
+                                  ? Container(
+                                      height: 20,
+                                      alignment: Alignment.center,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: Colors.white,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 10),
+                                        child: Text(
+                                          provider.unreadMsgCount.toString(),
+                                          style: const TextStyle(
+                                              fontSize: 12,
+                                              color: app_theme.black,
+                                              fontWeight: FontWeight.w600),
+                                        ),
+                                      ),
+                                    )
+                                  : Container(),
                             ],
                           ),
                         ),
                         // Mine tab
                         Tab(
-                          text:
-                          context.lwTranslate.mineFilter,
+                          text: context.lwTranslate.mineFilter,
                         ),
                         // Unassigned tab
-                        Tab(text:
-                        context.lwTranslate.unassignedFilter,
+                        Tab(
+                          text: context.lwTranslate.unassignedFilter,
                         ),
                         ...controller.vendorMessagingUsers
-                            .where((user) => user['vendors__id'] == null || user['vendors__id'] == 'null')
+                            .where((user) =>
+                                user['vendors__id'] == null ||
+                                user['vendors__id'] == 'null')
                             .map((user) {
                           // Safely find the matching contact
-                          final contact = provider.contactsList.cast<MapEntry<String, dynamic>?>().firstWhere(
-                                (contact) => contact?.value['assigned_users__id']?.toString() == user['id'],
-                            orElse: () => null,
-                          );
+                          final contact = provider.contactsList
+                              .cast<MapEntry<String, dynamic>?>()
+                              .firstWhere(
+                                (contact) =>
+                                    contact?.value['assigned_users__id']
+                                        ?.toString() ==
+                                    user['id'],
+                                orElse: () => null,
+                              );
 
-                          final unreadCount = contact?.value['unread_messages_count'] ?? 0;
+                          final unreadCount =
+                              contact?.value['unread_messages_count'] ?? 0;
 
                           return Tab(
                             child: Row(
@@ -286,7 +316,7 @@ class _WhatsAppChatState extends State<WhatsAppChat>
                                       unreadCount.toString(),
                                       style: const TextStyle(
                                           fontSize: 10,
-                                          color: Colors.black,
+                                          color: app_theme.black,
                                           fontWeight: FontWeight.w600),
                                     ),
                                   ),
@@ -294,10 +324,9 @@ class _WhatsAppChatState extends State<WhatsAppChat>
                               ],
                             ),
                           );
-                        })
-                            .toList(),
-                      ],
-                    ),
+                          }),
+                          ],
+                          ),
                   ),
                 ),
               ),
@@ -310,8 +339,7 @@ class _WhatsAppChatState extends State<WhatsAppChat>
         child: Column(
           children: [
             Expanded(
-              child:
-              TabBarView(
+              child: TabBarView(
                 physics: NeverScrollableScrollPhysics(),
                 controller: _tabController,
                 children: [
@@ -319,9 +347,10 @@ class _WhatsAppChatState extends State<WhatsAppChat>
                   buildAllTabContent(),
                   buildAllTabContent(),
                   ...controller.vendorMessagingUsers
-                      .where((user) => user['vendors__id'] == null || user['vendors__id'] == 'null')
-                      .map((user) => buildAllTabContent())
-                      .toList(),
+                      .where((user) =>
+                          user['vendors__id'] == null ||
+                          user['vendors__id'] == 'null')
+                      .map((user) => buildAllTabContent()),
                 ],
               ),
             ),
@@ -340,19 +369,21 @@ class _WhatsAppChatState extends State<WhatsAppChat>
     //     : provider.originalContactsList;
 
     List<MapEntry<String, dynamic>> filteredContacts = _showAllText
-        ? provider.contactsList.where((contact) =>
-    (contact.value['unread_messages_count'] ?? 0) > 0).toList()
+        ? provider.contactsList
+            .where(
+                (contact) => (contact.value['unread_messages_count'] ?? 0) > 0)
+            .toList()
         : provider.contactsList;
     return Column(
       children: [
-        SizedBox(height: 5,),
+        const SizedBox(height: 8),
         SizedBox(
           height: 30,
           width: MediaQuery.of(context).size.width,
           child: Row(
             children: [
               GestureDetector(
-                onTap:() async {
+                onTap: () async {
                   await provider.getUser(isRefresh: false);
                 },
                 child: Padding(
@@ -361,11 +392,13 @@ class _WhatsAppChatState extends State<WhatsAppChat>
                     height: 24,
                     width: 26,
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade400),
-                      color: Colors.grey.shade300,
+                      border: Border.all(
+                          color: const Color.fromRGBO(167, 223, 255, 0.18)),
+                      color: app_theme.surfaceElevated,
                       borderRadius: BorderRadius.circular(5.0),
                     ),
-                    child: Icon(Icons.clear_outlined,color: Colors.white,size: 20),
+                    child: const Icon(Icons.clear_outlined,
+                        color: app_theme.iceBlue, size: 20),
                   ),
                 ),
               ),
@@ -378,27 +411,34 @@ class _WhatsAppChatState extends State<WhatsAppChat>
                     return GestureDetector(
                       onTap: () {
                         setState(() {
-                          selectedLabelId = int.tryParse(label['id'].toString()) ?? 0;
+                          selectedLabelId =
+                              int.tryParse(label['id'].toString()) ?? 0;
                         });
-                        provider.getUserLable(isRefresh: true, labelId: selectedLabelId);
+                        provider.getUserLable(
+                            isRefresh: true, labelId: selectedLabelId);
                       },
-                      child:
-                      Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 2.0,vertical: 3),
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 2.0, vertical: 3),
                         decoration: BoxDecoration(
-                          border: Border.all(color: Color(int.parse('0xff' + label['textColor'].substring(1))),width: 0.5),
-                          color: Color(int.parse('0xff' + label['bgColor'].substring(1))),
+                          border: Border.all(
+                              color: Color(int.parse(
+                                  '0xff${label['textColor'].substring(1)}')),
+                              width: 0.5),
+                          color: Color(int.parse(
+                              '0xff${label['bgColor'].substring(1)}')),
                           borderRadius: BorderRadius.circular(5.0),
                         ),
-                        padding: EdgeInsets.symmetric(vertical: 0.0, horizontal: 8.0),
+                        padding: EdgeInsets.symmetric(
+                            vertical: 0.0, horizontal: 8.0),
                         child: Center(
                           child: Text(
                             label['value'] ?? '',
                             style: TextStyle(
-                                color: Color(int.parse('0xff' + label['textColor'].substring(1))),
+                                color: Color(int.parse(
+                                    '0xff${label['textColor'].substring(1)}')),
                                 fontSize: 11.0,
-                                fontWeight: FontWeight.w600
-                            ),
+                                fontWeight: FontWeight.w600),
                           ),
                         ),
                       ),
@@ -417,11 +457,12 @@ class _WhatsAppChatState extends State<WhatsAppChat>
             top: 8,
           ),
           child: Container(
-            // height: 40,
             decoration: BoxDecoration(
-              borderRadius:
-              BorderRadius.circular(4),
-              color: Colors.grey[200],
+              borderRadius: BorderRadius.circular(14),
+              color: app_theme.surface,
+              border: Border.all(
+                color: const Color.fromRGBO(167, 223, 255, 0.18),
+              ),
             ),
             child: TextField(
               onChanged: search,
@@ -434,24 +475,24 @@ class _WhatsAppChatState extends State<WhatsAppChat>
               autofocus: false,
               style: const TextStyle(
                 fontSize: 12,
-              ), // Ensured smaller font size to fit
-              cursorHeight: 15, // Adjusted to fit within the container
+                color: app_theme.lavenderWhite,
+              ),
+              cursorColor: app_theme.cyanGlow,
+              cursorHeight: 15,
               decoration: InputDecoration(
-                hintText:context.lwTranslate.search,
-                hintStyle: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey
-                ),
+                hintText: context.lwTranslate.search,
+                hintStyle:
+                    const TextStyle(fontSize: 12, color: app_theme.secondary),
                 suffixIcon: IconButton(
-                  padding: const EdgeInsets.all(0), // Removed padding from icon
-                  iconSize: 18, // Reduced icon size to fit
-                  icon: const Icon(Icons.search),
+                  padding: const EdgeInsets.all(0),
+                  iconSize: 18,
+                  icon: const Icon(Icons.search, color: app_theme.iceBlue),
                   onPressed: () {},
                 ),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 8,
                   vertical: 8.0,
-                ), // Adjusted to center text vertically
+                ),
                 border: const OutlineInputBorder(
                   borderSide: BorderSide.none,
                   borderRadius: BorderRadius.all(Radius.circular(15.0)),
@@ -460,13 +501,13 @@ class _WhatsAppChatState extends State<WhatsAppChat>
             ),
           ),
         ),
-        SizedBox(height: 5,),
-
+        const SizedBox(height: 8),
         Expanded(
           child: NotificationListener<ScrollNotification>(
             onNotification: (scrollNotification) {
-              if (scrollNotification is ScrollEndNotification && scrollNotification.metrics.pixels ==
-                  scrollNotification.metrics.maxScrollExtent &&
+              if (scrollNotification is ScrollEndNotification &&
+                  scrollNotification.metrics.pixels ==
+                      scrollNotification.metrics.maxScrollExtent &&
                   !provider.isLoadingMore &&
                   !provider.hasReachedMax) {
                 provider.getUser(isRefresh: false);
@@ -476,251 +517,303 @@ class _WhatsAppChatState extends State<WhatsAppChat>
             },
             child: provider.isLoading && provider.contactsList.isEmpty
                 ? Center(
-              child: Column(
-                children: [
-                  LoadingAnimationWidget.hexagonDots(
-                    color: Colors.green,
-                    size: 40,
-                  ),
-                  SizedBox(height: 8),
-                  Text(context.lwTranslate.loading)
-                ],
-              ),
-            )
+                    child: Column(
+                      children: [
+                        LoadingAnimationWidget.hexagonDots(
+                          color: app_theme.cyanGlow,
+                          size: 40,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(context.lwTranslate.loading)
+                      ],
+                    ),
+                  )
                 : Consumer<ContactProvider>(
-              builder: (context, provider, child) {
-
-                // if (provider.contactsList.isEmpty && !provider.isLoading) {
-                //   return Align(
-                //       alignment: Alignment.center,
-                //       child: Column(
-                //         mainAxisAlignment: MainAxisAlignment.center,
-                //         children: [
-                //           Icon(Icons.error, color: Colors.green.shade300, size: 45),
-                //           Text(
-                //             context.lwTranslate.noResultFound,
-                //             style: TextStyle(
-                //               fontSize: 15,
-                //               fontWeight: FontWeight.w500,
-                //               color: Colors.grey.shade400,
-                //             ),
-                //           ),
-                //         ],
-                //       )
-                //   );
-                // }
-
-                if (filteredContacts.isEmpty && !provider.isLoading) {
-                  return Align(
-                      alignment: Alignment.center,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.error, color: Colors.green.shade300, size: 45),
-                          Text(
-                            _showAllText
-                                ? "No Unread Message"
-                                : context.lwTranslate.noResultFound,
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.grey.shade400,
-                            ),
-                          ),
-                        ],
-                      )
-                  );
-                }
-                return RefreshIndicator(
-                  onRefresh: _handleRefresh,
-                  // onRefresh: () async {
-                  //   // await provider.getUser(isRefresh: true);
-                  //   // await provider.loadMockData(isRefresh: true);
-                  //
-                  // },
-                  child: ListView.builder(
-                    controller: _scrollController,
-                    physics: const ClampingScrollPhysics(),
-                    itemCount:
-                    filteredContacts.length +
-                        // provider.contactsList.length +
-                        (provider.isLoadingMore ? 1 : 0)
-                        + (provider.hasReachedMax ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (index >= filteredContacts.length) {
-                        // if (index >= provider.contactsList.length) {
-                        // return Container();
-                        if (provider.isLoadingMore) {
-                          return const Padding(
-                            padding: EdgeInsets.all(16.0),
-                            child: Center(child: CircularProgressIndicator()),
-                          );
-                        } else
-                          // if (provider.hasReachedMax &&  _isScrollingUp) {
-                        if (provider.hasReachedMax ) {
-                          return const Padding(
-                            padding: EdgeInsets.all(16.0),
-                            child: Center(
-                              child: Text(
-                                '',
-                                style: TextStyle(color: Colors.grey),
-                              ),
-                            ),
-                          );
-                        }
-                      }
-
-                      // if (index >= provider.contactsList.length && provider.isLoadingMore) {
-                      //   return Padding(
-                      //     padding: EdgeInsets.symmetric(vertical: 16),
-                      //     child: Center(
-                      //       child: LoadingAnimationWidget.hexagonDots(
-                      //         color: Colors.grey,
-                      //         size: 40,
-                      //       ),
-                      //     ),
+                    builder: (context, provider, child) {
+                      // if (provider.contactsList.isEmpty && !provider.isLoading) {
+                      //   return Align(
+                      //       alignment: Alignment.center,
+                      //       child: Column(
+                      //         mainAxisAlignment: MainAxisAlignment.center,
+                      //         children: [
+                      //           Icon(Icons.error, color: Colors.green.shade300, size: 45),
+                      //           Text(
+                      //             context.lwTranslate.noResultFound,
+                      //             style: TextStyle(
+                      //               fontSize: 15,
+                      //               fontWeight: FontWeight.w500,
+                      //               color: Colors.grey.shade400,
+                      //             ),
+                      //           ),
+                      //         ],
+                      //       )
                       //   );
                       // }
-                      // final contactEntry = provider.contactsList[index];
 
-                      final contactEntry = filteredContacts[index];
-                      final contact = contactEntry.value;
-                      int messageCount = contact['unread_messages_count'] ?? 0;
-
-                      return GestureDetector(
-                        onTap: () {
-                          provider.updateMessageCountToZero(contact['_uid'].toString());
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ChatboxScreen(contactdetails: contact),
-                            ),
-                          ).then((_) {
-                            provider.updateMessageCountToZero(contact['_uid']);
-                          });
-                        },
-                        child: Column(
-                          children: [
-                            ListTile(
-                              minVerticalPadding: 10,
-                              leading: CircleAvatar(
-                                child: Text(
-                                  contact['name_initials']?? "U",
-                                  style: const TextStyle(fontSize: 16),
+                      if (filteredContacts.isEmpty && !provider.isLoading) {
+                        return Align(
+                            alignment: Alignment.center,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.error,
+                                    color: Colors.green.shade300, size: 45),
+                                // ignore: deprecated_member_use
+                                Text(
+                                  _showAllText
+                                      ? "No Unread Message"
+                                      : context.lwTranslate.noResultFound,
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w500,
+                                    color: app_theme.secondary,
+                                  ),
                                 ),
-                              ),
-                              title: Row(
-                                children: [
-                                  Expanded(
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            contact['full_name']?? "Unknown",
-                                            style: const TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.black,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ),
-                                        Expanded(
-                                          child: Wrap(
-                                            spacing: -15,
-                                            runSpacing: 2,
-                                            children: (contact['labels'] as List<dynamic>?)?.map((label) {
-                                              return
-                                                Stack(
-                                                  alignment: Alignment.center,
-                                                  children: [
-                                                    Transform.rotate(
-                                                      angle: -135 * (3.1415926535 / 180), // Convert degrees to radians
-                                                      child: Icon(
-                                                        Icons.label,
-                                                        color: Color(int.parse(label['bg_color'].replaceFirst('#', '0xff'))),
-                                                        size: 30,
-                                                        shadows: [
-                                                          BoxShadow(
-                                                            color: Colors.grey.withOpacity(0.3),
-                                                            blurRadius: 1,
-                                                            spreadRadius: 3,
-                                                            offset: Offset(3, 3),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                    Positioned(
-                                                      left:10,
-                                                      top:10,
-                                                      child: Transform.rotate(
-                                                        angle: -135 * (3.1415926535 / 180),
-                                                        child: Icon(
-                                                          Icons.circle,
-                                                          color: Color(int.parse(label['text_color'].replaceFirst('#', '0xff'))),
-                                                          size: 6,
-                                                          shadows: [
-                                                            BoxShadow(
-                                                              color: Colors.grey.withOpacity(0.3),
-                                                              blurRadius: 2,
-                                                              spreadRadius: 1,
-                                                              offset: Offset(1, 1),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                );
-
-                                            }).toList() ?? [],
-                                          ),
-                                        ),
-                                        // Your label widgets here
-                                      ],
+                              ],
+                            ));
+                      }
+                      return RefreshIndicator(
+                        onRefresh: _handleRefresh,
+                        // onRefresh: () async {
+                        //   // await provider.getUser(isRefresh: true);
+                        //   // await provider.loadMockData(isRefresh: true);
+                        //
+                        // },
+                        child: ListView.builder(
+                          controller: _scrollController,
+                          physics: const ClampingScrollPhysics(),
+                          itemCount: filteredContacts.length +
+                              // provider.contactsList.length +
+                              (provider.isLoadingMore ? 1 : 0) +
+                              (provider.hasReachedMax ? 1 : 0),
+                          itemBuilder: (context, index) {
+                            if (index >= filteredContacts.length) {
+                              // if (index >= provider.contactsList.length) {
+                              // return Container();
+                              if (provider.isLoadingMore) {
+                                return const Padding(
+                                  padding: EdgeInsets.all(16.0),
+                                  child: Center(
+                                      child: CircularProgressIndicator()),
+                                );
+                              } else
+                              // if (provider.hasReachedMax &&  _isScrollingUp) {
+                              if (provider.hasReachedMax) {
+                                return const Padding(
+                                  padding: EdgeInsets.all(16.0),
+                                  child: Center(
+                                    child: Text(
+                                      '',
+                                      style: TextStyle(color: Colors.grey),
                                     ),
                                   ),
-                                  if (messageCount > 0)
-                                    CircleAvatar(
-                                      radius: 10,
+                                );
+                              }
+                            }
+
+                            // if (index >= provider.contactsList.length && provider.isLoadingMore) {
+                            //   return Padding(
+                            //     padding: EdgeInsets.symmetric(vertical: 16),
+                            //     child: Center(
+                            //       child: LoadingAnimationWidget.hexagonDots(
+                            //         color: Colors.grey,
+                            //         size: 40,
+                            //       ),
+                            //     ),
+                            //   );
+                            // }
+                            // final contactEntry = provider.contactsList[index];
+
+                            final contactEntry = filteredContacts[index];
+                            final contact = contactEntry.value;
+                            int messageCount =
+                                contact['unread_messages_count'] ?? 0;
+
+                            return GestureDetector(
+                              onTap: () {
+                                provider.updateMessageCountToZero(
+                                    contact['_uid'].toString());
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        ChatboxScreen(contactdetails: contact),
+                                  ),
+                                ).then((_) {
+                                  provider.updateMessageCountToZero(
+                                      contact['_uid']);
+                                });
+                              },
+                              child: Column(
+                                children: [
+                                  ListTile(
+                                    minVerticalPadding: 10,
+                                    leading: CircleAvatar(
+                                      backgroundColor:
+                                          app_theme.surfaceElevated,
                                       child: Text(
-                                        messageCount.toString(),
+                                        contact['name_initials'] ?? "U",
                                         style: const TextStyle(
-                                            fontSize: 8,
-                                            color: Colors.yellow,
-                                            fontWeight: FontWeight.w900),
+                                          fontSize: 16,
+                                          color: app_theme.iceBlue,
+                                          fontWeight: FontWeight.w700,
+                                        ),
                                       ),
                                     ),
+                                    title: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  contact['full_name'] ??
+                                                      "Unknown",
+                                                  style: const TextStyle(
+                                                    fontSize: 15,
+                                                    color:
+                                                        app_theme.lavenderWhite,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                              ),
+                                              Expanded(
+                                                child: Wrap(
+                                                  spacing: -15,
+                                                  runSpacing: 2,
+                                                  children: (contact['labels']
+                                                              as List<dynamic>?)
+                                                          ?.map((label) {
+                                                        return Stack(
+                                                          alignment:
+                                                              Alignment.center,
+                                                          children: [
+                                                            Transform.rotate(
+                                                              angle: -135 *
+                                                                  (3.1415926535 /
+                                                                      180), // Convert degrees to radians
+                                                              child: Icon(
+                                                                Icons.label,
+                                                                color: Color(int.parse(label[
+                                                                        'bg_color']
+                                                                    .replaceFirst(
+                                                                        '#',
+                                                                        '0xff'))),
+                                                                size: 30,
+                                                                shadows: [
+                                                                  BoxShadow(
+                                                                    color: Colors
+                                                                        .grey
+                                                                        .withValues(
+                                                                            alpha:
+                                                                                0.3),
+                                                                    blurRadius:
+                                                                        1,
+                                                                    spreadRadius:
+                                                                        3,
+                                                                    offset:
+                                                                        Offset(
+                                                                            3,
+                                                                            3),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                            ),
+                                                            Positioned(
+                                                              left: 10,
+                                                              top: 10,
+                                                              child: Transform
+                                                                  .rotate(
+                                                                angle: -135 *
+                                                                    (3.1415926535 /
+                                                                        180),
+                                                                child: Icon(
+                                                                  Icons.circle,
+                                                                  color: Color(int.parse(label[
+                                                                          'text_color']
+                                                                      .replaceFirst(
+                                                                          '#',
+                                                                          '0xff'))),
+                                                                  size: 6,
+                                                                  shadows: [
+                                                                    BoxShadow(
+                                                                      color: Colors
+                                                                          .grey
+                                                                          .withValues(
+                                                                              alpha: 0.3),
+                                                                      blurRadius:
+                                                                          2,
+                                                                      spreadRadius:
+                                                                          1,
+                                                                      offset:
+                                                                          Offset(
+                                                                              1,
+                                                                              1),
+                                                                    ),
+                                                                  ],
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        );
+                                                      }).toList() ??
+                                                      [],
+                                                ),
+                                              ),
+                                              // Your label widgets here
+                                            ],
+                                          ),
+                                        ),
+                                        if (messageCount > 0)
+                                          CircleAvatar(
+                                            radius: 10,
+                                            backgroundColor:
+                                                app_theme.surfaceElevated,
+                                            child: Text(
+                                              messageCount.toString(),
+                                              style: const TextStyle(
+                                                  fontSize: 8,
+                                                  color: app_theme.cyanGlow,
+                                                  fontWeight: FontWeight.w900),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                    subtitle: Text(
+                                        contact['wa_id'] ?? "Unknown",
+                                        style: const TextStyle(
+                                            fontSize: 11,
+                                            color: app_theme.secondary)),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.only(right: 8),
+                                    child: Align(
+                                        alignment: Alignment.topRight,
+                                        child: Text(
+                                          (contact['last_message']?[
+                                                      'formatted_message_time'] ??
+                                                  "")
+                                              .toString(),
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color: app_theme.secondary,
+                                          ),
+                                        )),
+                                  ),
+                                  const Divider(
+                                      height: 1,
+                                      color:
+                                          Color.fromRGBO(167, 223, 255, 0.10)),
                                 ],
                               ),
-                              subtitle: Text(contact['wa_id'] ?? "Unknown",
-                                  style: const TextStyle(
-                                      fontSize: 11, color: Colors.black)),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: Align(
-                                  alignment: Alignment.topRight,
-                                  child: Text(
-                                    (contact['last_message']?['formatted_message_time'] ?? "").toString(),
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                  )
-                              ),
-                            ),
-                            const Divider(
-                                height: 1,
-                                color: Color.fromARGB(255, 222, 222, 222)),
-                          ],
+                            );
+                          },
                         ),
                       );
                     },
                   ),
-                );
-              },
-            ),
           ),
         )
       ],
@@ -738,9 +831,12 @@ class _WhatsAppChatState extends State<WhatsAppChat>
     } else {
       int userIndex = _tabController.index - 3;
       final filteredUsers = controller.vendorMessagingUsers
-          .where((user) => user['vendors__id'] == null || user['vendors__id'] == 'null')
+          .where((user) =>
+              user['vendors__id'] == null || user['vendors__id'] == 'null')
           .toList();
-      if (filteredUsers.isNotEmpty && userIndex >= 0 && userIndex < filteredUsers.length) {
+      if (filteredUsers.isNotEmpty &&
+          userIndex >= 0 &&
+          userIndex < filteredUsers.length) {
         String assignedId = filteredUsers[userIndex]['id'];
         await provider.getUser(isRefresh: true, assigned: assignedId);
       }

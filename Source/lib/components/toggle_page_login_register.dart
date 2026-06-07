@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../screens/user/login.dart';
-import '../screens/user/register.dart';
+import 'package:stundaa/screens/user/login.dart';
+import 'package:stundaa/screens/user/register.dart';
 
 class LoginOrRegisterPage extends StatefulWidget {
   const LoginOrRegisterPage({super.key});

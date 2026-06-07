@@ -1,8 +1,8 @@
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:flutter/material.dart';
 import 'package:multi_dropdown/multi_dropdown.dart';
-import 'package:whatsjet_demo/services/utils.dart';
-import '/support/app_theme.dart' as app_theme;
+import 'package:stundaa/services/utils.dart';
+import 'package:stundaa/support/app_theme.dart' as app_theme;
 
 class CustomDropdown extends StatefulWidget {
   final String labelText;
@@ -62,29 +62,32 @@ class _CustomDropdownState extends State<CustomDropdown> {
           isExpanded: true,
           hint: Text(
             widget.labelText,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 14,
-              color: Theme.of(context).hintColor,
+              color: app_theme.secondary,
+              fontWeight: FontWeight.w500,
             ),
           ),
           value: selectedValue,
           buttonStyleData: const ButtonStyleData(
-            padding: EdgeInsets.symmetric(horizontal: 8),
-            height: 50,
+            padding: EdgeInsets.symmetric(horizontal: 12),
+            height: 56,
             width: 500,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.all(Radius.circular(5)),
-              border: Border(
-                bottom: BorderSide(color: Color.fromRGBO(212, 212, 212, 1)),
-                top: BorderSide(color: Color.fromRGBO(212, 212, 212, 1)),
-                right: BorderSide(color: Color.fromRGBO(212, 212, 212, 1)),
-                left: BorderSide(color: Color.fromRGBO(212, 212, 212, 1)),
+              color: Color.fromRGBO(255, 255, 255, 0.055),
+              borderRadius: BorderRadius.all(Radius.circular(18)),
+              border: Border.fromBorderSide(
+                BorderSide(color: Color.fromRGBO(167, 223, 255, 0.16)),
               ),
             ),
           ),
           dropdownStyleData: const DropdownStyleData(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.all(Radius.circular(5)),
+              color: app_theme.surface,
+              borderRadius: BorderRadius.all(Radius.circular(18)),
+              border: Border.fromBorderSide(
+                BorderSide(color: Color.fromRGBO(167, 223, 255, 0.16)),
+              ),
             ),
             maxHeight: 200,
           ),
@@ -109,8 +112,7 @@ class _CustomDropdownState extends State<CustomDropdown> {
             if (!isOpen) {
               textEditingController.clear();
               setState(() {
-                filteredItems =
-                    widget.listItems;
+                filteredItems = widget.listItems;
               });
             }
           },
@@ -133,7 +135,7 @@ class _CustomDropdownState extends State<CustomDropdown> {
             context.lwTranslate.noResultFound,
             style: TextStyle(
               fontSize: 14,
-              color: Theme.of(context).hintColor,
+              color: app_theme.secondary,
             ),
           ),
         ),
@@ -164,7 +166,7 @@ class _CustomDropdownState extends State<CustomDropdown> {
           value.toString(),
           style: TextStyle(
             fontSize: 14,
-            color: Theme.of(context).hintColor,
+            color: app_theme.lavenderWhite,
           ),
         ),
       ));
@@ -172,8 +174,6 @@ class _CustomDropdownState extends State<CustomDropdown> {
     return newItems;
   }
 }
-
-
 
 class MultiDropdownCustom extends StatefulWidget {
   final String labelText;
@@ -230,22 +230,23 @@ class _MultiDropdownCustomState extends State<MultiDropdownCustom> {
           }
         },
         itemBuilder: (DropdownItem<String> item, index, select) {
-          final label = widget.listItems.firstWhere((element) =>
-          element[widget.optionKeyName].toString() == item.value
-          );
           return ListTile(
             title: Text(
               item.label,
-              style: TextStyle(fontSize: 14,color: Theme.of(context).hintColor,fontWeight:FontWeight.w500 ,),
+              style: const TextStyle(
+                fontSize: 14,
+                color: app_theme.lavenderWhite,
+                fontWeight: FontWeight.w500,
+              ),
             ),
             onTap: select,
           );
         },
         dropdownDecoration: DropdownDecoration(
           marginTop: 8.0,
-          backgroundColor: Colors.white,
-          elevation: 2.0,
-          borderRadius: BorderRadius.circular(8),
+          backgroundColor: app_theme.surface,
+          elevation: 4.0,
+          borderRadius: BorderRadius.circular(12),
           maxHeight: 400,
         ),
         searchEnabled: true,
@@ -254,7 +255,6 @@ class _MultiDropdownCustomState extends State<MultiDropdownCustom> {
     );
   }
 }
-
 
 class CustomMultiDropdown extends StatefulWidget {
   final List<Map<String, dynamic>> items;
@@ -283,9 +283,8 @@ class _CustomMultiDropdownState extends State<CustomMultiDropdown> {
 
   @override
   Widget build(BuildContext context) {
-    final selectedItems = widget.items
-        .where((item) => selectedIds.contains(item['id']))
-        .toList();
+    final selectedItems =
+        widget.items.where((item) => selectedIds.contains(item['id'])).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -302,56 +301,60 @@ class _CustomMultiDropdownState extends State<CustomMultiDropdown> {
           },
           child: Container(
             width: MediaQuery.of(context).size.width * 0.85,
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(5),
-              border: Border.all(color: Colors.grey.shade400),
-              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: const Color.fromRGBO(167, 223, 255, 0.16),
+              ),
+              color: const Color.fromRGBO(255, 255, 255, 0.055),
             ),
             child: Wrap(
               spacing: 5.0,
               runSpacing: 6.0,
               children: selectedItems.isNotEmpty
                   ? selectedItems.map((item) {
-                final Color textColor =
-                HexColorCustom.fromHex(item['textColor']);
-                final Color bgColor =
-                HexColorCustom.fromHex(item['bgColor']);
-                return Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 6, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: bgColor,
-                    border: Border.all(color: Colors.grey.shade300),
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 5, horizontal: 5),
-                    child: Text(
-                      item['value'].toString() ?? '',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: textColor,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                );
-              }).toList()
+                      final Color textColor =
+                          HexColorCustom.fromHex(item['textColor']);
+                      final Color bgColor =
+                          HexColorCustom.fromHex(item['bgColor']);
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: bgColor,
+                          border: Border.all(
+                            color: const Color.fromRGBO(167, 223, 255, 0.16),
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 5, horizontal: 5),
+                          child: Text(
+                            item['value'].toString(),
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: textColor,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList()
                   : [
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 5),
-                  child: Text(
-                    context.lwTranslate.selectLable,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Theme.of(context).hintColor,
-                    ),
-                  ),
-                )
-              ],
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 5),
+                        child: Text(
+                          context.lwTranslate.selectLable,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: app_theme.secondary,
+                          ),
+                        ),
+                      )
+                    ],
             ),
           ),
         ),
@@ -366,9 +369,11 @@ class _CustomMultiDropdownState extends State<CustomMultiDropdown> {
       context: context,
       builder: (context) {
         return AlertDialog(
+          backgroundColor: app_theme.surface,
           insetPadding: EdgeInsets.symmetric(horizontal: 16),
           title: Text(
-              context.lwTranslate.selectLable
+            context.lwTranslate.selectLable,
+            style: const TextStyle(color: app_theme.lavenderWhite),
           ),
           content: StatefulBuilder(
             builder: (context, setState) {
@@ -380,9 +385,9 @@ class _CustomMultiDropdownState extends State<CustomMultiDropdown> {
                     final String id = item['id'].toString();
                     final String label = item['value'].toString();
                     final Color textColor =
-                    HexColorCustom.fromHex(item['textColor'].toString());
+                        HexColorCustom.fromHex(item['textColor'].toString());
                     final Color bgColor =
-                    HexColorCustom.fromHex(item['bgColor']);
+                        HexColorCustom.fromHex(item['bgColor']);
                     final bool isSelected = tempSelectedIds.contains(id);
                     return GestureDetector(
                       onTap: () {
@@ -396,7 +401,7 @@ class _CustomMultiDropdownState extends State<CustomMultiDropdown> {
                       },
                       child: Chip(
                         side: BorderSide(
-                          color: Colors.grey.shade300,
+                          color: const Color.fromRGBO(167, 223, 255, 0.16),
                           width: 1.0,
                         ),
                         backgroundColor: bgColor,
@@ -406,13 +411,13 @@ class _CustomMultiDropdownState extends State<CustomMultiDropdown> {
                         ),
                         avatar: isSelected
                             ? const CircleAvatar(
-                          backgroundColor: Colors.transparent,
-                          child: Icon(
-                            Icons.check_circle,
-                            color: app_theme.primary,
-                            size: 20,
-                          ),
-                        )
+                                backgroundColor: Colors.transparent,
+                                child: Icon(
+                                  Icons.check_circle,
+                                  color: app_theme.primary,
+                                  size: 20,
+                                ),
+                              )
                             : null,
                       ),
                     );
@@ -424,18 +429,21 @@ class _CustomMultiDropdownState extends State<CustomMultiDropdown> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text(context.lwTranslate.cancel),
+              child: Text(
+                context.lwTranslate.cancel,
+                style: const TextStyle(color: app_theme.secondary),
+              ),
             ),
             ElevatedButton(
               style: ButtonStyle(
-                backgroundColor:
-                MaterialStateProperty.all<Color>(app_theme.primary)
-                // MaterialStateProperty.all<Color>(Colors.green),
+                backgroundColor: WidgetStateProperty.all<Color>(
+                  app_theme.cyanGlow,
+                ),
               ),
               onPressed: () => Navigator.pop(context, tempSelectedIds),
               child: Text(
                 context.lwTranslate.ok,
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(color: app_theme.black),
               ),
             ),
           ],
@@ -463,8 +471,3 @@ class HexColorCustom extends Color {
     return HexColorCustom(hexColor ?? '#000000');
   }
 }
-
-
-
-
-

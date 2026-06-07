@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
-import 'package:whatsjet_demo/services/utils.dart';
+import 'package:stundaa/services/utils.dart';
 
 class PdfPickerPage extends StatefulWidget {
-  String pickedFilePath;
-  String filename;
+  final String pickedFilePath;
+  final String filename;
 
-  PdfPickerPage(
+  const PdfPickerPage(
       {super.key, required this.pickedFilePath, required this.filename});
   @override
-  PdfPickerPageState createState() => PdfPickerPageState();
+  State<PdfPickerPage> createState() => PdfPickerPageState();
 }
 
 class PdfPickerPageState extends State<PdfPickerPage> {

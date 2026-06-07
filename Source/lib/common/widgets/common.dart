@@ -1,8 +1,9 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import '../../services/utils.dart';
-import '../../support/app_theme.dart' as app_theme;
+import 'package:google_fonts/google_fonts.dart';
+import 'package:stundaa/services/utils.dart';
+import 'package:stundaa/support/app_theme.dart' as app_theme;
 
 ///
 /// App Logo Widget
@@ -66,21 +67,31 @@ PreferredSizeWidget innerAppBar(
     required BuildContext context,
     List<Widget>? actions,  TabBar? bottom}) {
   return AppBar(
-    backgroundColor:  app_theme.primary,
+    backgroundColor: Colors.transparent,
     automaticallyImplyLeading: false,
     centerTitle: false,
+    flexibleSpace: Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
+      child: DecoratedBox(
+        decoration: app_theme.topBarDecoration(radius: 28),
+      ),
+    ),
     leading: IconButton(
       onPressed: () {
         Navigator.pop(context);
       },
       icon: const Icon(
-        Icons.arrow_back,
+        CupertinoIcons.back,
         color: Colors.white,
       ),
     ),
     title: Text(
       title,
-      style: const TextStyle(color: Colors.white, fontSize: 16),
+      style: GoogleFonts.plusJakartaSans(
+        color: Colors.white,
+        fontSize: 17,
+        fontWeight: FontWeight.w700,
+      ),
     ),
     actions: actions,
   );
