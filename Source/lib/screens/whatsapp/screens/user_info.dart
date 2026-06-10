@@ -342,7 +342,7 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
                 Row(
                   children: [
                     if (isProfileEdit)
-                      TextButton(
+                      ElevatedButton(
                         onPressed: () async {
                           await controller.updateProfileApi(
                             context: context,
@@ -353,47 +353,47 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
                           if (context.mounted) {
                             final provider = Provider.of<ContactProvider>(context, listen: false);
                             await provider.getUser(isRefresh: true, assigned: '');
+                            
+                            // Show success message
+                            showToastMessage(
+                              context, 
+                              'Contact updated successfully!', 
+                              type: 'success'
+                            );
                           }
                           setState(() {
                             isProfileEdit = false;
                           });
                         },
-                        child: Text(
-                          "SAVE",
-                          style: TextStyle(
-                            color: app_theme.primary,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: app_theme.primary,
+                          foregroundColor: app_theme.black,
+                          minimumSize: const Size(70, 32),
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                      ),
-                    IconButton(
-                      icon: Icon(
-                        isProfileEdit ? CupertinoIcons.check_mark : CupertinoIcons.pencil,
-                        color: app_theme.primary,
-                      ),
-                      onPressed: () async {
-                        if (isProfileEdit) {
-                          await controller.updateProfileApi(
-                            context: context,
-                            firstNameValue: controller.nameController.text,
-                            emailValue: controller.emailController.text,
-                            languageCodeValue: controller.languageCodeController.text,
-                          );
-                          if (context.mounted) {
-                            final provider = Provider.of<ContactProvider>(context, listen: false);
-                            await provider.getUser(isRefresh: true, assigned: '');
-                          }
-                          setState(() {
-                            isProfileEdit = false;
-                          });
-                        } else {
+                        child: const Text(
+                          "SAVE",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      )
+                    else
+                      IconButton(
+                        icon: const Icon(
+                          CupertinoIcons.pencil,
+                          color: app_theme.primary,
+                        ),
+                        onPressed: () {
                           setState(() {
                             isProfileEdit = true;
                           });
-                        }
-                      },
-                    ),
+                        },
+                      ),
                   ],
                 ),
               ],
