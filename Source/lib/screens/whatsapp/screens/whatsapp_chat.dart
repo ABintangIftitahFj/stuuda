@@ -582,7 +582,7 @@ class _WhatsAppChatState extends State<WhatsAppChat>
                           children: [
                             Expanded(
                               child: Text(
-                                contact.lastMessage,
+                                contact.lastMessageText,
                                 style: TextStyle(
                                     color: Colors.white.withValues(alpha: 0.5),
                                     fontSize: 13,
