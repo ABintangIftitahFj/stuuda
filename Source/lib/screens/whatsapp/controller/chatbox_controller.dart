@@ -517,10 +517,8 @@ class ChatboxController extends ChangeNotifier {
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (userId != null && userId!.isNotEmpty) {
-          // Reduced delay from 5s to 2s
-          Future.delayed(const Duration(seconds: 2), () {
-            getUserChatSend();
-          });
+          // Removed delay entirely for instant refresh
+          getUserChatSend();
         }
       });
     } catch (e) {

@@ -49,11 +49,15 @@ class Userinfocontroller extends GetxController {
   }) async {
     isLoadingUpdateData.value = true;
     try {
+      // Ensure email is sent as empty string if not provided, 
+      // avoiding server-side "invalid email" errors if the field is optional.
+      final emailToSend = emailValue.trim().isEmpty ? "" : emailValue;
+      
       await _contactInfoRepository.updateContactProfile(
         context: context,
         contactUid: userId ?? '',
         firstName: firstNameValue,
-        email: emailValue,
+        email: emailToSend,
         languageCode: languageCodeValue,
       );
       firstName.value = firstNameValue;
