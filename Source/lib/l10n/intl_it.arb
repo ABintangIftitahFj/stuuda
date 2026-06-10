@@ -200,6 +200,6 @@
   "showAll": "Mostra tutto",
 
   "enableAIbot": "Abilita il bot AI",
-  "enableReplybot": "Abilita il bot di risposta"
-
-}
+  "enableReplybot": "Abilita il bot di risposta",
+  "submittedSuccessfully": "Inviato con successo"
+  }

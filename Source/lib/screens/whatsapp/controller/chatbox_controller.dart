@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:stundaa/model/chat_conversation.dart';
 import 'package:stundaa/model/chat_message.dart';
@@ -155,9 +156,28 @@ class ChatboxController extends ChangeNotifier {
     return null;
   }
 
+  Timer? _pollingTimer;
+
   void setUserId(String id) {
-    userId = id;
-    _loadReplyCache(); // load persisted reply cache for this contact
+    if (userId != id) {
+      userId = id;
+      _loadReplyCache(); // load persisted reply cache for this contact
+      _startPolling();
+    }
+  }
+
+  void _startPolling() {
+    _pollingTimer?.cancel();
+    _pollingTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
+      if (userId != null && userId!.isNotEmpty) {
+        getUserChatSend();
+      }
+    });
+  }
+
+  void _stopPolling() {
+    _pollingTimer?.cancel();
+    _pollingTimer = null;
   }
 
   void toggleEmojiShowing() {
@@ -583,6 +603,7 @@ class ChatboxController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _stopPolling();
     currentPage = 2;
     super.dispose();
   }

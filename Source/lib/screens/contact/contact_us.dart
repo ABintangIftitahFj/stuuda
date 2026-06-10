@@ -8,6 +8,8 @@ import 'package:stundaa/services/utils.dart';
 import 'package:stundaa/support/app_theme.dart' as app_theme;
 import 'package:stundaa/services/auth.dart' as auth;
 
+import 'package:stundaa/repositories/common_repository.dart';
+
 class ContactUs extends StatefulWidget {
   const ContactUs({super.key});
 
@@ -20,6 +22,9 @@ class _ContactUsState extends State<ContactUs> {
   bool isLoading = false;
   late TextEditingController _nameController;
   late TextEditingController _emailController;
+  final TextEditingController _subjectController = TextEditingController();
+  final TextEditingController _messageController = TextEditingController();
+  final CommonRepository _commonRepository = CommonRepository();
 
   @override
   void initState() {
@@ -37,7 +42,42 @@ class _ContactUsState extends State<ContactUs> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
+    _subjectController.dispose();
+    _messageController.dispose();
     super.dispose();
+  }
+
+  void _submitForm() async {
+    if (_formKey.currentState!.validate()) {
+      _formKey.currentState!.save();
+      setState(() {
+        isLoading = true;
+      });
+
+      try {
+        await _commonRepository.submitContactForm(
+          fullName: _nameController.text,
+          email: _emailController.text,
+          subject: _subjectController.text,
+          message: _messageController.text,
+        );
+        if (mounted) {
+          showSuccessMessage(context, context.lwTranslate.submittedSuccessfully);
+          _subjectController.clear();
+          _messageController.clear();
+        }
+      } catch (e) {
+        if (mounted) {
+          showErrorMessage(context, e.toString());
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            isLoading = false;
+          });
+        }
+      }
+    }
   }
 
   @override
@@ -132,15 +172,17 @@ class _ContactUsState extends State<ContactUs> {
                                   onChanged: (text) {},
                                 ),
                                 InputField(
+                                  controller: _subjectController,
                                   labelText: context.lwTranslate.subject,
                                   validation:
-                                      ValidationBuilder().minLength(6).build(),
+                                      ValidationBuilder().minLength(3).build(),
                                   prefixIcon: const Icon(
                                     CupertinoIcons.doc_text,
                                     color: app_theme.iceBlue,
                                   ),
                                 ),
                                 InputField(
+                                  controller: _messageController,
                                   maxLines: null,
                                   minLines: 5,
                                   labelText: context.lwTranslate.message,
@@ -153,10 +195,7 @@ class _ContactUsState extends State<ContactUs> {
                           ),
                           const SizedBox(height: 18),
                           GestureDetector(
-                            onTap: () async {
-                              _formKey.currentState?.save();
-                              if (_formKey.currentState!.validate()) {}
-                            },
+                            onTap: _submitForm,
                             child: Container(
                               height: 50,
                               width: double.infinity,

@@ -1129,6 +1129,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enable Reply Bot'**
   String get enableReplybot;
+
+  /// No description provided for @submittedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Submitted Successfully'**
+  String get submittedSuccessfully;
 }
 
 class _AppLocalizationsDelegate

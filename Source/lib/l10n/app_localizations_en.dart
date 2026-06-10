@@ -533,4 +533,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get enableReplybot => 'Enable Reply Bot';
+
+  @override
+  String get submittedSuccessfully => 'Submitted Successfully';
 }

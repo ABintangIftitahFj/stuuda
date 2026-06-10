@@ -208,8 +208,6 @@
 
 
   "enableAIbot": "Enable AI Bot",
-  "enableReplybot": "Enable Reply Bot"
-
-
-
-}
+  "enableReplybot": "Enable Reply Bot",
+  "submittedSuccessfully": "Submitted Successfully"
+  }
