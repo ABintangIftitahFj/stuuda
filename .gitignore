@@ -1,4 +1,29 @@
 
+# IDE / Editor
+.vscode/
+.qwen/
+.idea/
+
+# Planning & Agent logs
+planning/
+findings.md
+progress.md
+task_plan.md
+desain_theme.md
+
+# Backend (separate repo)
+backend_repo/
+
+# Temp / Downloads
+5_6096171031121109264/
+
+# Flutter audio temp & coverage
+Source/coverage/
+Source/[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]-*
+Source/test_*.dart
+*.jpeg
+update_imports.ps1
+
 # Mobile build artifacts
 *.apk
 *.ipa
@@ -11,4 +36,11 @@ upload-keystore.jks
 # Flutter build dirs
 build/
 .flutter-plugins
+Source/.dart_tool/
+Source/.packages
+Source/.pub/
+Source/build/
+Source/.flutter-plugins
+Source/.flutter-plugins-dependencies
+
 
