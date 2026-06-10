@@ -23,7 +23,6 @@ class _LoginPageState extends State<LoginPage> {
   final Map<String, dynamic> formInputData = {};
   bool isInProcess = false;
   bool _isLoading = false;
-  bool _isLoadingForDemo = false;
   bool isPasswordVisible = false;
 
   void login() async {
@@ -47,31 +46,6 @@ class _LoginPageState extends State<LoginPage> {
         _isLoading = false;
       });
     }
-  }
-
-  void demoLogin() async {
-    formInputData['email'] = 'testcompany';
-    formInputData['password'] = 'demopass12';
-
-    setState(() {
-      _isLoadingForDemo = true;
-    });
-
-    await data_transport.post(
-      Account.login,
-      inputData: formInputData,
-      context: context,
-      secured: true,
-      onSuccess: (responseData) {
-        if (responseData != null) {
-          auth.createLoginSession(responseData, context);
-        }
-      },
-    );
-
-    setState(() {
-      _isLoadingForDemo = false;
-    });
   }
 
   @override
@@ -144,7 +118,7 @@ class _LoginPageState extends State<LoginPage> {
                                 ),
                             textAlign: TextAlign.center,
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 10),
                           Text(
                             'Continue your focus journey with STUNDAA.',
                             style: Theme.of(context)
@@ -223,26 +197,26 @@ class _LoginPageState extends State<LoginPage> {
                                   ),
                                 ],
                               ),
-                                child: !_isLoading
+                              child: !_isLoading
                                   ? Row(
                                       mainAxisAlignment:
                                           MainAxisAlignment.center,
                                       children: [
                                         Text(
-                                      context.lwTranslate.login,
-                                      style: const TextStyle(
-                                        fontSize: 18,
-                                        color: app_theme.black,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                          context.lwTranslate.login,
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            color: app_theme.black,
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                         ),
                                         const SizedBox(width: 10),
                                         Container(
                                           width: 28,
                                           height: 28,
                                           decoration: BoxDecoration(
-                                            color: Colors.black.withValues(
-                                                alpha: 0.10),
+                                            color: Colors.black
+                                                .withValues(alpha: 0.10),
                                             shape: BoxShape.circle,
                                           ),
                                           child: const Icon(
@@ -263,54 +237,6 @@ class _LoginPageState extends State<LoginPage> {
                                     ),
                             ),
                           ),
-                          if (configItem('demoMode', fallbackValue: false) ==
-                              true) ...[
-                            const SizedBox(height: 18),
-                            Text(
-                              context.lwTranslate.or,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: app_theme.secondary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 18),
-                            GestureDetector(
-                              onTap: demoLogin,
-                              child: Container(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 16),
-                                width: double.infinity,
-                                alignment: Alignment.center,
-                                decoration: BoxDecoration(
-                                  color:
-                                      const Color.fromRGBO(255, 255, 255, 0.06),
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: const Color.fromRGBO(
-                                        167, 223, 255, 0.24),
-                                  ),
-                                ),
-                                child: !_isLoadingForDemo
-                                    ? Text(
-                                        context.lwTranslate.demoCompanyLogin,
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          color: app_theme.lavenderWhite,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      )
-                                    : const SizedBox(
-                                        height: 24,
-                                        width: 24,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2.2,
-                                          color: app_theme.cyanGlow,
-                                        ),
-                                      ),
-                              ),
-                            ),
-                          ],
                           const SizedBox(height: 22),
                           Text(
                             context.lwTranslate.dontHaveAcc,

@@ -145,6 +145,8 @@ class _MessageBubbleState extends State<MessageBubble>
         .hasMatch(uri.path);
   }
 
+  bool _mediaError = false;
+
   void _initializeMedia() async {
     if (widget.mediaType == 'video' && widget.mediaLink != null) {
       await _disposeVideoController();
@@ -157,6 +159,7 @@ class _MessageBubbleState extends State<MessageBubble>
 
         if (mounted) {
           setState(() {
+            _mediaError = false;
             _chewieController = ChewieController(
               videoPlayerController: _videoController!,
               aspectRatio: _videoController!.value.aspectRatio,
@@ -167,19 +170,48 @@ class _MessageBubbleState extends State<MessageBubble>
                 ),
               ),
               autoInitialize: true,
+              errorBuilder: (context, errorMessage) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.error_outline,
+                          color: Colors.white, size: 42),
+                      const SizedBox(height: 8),
+                      const Text('Failed to load video',
+                          style: TextStyle(color: Colors.white)),
+                    ],
+                  ),
+                );
+              },
             );
           });
         }
       } catch (e) {
         pr("Failed to initialize video player: $e");
+        if (mounted) {
+          setState(() {
+            _mediaError = true;
+          });
+        }
       }
     } else if (widget.mediaType == 'audio' && widget.mediaLink != null) {
       _audioPlayer = AudioPlayer();
       try {
         await _audioPlayer
             ?.setAudioSource(AudioSource.uri(Uri.parse(widget.mediaLink!)));
+        if (mounted) {
+          setState(() {
+            _mediaError = false;
+          });
+        }
       } catch (e) {
         pr("Failed to initialize audio player: $e");
+        if (mounted) {
+          setState(() {
+            _mediaError = true;
+          });
+        }
       }
     }
   }
@@ -196,6 +228,28 @@ class _MessageBubbleState extends State<MessageBubble>
   }
 
   Widget _buildMediaWidget() {
+    if (_mediaError) {
+      return Container(
+        height: 100,
+        decoration: BoxDecoration(
+          color: app_theme.surface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: app_theme.outlineSoft),
+        ),
+        child: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.broken_image_outlined,
+                  color: app_theme.error, size: 32),
+              SizedBox(height: 8),
+              Text('Media unavailable',
+                  style: TextStyle(color: app_theme.secondary, fontSize: 12)),
+            ],
+          ),
+        ),
+      );
+    }
     if (widget.mediaType == 'video' && widget.mediaLink != null) {
       return Container(
         decoration: BoxDecoration(
@@ -841,7 +895,7 @@ class _MessageBubbleState extends State<MessageBubble>
                               ? Row(
                                   children: [
                                     widget.whatsAppError.toString() != ""
-                                        ? Icon(
+                                        ? const Icon(
                                             Icons.error,
                                             color: Colors.red,
                                             size: 15,
@@ -850,14 +904,16 @@ class _MessageBubbleState extends State<MessageBubble>
                                     const SizedBox(
                                       width: 4,
                                     ),
-                                    Text(
-                                      widget.whatsAppError.toString(),
-                                      style: GoogleFonts.roboto(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w400,
-                                          color: Colors.red,
-                                          fontStyle: FontStyle.italic),
-                                      textAlign: TextAlign.left,
+                                    Expanded(
+                                      child: Text(
+                                        widget.whatsAppError.toString(),
+                                        style: GoogleFonts.roboto(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w400,
+                                            color: Colors.red,
+                                            fontStyle: FontStyle.italic),
+                                        textAlign: TextAlign.left,
+                                      ),
                                     ),
                                   ],
                                 )
@@ -986,25 +1042,38 @@ class _MessageBubbleState extends State<MessageBubble>
                                         size: 20,
                                       ),
                                     )
-                                  : widget.status == "delivered"
+                                  : widget.status == "pending"
                                       ? const Icon(
-                                          Icons.done_all,
+                                          Icons.watch_later_outlined,
                                           color: Colors.grey,
                                           size: 15,
                                         )
-                                      : widget.status == "read"
+                                      : widget.status == "failed"
                                           ? const Icon(
-                                              Icons.done_all,
-                                              color: app_theme.cyanGlow,
+                                              Icons.error_outline,
+                                              color: Colors.red,
                                               size: 15,
                                             )
-                                          : widget.status == "initialize"
-                                              ? Container()
-                                              : const Icon(
-                                                  Icons.watch_later_outlined,
+                                          : widget.status == "delivered" ||
+                                                  widget.status == "sent"
+                                              ? const Icon(
+                                                  Icons.done_all,
                                                   color: Colors.grey,
                                                   size: 15,
                                                 )
+                                              : widget.status == "read"
+                                                  ? const Icon(
+                                                      Icons.done_all,
+                                                      color: app_theme.cyanGlow,
+                                                      size: 15,
+                                                    )
+                                                  : widget.status == "initialize"
+                                                      ? Container()
+                                                      : const Icon(
+                                                          Icons.done,
+                                                          color: Colors.grey,
+                                                          size: 15,
+                                                        )
                       ],
                     ),
                   ],

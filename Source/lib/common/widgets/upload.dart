@@ -139,10 +139,10 @@ class _UploadWidgetState extends State<UploadWidget> {
     );
   }
 
-  void pickAndUploadFile(context, url,
+  void pickAndUploadFile(BuildContext context, String url,
       {Function? onSuccess,
       Function? thenCallback,
-      Function? onError,
+      void Function(dynamic error)? onError,
       Function? onStart,
       FileType pickingType = FileType.image,
       bool allowMultiple = false,
@@ -156,6 +156,7 @@ class _UploadWidgetState extends State<UploadWidget> {
             : null,
       ))
           ?.files;
+      if (!context.mounted) return;
       String uploadedImageName = paths?[0].path ?? '';
       // });
       if (uploadedImageName == '') {
@@ -331,10 +332,10 @@ class _UploadImagesWidgetState extends State<UploadImagesWidget> {
     );
   }
 
-  void pickAndUploadFile(context, url,
+  void pickAndUploadFile(BuildContext context, String url,
       {Function? onSuccess,
       Function? thenCallback,
-      Function? onError,
+      void Function(dynamic error)? onError,
       Function? onStart,
       FileType pickingType = FileType.image,
       bool allowMultiple = false,
@@ -348,6 +349,7 @@ class _UploadImagesWidgetState extends State<UploadImagesWidget> {
             : null,
       ))
           ?.files;
+      if (!context.mounted) return;
       String uploadedImageName = paths?[0].path ?? '';
       if (uploadedImageName == '') {
         setState(() {

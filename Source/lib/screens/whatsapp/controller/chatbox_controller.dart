@@ -1,17 +1,19 @@
 import 'dart:convert';
-
-import 'package:intl/intl.dart';
+import 'package:stundaa/model/chat_conversation.dart';
+import 'package:stundaa/model/chat_message.dart';
+import 'package:stundaa/repositories/chat_repository.dart';
 import 'package:stundaa/services/utils.dart';
 import 'package:stundaa/services/auth.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:stundaa/services/data_transport.dart' as data_transport;
+import 'package:shared_preferences/shared_preferences.dart';
 
 // class ChatboxController extends GetxController {
 class ChatboxController extends ChangeNotifier {
   // Existing variables
   var holduser = <Map<String, dynamic>>[].obs;
+  var messageModels = <ChatMessage>[].obs;
   var emojiShowing = false.obs;
   var iscurrentUser = false.obs;
   var documentsOption = true.obs;
@@ -19,6 +21,7 @@ class ChatboxController extends ChangeNotifier {
   TextEditingController messageDraftController = TextEditingController();
   ScrollController scrollController = ScrollController();
   final AudioPlayer _player = AudioPlayer();
+  final ChatRepository _chatRepository = ChatRepository();
   String? userId;
   final _isDataCached = false.obs;
 
@@ -37,6 +40,47 @@ class ChatboxController extends ChangeNotifier {
   // Reply chat states
   var selectedReplyMessage = Rxn<Map<String, dynamic>>();
   static final RegExp _htmlTagPattern = RegExp(r'<[^>]*>');
+
+  /// Persistent reply cache: survives app restart because backend does not
+  /// populate replied_to_whatsapp_message_logs__uid.
+  /// Key = message wamid (outgoing), value = replied-to wamid/uid.
+  /// Stored in SharedPreferences as JSON under key "reply_cache_{userId}".
+  final _localReplyCache = <String, String>{};
+
+  /// Load cache from SharedPreferences for current userId.
+  /// Cache key = message content (trimmed), value = repliedToWamid/uid.
+  Future<void> _loadReplyCache() async {
+    if (userId == null || userId!.isEmpty) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('reply_cache_$userId');
+      if (raw != null && raw.isNotEmpty) {
+        final decoded = jsonDecode(raw);
+        if (decoded is Map) {
+          _localReplyCache.clear();
+          decoded.forEach((k, v) {
+            if (k is String && v is String) {
+              _localReplyCache[k] = v;
+            }
+          });
+        }
+      }
+    } catch (e) {
+      pr('_loadReplyCache error: $e');
+    }
+  }
+
+  /// Persist cache entry: message content → replied-to wamid/uid.
+  Future<void> _persistReplyCacheEntry(String content, String repliedToId) async {
+    if (userId == null || userId!.isEmpty) return;
+    _localReplyCache[content] = repliedToId;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('reply_cache_$userId', jsonEncode(_localReplyCache));
+    } catch (e) {
+      pr('_persistReplyCacheEntry error: $e');
+    }
+  }
 
   void setReplyMessage(Map<String, dynamic> message) {
     selectedReplyMessage.value = message;
@@ -102,7 +146,8 @@ class ChatboxController extends ChangeNotifier {
     }
 
     for (final message in holduser) {
-      if (message['uid'] == messageUid) {
+      // Check both uid and wamid
+      if (message['uid'] == messageUid || message['wamid'] == messageUid) {
         return message;
       }
     }
@@ -112,6 +157,7 @@ class ChatboxController extends ChangeNotifier {
 
   void setUserId(String id) {
     userId = id;
+    _loadReplyCache(); // load persisted reply cache for this contact
   }
 
   void toggleEmojiShowing() {
@@ -151,40 +197,76 @@ class ChatboxController extends ChangeNotifier {
   void addMessage(dynamic message,
       {bool isFile = false, dynamic filename, dynamic filetype}) {
     if (message.isNotEmpty) {
-      var now = DateTime.now();
-      var formattedDate = DateFormat("EEEE d MMMM yyyy h:mm:ss a").format(now);
-      holduser.insert(0, {
-        'content': message,
-        'isFile': isFile,
-        'filename': filename,
-        'filetype': filetype,
-        'isIncoming': false,
-        'repliedToMessageUid': selectedReplyMessage.value?['uid'] ?? '',
-        'formattedMessagedAt': formattedDate,
-      });
+      final draftMessage = ChatMessage.localOutgoing(
+        message.toString(),
+        repliedToMessageUid: selectedReplyMessage.value?['wamid']?.toString().isNotEmpty == true
+            ? selectedReplyMessage.value!['wamid'].toString()
+            : selectedReplyMessage.value?['uid']?.toString() ?? '',
+        isFile: isFile,
+        filename: filename,
+        filetype: filetype,
+      );
+      messageModels.insert(0, draftMessage);
+      holduser.insert(0, draftMessage.toMap());
       _player.play(AssetSource('audio/sendsound.mp3'));
       scrollToBottom();
       messageController.clear();
     }
   }
 
+  void injectReplyChatDummyConversation() {
+    if (holduser.any((message) => message['uid'] == 'dummy-reply-1')) {
+      return;
+    }
+
+    final dummyMessages = <ChatMessage>[
+      ChatMessage.dummy(
+        uid: 'dummy-original-1',
+        wamid: 'wamid-dummy-original-1',
+        repliedToMessageUid: '',
+        content: 'Halo admin, saya mau tanya status jadwal saya hari ini.',
+        isIncoming: true,
+        status: 'received',
+        messagedAt: '2026-06-08 08:12:00',
+        formattedMessagedAt: '8:12 AM',
+      ),
+      ChatMessage.dummy(
+        uid: 'dummy-reply-1',
+        wamid: 'wamid-dummy-reply-1',
+        repliedToMessageUid: 'dummy-original-1',
+        content:
+            'Baik, jadwal Anda sudah kami cek. Ini dummy 1 pesan terkirim untuk tes reply chat.',
+        isIncoming: false,
+        status: 'sent',
+        messagedAt: '2026-06-08 08:15:00',
+        formattedMessagedAt: '8:15 AM',
+      ),
+    ];
+    _replaceMessages(dummyMessages);
+  }
+
+  void injectReplyChatDummyIfEmpty() {
+    assert(() {
+      if (holduser.isEmpty) {
+        injectReplyChatDummyConversation();
+      }
+      return true;
+    }());
+  }
+
   Future<void> clearChatHistory(BuildContext? context) async {
-    // holduser.clear();
     try {
-      await data_transport.post(
-        'vendor/whatsapp/contact/chat/clear-history/$userId',
-        inputData: {},
+      if (userId == null || userId!.isEmpty) {
+        return;
+      }
+      await _chatRepository.clearHistory(
         context: context,
-        onSuccess: (responseData) {
-          getUserChatSend();
-        },
-        onFailed: (responseData) {},
+        contactUid: userId!,
       );
+      await getUserChatSend();
     } catch (e) {
       pr("Error in ClearHistory: $e");
     }
-    // _cachedMessages.clear(); // Clear cache when chat history is cleared
-    // _isDataCached.value = false;
   }
 
   List<int> assignedLabelIds = [];
@@ -197,20 +279,15 @@ class ChatboxController extends ChangeNotifier {
         _resetLoadingStates();
         return;
       }
-      await data_transport.get(
-        'vendor/whatsapp/contact/chat/$userId?assigned=',
-        onSuccess: (response) {
-          _handleSuccessResponse(response);
-        },
-        onError: (error) {
-          _handleError(error);
-        },
-        onFailed: (failedResponse) {
-          _handleFailedResponse(failedResponse);
-        },
-      );
+      final conversation = await _chatRepository.fetchConversation(userId!);
+      _handleConversationResponse(conversation, replaceExisting: true);
     } catch (error) {
-      _handleUnexpectedError(error);
+      // Handle error gracefully - don't crash, just show empty chat
+      pr("Error fetching conversation: $error");
+      _resetLoadingStates();
+      // Clear messages to show empty state
+      holduser.clear();
+      messageModels.clear();
     }
   }
 
@@ -219,42 +296,20 @@ class ChatboxController extends ChangeNotifier {
     isInitialLoading.value = false;
   }
 
-  void _handleSuccessResponse(dynamic responseData) {
+  void _handleConversationResponse(
+    ChatConversation conversation, {
+    required bool replaceExisting,
+  }) {
     try {
-      holduser.clear();
-      if (responseData == null) {
-        return;
+      enableAiBot.value = conversation.enableAiBot;
+      replyAEnableBot.value = conversation.enableReplyBot;
+      if (replaceExisting) {
+        _replaceMessages(conversation.messages);
+      } else {
+        _appendMessages(conversation.messages);
       }
-
-      if (responseData is! Map<String, dynamic>) {
-        return;
-      }
-
-      // Safely parse the response
-      final clientModels =
-          responseData['client_models'] as Map<String, dynamic>?;
-      if (clientModels == null) {
-        return;
-      }
-      final enableAiBotValue = clientModels['isAiChatBotEnabled'] ?? false;
-      final replyAEnableBotValue = clientModels['isReplyBotEnable'] ?? false;
-
-      enableAiBot.value = enableAiBotValue is bool ? enableAiBotValue : false;
-      replyAEnableBot.value =
-          replyAEnableBotValue is bool ? replyAEnableBotValue : false;
-
-      // Parse message logs
-      final messageLogs = clientModels['whatsappMessageLogs'];
-      if (messageLogs != null && messageLogs is Map) {
-        _parseAndAddMessages(messageLogs);
-      }
-
-      // Parse labels
-      final labels = clientModels['assignedLabelIds'];
-
-      if (labels is List) {
-        assignedLabelIds = List<int>.from(labels.whereType<int>());
-      }
+      injectReplyChatDummyIfEmpty();
+      assignedLabelIds = conversation.assignedLabelIds;
     } catch (e) {
       pr("Error processing success response: ${e.toString()}");
     } finally {
@@ -262,56 +317,18 @@ class ChatboxController extends ChangeNotifier {
     }
   }
 
-  void _handleError(dynamic error) {
-    pr("onError: ${error?.toString() ?? 'null error'}");
-    _resetLoadingStates();
-  }
-
-  void _handleFailedResponse(dynamic failedResponse) {
-    try {
-      if (failedResponse == null) {
-        pr("Failed response is null");
-        return;
-      }
-
-      if (failedResponse is Map<String, dynamic>) {
-        pr("Failure details: ${failedResponse['failed'] ?? 'No failure details'}");
-      }
-    } catch (e) {
-      pr("Error processing failed response: ${e.toString()}");
-    } finally {
-      _resetLoadingStates();
-    }
-  }
-
-  void _handleUnexpectedError(dynamic error) {
-    pr("Unexpected error in getUserChat: ${error?.toString() ?? 'unknown error'}");
-    _resetLoadingStates();
-  }
-
   Future<void> getUserChatSend() async {
     if (userId == null || userId!.isEmpty) {
       return;
     }
     try {
-      await data_transport.get(
-        'vendor/whatsapp/contact/chat/$userId?assigned=',
-        onSuccess: (responseData) {
-          holduser.clear();
-          if (responseData is Map<String, dynamic>) {
-            _parseAndAddMessages(
-                responseData['client_models']?['whatsappMessageLogs']);
-            // Update cache
-            _cachedMessages.assignAll(holduser);
-            _isDataCached.value = true;
-          }
-        },
-      ).catchError((error) {
-        pr("catchError $error");
-        return "";
-      });
+      final conversation = await _chatRepository.fetchConversation(userId!);
+      _handleConversationResponse(conversation, replaceExisting: true);
+      _cachedMessages.assignAll(holduser);
+      _isDataCached.value = true;
     } catch (error) {
-      pr("catch $error");
+      pr("Error in getUserChatSend: $error");
+      // Don't crash, just keep current state
     } finally {
       if (scrollController.hasClients) {
         scrollController.jumpTo(scrollController.position.minScrollExtent);
@@ -326,21 +343,16 @@ class ChatboxController extends ChangeNotifier {
     isLoading.value = true;
     await Future.delayed(const Duration(seconds: 3));
     try {
-      await data_transport.get(
-        'vendor/whatsapp/contact/chat/$userId?way=prepend&assigned=&page=$currentPage',
-        onSuccess: (responseData) {
-          if (responseData is Map<String, dynamic>) {
-            // _handleSuccessResponse(responseData);
-            _parseAndAddMessages(
-                responseData['client_models']?['whatsappMessageLogs']);
-          } else {
-            hasMoreMessages.value = false;
-          }
-        },
-      ).catchError((error) {
-        pr("loadMoreMessages2 catchError $error");
-        return "";
-      });
+      final conversation = await _chatRepository.fetchConversation(
+        userId!,
+        way: 'prepend',
+        page: currentPage,
+      );
+      if (conversation.messages.isEmpty) {
+        hasMoreMessages.value = false;
+      } else {
+        _handleConversationResponse(conversation, replaceExisting: false);
+      }
     } catch (error) {
       pr("loadMoreMessages2 catch $error");
     } finally {
@@ -349,134 +361,214 @@ class ChatboxController extends ChangeNotifier {
     }
   }
 
-  Future<void> sendMediaN({
+  Future<bool> sendMediaN({
     String? caption,
     String? uploadingFileNameMedia,
     Map<String, dynamic>? data,
     required BuildContext context,
     String? label,
   }) async {
-    final Map<String, dynamic> payload = {
-      "contact_uid": userId,
-      "filepond": "undefined",
-      "uploaded_media_file_name": uploadingFileNameMedia,
-      "media_type": label,
-      "raw_upload_data": jsonEncode(data),
-      "caption": caption,
-    };
-    addQuotedMessageWamid(payload);
-
     try {
-      await data_transport.post(
-        'vendor/whatsapp/contact/chat/send-media',
-        inputData: payload,
+      await _chatRepository.sendMedia(
         context: context,
-        onSuccess: (responseData) async {
-          clearReplyMessage();
-          Navigator.pop(context);
-          _player.play(AssetSource('audio/sendsound.mp3'));
-          if (userId != null && userId!.isNotEmpty) {
-            getUserChatSend();
-          }
-        },
-        onFailed: (responseData) {},
+        contactUid: userId ?? '',
+        uploadedMediaFileName: uploadingFileNameMedia ?? '',
+        mediaType: label ?? '',
+        rawUploadData: data,
+        caption: caption,
+        quotedMessageWamid:
+            selectedReplyMessage.value?['wamid']?.toString() ?? '',
       );
+      clearReplyMessage();
+      _player.play(AssetSource('audio/sendsound.mp3'));
+      if (userId != null && userId!.isNotEmpty) {
+        getUserChatSend();
+      }
+      return true;
     } catch (e) {
       pr("Error in sendMedia: $e");
+      return false;
     }
   }
 
-  void _parseAndAddMessages(Map<dynamic, dynamic>? whatsappMessageLogs) {
-    if (whatsappMessageLogs == null) {
-      pr("whatsappMessageLogs is null");
+  void _replaceMessages(List<ChatMessage> messages) {
+    // Keep local pending/sending messages so they don't disappear while refreshing
+    final pendingMessages = holduser
+        .where((m) => m['status'] == 'pending' || m['status'] == 'sending')
+        .toList();
+
+    // Build lookup: content → repliedToMessageUid from current local messages.
+    // Used to restore reply context lost when API omits replied_to field.
+    final localReplyByContent = <String, String>{};
+    for (final m in holduser) {
+      final uid = m['repliedToMessageUid']?.toString() ?? '';
+      if (uid.isNotEmpty) {
+        localReplyByContent[m['content']?.toString() ?? ''] = uid;
+      }
+    }
+    // Also merge persisted cache.
+    localReplyByContent.addAll(_localReplyCache);
+
+    messageModels.assignAll(messages);
+    final apiMessages = messages.map((message) {
+      final map = message.toMap();
+      // Restore repliedToMessageUid if API returned it empty but we have local data.
+      final replied = map['repliedToMessageUid']?.toString() ?? '';
+      if (replied.isEmpty) {
+        final content = map['content']?.toString() ?? '';
+        final restored = localReplyByContent[content];
+        if (restored != null && restored.isNotEmpty) {
+          map['repliedToMessageUid'] = restored;
+        }
+      }
+      return map;
+    }).toList();
+
+    // Avoid duplicates if API already returned the message
+    final apiUids = apiMessages.map((m) => m['uid']).toSet();
+    final uniquePending =
+        pendingMessages.where((m) => !apiUids.contains(m['uid'])).toList();
+
+    holduser.assignAll([...uniquePending, ...apiMessages]);
+  }
+
+  void _appendMessages(List<ChatMessage> messages) {
+    if (messages.isEmpty) {
+      hasMoreMessages.value = false;
       return;
     }
-
-    final newMessages = <Map<String, dynamic>>[];
-
-    whatsappMessageLogs.forEach((key, value) {
-      try {
-        if (value is! Map<String, dynamic>) {
-          pr("Skipping invalid message format for key $key");
-          return;
-        }
-
-        final message = value['message']?.toString() ?? "";
-        final isIncomingMessage = value['is_incoming_message'] == 1;
-
-        final isSystemMessage = value['is_system_message'] == 1;
-
-        // Safely extract all fields with null checks
-        // final mediaValues = (value['__data'] as Map<String, dynamic>?)?['media_values']
-        // as Map<String, dynamic>?;
-
-        final dynamic rawData = value['__data'];
-        Map<String, dynamic>? mediaValues;
-
-        if (rawData is Map<String, dynamic>) {
-          mediaValues = rawData['media_values'] as Map<String, dynamic>?;
-        } else if (rawData is List) {
-          // Handle case where __data is a list (you might want to process it differently)
-          mediaValues = null;
-        }
-
-        newMessages.add({
-          'uid': value['_uid']?.toString() ?? key.toString(),
-          'wamid': value['wamid']?.toString() ?? '',
-          'repliedToMessageUid':
-              value['replied_to_whatsapp_message_logs__uid']?.toString() ?? '',
-          'content': message,
-          'isIncoming': isIncomingMessage,
-          'isSystem': isSystemMessage,
-          'status': value['status']?.toString() ?? 'unknown',
-          'messagedAt': value['messaged_at']?.toString() ?? '',
-          'formattedMessagedAt':
-              value['formatted_message_time']?.toString() ?? '',
-          'templateMessage': value['template_message']?.toString() ?? '',
-          'whatsAppError': value['whatsapp_message_error']?.toString() ?? '',
-          '__data': value['__data'] ?? {},
-          'media': {
-            'link': mediaValues?['link']?.toString() ?? '',
-            'type': mediaValues?['type']?.toString() ?? '',
-            'caption': mediaValues?['caption']?.toString() ?? '',
-            'fileName': mediaValues?['file_name']?.toString() ?? '',
-            'mimeType': mediaValues?['mime_type']?.toString() ?? '',
-            'originalFileName':
-                mediaValues?['original_filename']?.toString() ?? '',
-          },
-        });
-      } catch (e) {
-        pr("Error parsing message $key: ${e.toString()}");
-      }
-    });
-
-    if (newMessages.isNotEmpty) {
-      holduser.addAll(newMessages);
-    } else {
-      hasMoreMessages.value = false;
-    }
+    messageModels.addAll(messages);
+    holduser.addAll(messages.map((message) => message.toMap()).toList());
   }
 
   Future<void> loadMessagesWithAppendLogic() async {
     try {
       isLoading.value = true;
-      await data_transport.get(
-        'vendor/whatsapp/contact/contacts-data/$userId?way=append&request_contact=$userId&=&assigned=',
-        onSuccess: (responseData) {
-          if (responseData is Map<String, dynamic>) {
-            _parseAndAddMessages(
-                responseData['client_models']?['whatsappMessageLogs']);
-          }
-        },
-      ).catchError((error) {
-        pr("loadMessagesWithAppendLogic catchError $error");
-        return "";
-      });
+      final conversation = await _chatRepository.fetchConversation(userId!);
+      _handleConversationResponse(conversation, replaceExisting: true);
     } catch (e) {
       pr("loadMessagesWithAppendLogic catch $e");
     } finally {
       isLoading.value = false;
     }
+  }
+
+  DateTime? _lastSentTime;
+  static const _cooldownDuration = Duration(seconds: 5);
+
+  Future<void> sendTextMessage(BuildContext context, String messageBody) async {
+    if (userId == null || userId!.isEmpty || messageBody.trim().isEmpty) {
+      return;
+    }
+
+    final now = DateTime.now();
+    if (_lastSentTime != null &&
+        now.difference(_lastSentTime!) < _cooldownDuration) {
+      final remaining =
+          _cooldownDuration.inSeconds - now.difference(_lastSentTime!).inSeconds;
+      showToastMessage(
+          context, "Please wait $remaining seconds before sending again",
+          type: "warning");
+      return;
+    }
+
+    final trimmedMessage = messageBody.trim();
+    // Only use wamid — local UIDs are not valid WhatsApp message IDs and
+    // cannot be forwarded to WhatsApp Cloud API as context.message_id.
+    final quotedMessageId =
+        selectedReplyMessage.value?['wamid']?.toString() ?? '';
+    // wamid must look like a real WA ID (not a local optimistic ID)
+    final isValidWamid = quotedMessageId.isNotEmpty &&
+        !quotedMessageId.startsWith('local-');
+    final effectiveQuotedId = isValidWamid ? quotedMessageId : '';
+    pr('[REPLY] quotedMessageId=$quotedMessageId isValid=$isValidWamid effectiveId=$effectiveQuotedId');
+
+    _lastSentTime = now;
+
+    // Cache reply association so bubble survives API refresh + app restart.
+    // Use effectiveQuotedId (valid wamid only) for sending, but store
+    // quotedMessageId (may be wamid or uid) for local bubble display.
+    if (effectiveQuotedId.isNotEmpty) {
+      _persistReplyCacheEntry(trimmedMessage, effectiveQuotedId);
+    }
+
+    // Optimistic update using factory — use raw quotedMessageId for local
+    // display so bubble shows even when replying to outgoing messages.
+    final pendingMessage = ChatMessage.localOutgoing(
+      trimmedMessage,
+      repliedToMessageUid: quotedMessageId,
+    );
+
+    final localId = pendingMessage.uid;
+    holduser.insert(0, pendingMessage.toMap());
+    messageController.clear();
+
+    try {
+      await _chatRepository.sendTextMessage(
+        context: context,
+        contactUid: userId!,
+        messageBody: trimmedMessage,
+        quotedMessageWamid: effectiveQuotedId, // only valid wamid sent to backend
+      );
+
+      // Status update to 'sent' (or just let the refresh handle it)
+      _updateMessageStatus(localId, 'sent');
+      clearReplyMessage();
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (userId != null && userId!.isNotEmpty) {
+          // Reduced delay from 5s to 2s
+          Future.delayed(const Duration(seconds: 2), () {
+            getUserChatSend();
+          });
+        }
+      });
+    } catch (e) {
+      pr("Error sending message: $e");
+      _updateMessageStatus(localId, 'failed');
+      
+      String errorMsg = "Failed to send message. Tap to retry.";
+      if (e is Map && e['message'] != null) {
+        errorMsg = e['message'].toString();
+      } else if (e.toString().isNotEmpty) {
+        errorMsg = e.toString();
+      }
+
+      if (context.mounted) {
+        showToastMessage(context, errorMsg, type: "error");
+      }
+    }
+  }
+
+  void _updateMessageStatus(String localId, String newStatus) {
+    final index = holduser.indexWhere((m) => m['uid'] == localId);
+    if (index != -1) {
+      final updated = Map<String, dynamic>.from(holduser[index]);
+      updated['status'] = newStatus;
+      holduser[index] = updated;
+    }
+  }
+
+  Future<void> forwardMessages(
+    BuildContext context,
+    String targetContactUid,
+    List<Map<String, dynamic>> messages,
+  ) async {
+    for (final msg in messages) {
+      final content = msg['content']?.toString() ?? '';
+      if (content.isEmpty) {
+        continue;
+      }
+      await _chatRepository.sendTextMessage(
+        context: context,
+        contactUid: targetContactUid,
+        messageBody: content,
+      );
+    }
+  }
+
+  Future<String?> prepareSendMedia(String label) {
+    return _chatRepository.prepareSendMedia(label);
   }
 
   // Clear cache manually (optional)

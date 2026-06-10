@@ -1,7 +1,6 @@
 import 'dart:ui';
 
 import 'package:stundaa/provider/contacts_provider.dart';
-import 'package:stundaa/screens/whatsapp/controller/chatbox_controller.dart';
 import 'package:stundaa/screens/home.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
@@ -23,13 +22,54 @@ List<Locale> supportedLocales = <Locale>[
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  // Custom Error Screen for UI crashes
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    return Material(
+      child: Container(
+        color: app_theme.backgroundColor,
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, color: app_theme.error, size: 64),
+            const SizedBox(height: 16),
+            Text(
+              'Something went wrong!',
+              style: GoogleFonts.plusJakartaSans(
+                color: app_theme.lavenderWhite,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'An unexpected error occurred. Our team has been notified.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.plusJakartaSans(
+                color: app_theme.secondary,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () {
+                // simple reload attempt or go to home
+                // In a real app, you might want a more sophisticated restart logic
+              },
+              child: const Text('Try Again'),
+            ),
+          ],
+        ),
+      ),
+    );
+  };
+
   // Tambahkan error handler untuk menangkap crash saat startup
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
-    debugPrint("Startup Error: ${details.exception}");
+    debugPrint("Flutter Error: ${details.exception}");
   };
   PlatformDispatcher.instance.onError = (error, stack) {
-    debugPrint("Uncaught Startup Error: $error");
+    debugPrint("Uncaught Error: $error");
     debugPrintStack(stackTrace: stack);
     return true;
   };
@@ -49,7 +89,6 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => ContactProvider()),
-        ChangeNotifierProvider(create: (_) => ChatboxController()),
       ],
       child: const MyApp(),
     ),

@@ -1,6 +1,6 @@
 
 buildscript {
-    ext.kotlin_version = '1.9.0'
+    ext.kotlin_version = '2.2.20'
     repositories {
         google()
         mavenCentral()
@@ -8,7 +8,7 @@ buildscript {
 
     dependencies {
 //        classpath 'com.android.tools.build:gradle:8.1.0'
-        classpath 'com.android.tools.build:gradle:8.3.0'
+        classpath 'com.android.tools.build:gradle:8.11.1'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
@@ -18,11 +18,37 @@ allprojects {
         mavenCentral()
     }
 
+    tasks.withType(JavaCompile).configureEach {
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
+    }
+
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+        kotlinOptions {
+            jvmTarget = "21"
+        }
+    }
 }
 
 rootProject.buildDir = '../build'
 subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"
+    
+    afterEvaluate { project ->
+        if (project.hasProperty('android')) {
+            project.android {
+                compileOptions {
+                    sourceCompatibility JavaVersion.VERSION_21
+                    targetCompatibility JavaVersion.VERSION_21
+                }
+            }
+        }
+        tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+            kotlinOptions {
+                jvmTarget = "21"
+            }
+        }
+    }
 }
 subprojects {
     project.evaluationDependsOn(':app')

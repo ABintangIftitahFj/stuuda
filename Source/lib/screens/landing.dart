@@ -648,17 +648,13 @@
 //   }
 // }
 
-import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 
-
 import 'package:stundaa/provider/contacts_provider.dart';
 import 'package:stundaa/services/auth.dart';
-import 'package:stundaa/services/global.dart';
 import 'package:stundaa/services/pusher_service.dart';
 import 'package:stundaa/components/app_drawer.dart';
-import 'package:stundaa/components/demo_dialogs.dart';
 import 'package:stundaa/screens/whatsapp/screens/whatsapp_chat.dart';
 import 'package:stundaa/screens/myprofile.dart';
 import 'package:stundaa/screens/settings/settings.dart';
@@ -673,7 +669,6 @@ import 'package:stundaa/screens/whatsapp/controller/chatbox_controller.dart';
 import 'package:stundaa/services/call_service.dart';
 import 'package:stundaa/services/webrtc_manager.dart';
 import 'package:stundaa/screens/whatsapp/screens/calling_screen.dart';
-
 import 'user/login.dart';
 
 class LandingPage extends StatefulWidget {
@@ -709,28 +704,20 @@ class _LandingPageState extends State<LandingPage> with WidgetsBindingObserver {
     final contactProvider =
         Provider.of<ContactProvider>(context, listen: false);
     final authToken = auth.getAuthToken();
+    final vendorUid = getAuthInfo('vendor_uid');
 
-    final pusherService = PusherService();
-
-    pusherService.initPusher(auth.getAuthToken()).catchError((error) {
-      if (mounted) {
-        auth.checkAndHandleCSRFExpiry(error, context);
-      }
-    });
-    pusherService.initPusher(authToken).then((_) {
-      if (mounted) {
-        setupContactListUpdates(pusherService, contactProvider);
-      }
-    });
-
-    // Show dialog only once after the first render
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!widget.skipMobileDialog &&
-          configItem('demoMode', fallbackValue: false) == true &&
-          !isMobileDialogShown) {
-        DemoDialogs.showMobileNumberDialog(context, showSavedNumber: false);
-      }
-    });
+    if (authToken.isNotEmpty && vendorUid != null) {
+      final pusherService = PusherService();
+      pusherService.initPusher(authToken).then((_) {
+        if (mounted) {
+          setupContactListUpdates(pusherService, contactProvider);
+        }
+      }).catchError((error) {
+        if (mounted) {
+          auth.checkAndHandleCSRFExpiry(error, context);
+        }
+      });
+    }
   }
 
   @override
@@ -769,13 +756,14 @@ class _LandingPageState extends State<LandingPage> with WidgetsBindingObserver {
 
             // If app is in foreground, navigate to calling screen
             Get.to(() => CallingScreen(
-              contactName: eventData['contactName'] ?? 'WhatsApp Contact',
-              contactPhoneNumber: eventData['contactPhoneNumber'],
-              isIncoming: true,
-            ));
+                  contactName: eventData['contactName'] ?? 'WhatsApp Contact',
+                  contactPhoneNumber: eventData['contactPhoneNumber'],
+                  isIncoming: true,
+                ));
           } else if (type == 'answer') {
             // Call Answered by customer
-            await webRTCManager.setRemoteDescription(eventData['sdp'], 'answer');
+            await webRTCManager.setRemoteDescription(
+                eventData['sdp'], 'answer');
           } else if (type == 'ice-candidate') {
             // Received ICE Candidate
             await webRTCManager.addIceCandidate(eventData['candidate']);
@@ -789,18 +777,22 @@ class _LandingPageState extends State<LandingPage> with WidgetsBindingObserver {
         if (eventName == 'VendorChannelBroadcast' &&
             eventData['message_status'] == null) {
           final contactUid = eventData['contactUid'];
+          final justNowLabel = localizedJustNowLabel();
 
           // Check if this is a new contact not in our list
           if (!contactProvider.contactExists(contactUid)) {
             // Fetch full contact details for this new contact
             await contactProvider.fetchSingleContact(contactUid);
+            if (!mounted) {
+              return;
+            }
           } else {
             // Existing contact - just update message
             contactProvider.updateContactWithNewMessage(
-                context,
                 contactUid,
                 eventData['lastMessageUid'],
-                eventData['formatted_last_message_time']);
+                eventData['formatted_last_message_time'],
+                justNowLabel);
           }
           controller.getUserChatSend();
         } else if (eventName == 'VendorChannelBroadcast' &&
@@ -864,13 +856,8 @@ class _LandingPageState extends State<LandingPage> with WidgetsBindingObserver {
     const WhatsAppChat(),
   ];
 
-  final List<IconData> _icons = [
-    CupertinoIcons.chat_bubble_2,
-  ];
-
   @override
   Widget build(BuildContext context) {
-    final provider = Provider.of<ContactProvider>(context);
     return FutureBuilder(
       future: _fetchMyData,
       builder: (BuildContext context, AsyncSnapshot snapshot) {
@@ -890,180 +877,81 @@ class _LandingPageState extends State<LandingPage> with WidgetsBindingObserver {
         // Authenticated state - show main app
         return Scaffold(
           drawer: const AppDrawer(),
-          backgroundColor: app_theme.backgroundColor,
-          appBar: PreferredSize(
-            preferredSize: const Size.fromHeight(68),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: Container(
-                decoration: app_theme.topBarDecoration(radius: 28),
-                child: AppBar(
-                  backgroundColor: Colors.transparent,
-                  elevation: 0,
-                  titleSpacing: 0,
-                  title: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text(
-                        'STUNDAA',
-                        style: TextStyle(
-                          color: app_theme.iceBlue,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.8,
-                        ),
-                      ),
-                      tabTitle ??
-                          const Text(
-                            'Inbox',
-                            style: TextStyle(
-                              color: app_theme.lavenderWhite,
-                              fontSize: 17,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                    ],
-                  ),
-                  iconTheme:
-                      const IconThemeData(color: app_theme.lavenderWhite),
-                  actions: [
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        return SizedBox(
-                          width: 48,
-                          height: 48,
-                          child: PopupMenuButton<String>(
-                            offset: const Offset(0, 30),
-                            color: app_theme.surface,
-                            icon: const Icon(
-                              CupertinoIcons.ellipsis_circle,
-                              color: app_theme.lavenderWhite,
-                            ),
-                            onSelected: (value) {},
-                            itemBuilder: (BuildContext context) => [
-                              PopupMenuItem<String>(
-                                value: 'profile',
-                                onTap: () async {
-                                  await Future.microtask(() {
-                                    if (context.mounted) {
-                                      navigatePage(context, const MyProfile());
-                                    }
-                                  });
-                                },
-                                child: Text(context.lwTranslate.profile),
-                              ),
-                              PopupMenuItem<String>(
-                                value: 'settings',
-                                onTap: () async {
-                                  await Future.microtask(() {
-                                    if (context.mounted) {
-                                      navigatePage(context, const Settings());
-                                    }
-                                  });
-                                },
-                                child: Text(context.lwTranslate.settings),
-                              ),
-                              if (configItem('demoMode', fallbackValue: false) ==
-                                  true)
-                                PopupMenuItem<String>(
-                                  value: 'addNumber',
-                                  onTap: () async {
-                                    await Future.microtask(() {
-                                      if (context.mounted) {
-                                        DemoDialogs.showMobileNumberDialog(
-                                            context,
-                                            showSavedNumber: true);
-                                      }
-                                    });
-                                  },
-                                  child:
-                                      Text(context.lwTranslate.addNumberForTest),
-                                ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
+          backgroundColor: const Color(0xFF02040A),
+          appBar: AppBar(
+            backgroundColor: const Color(0xFF02040A),
+            elevation: 0,
+            leading: Builder(
+              builder: (context) => IconButton(
+                icon: const Icon(Icons.menu, color: Colors.white),
+                onPressed: () => Scaffold.of(context).openDrawer(),
               ),
             ),
-          ),
-          body: _pages[_currentIndex],
-          bottomNavigationBar: Container(
-            margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(
-                color: const Color.fromRGBO(167, 223, 255, 0.18),
-              ),
-              gradient: app_theme.cardGradient,
-              boxShadow: const [
-                BoxShadow(
-                  color: Color.fromRGBO(0, 0, 0, 0.35),
-                  blurRadius: 24,
-                  offset: Offset(0, 12),
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "STUNDAA",
+                  style: TextStyle(
+                    color: app_theme.primary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
                 ),
+                tabTitle ??
+                    Text(
+                      context.lwTranslate.whatsAppChat,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
               ],
             ),
-            child: CurvedNavigationBar(
-              index: widget.initialActiveTab,
-              backgroundColor: Colors.transparent,
-              color: app_theme.surface,
-              buttonBackgroundColor: app_theme.primary,
-              animationCurve: Curves.easeOutCubic,
-              animationDuration: const Duration(milliseconds: 180),
-              height: 58,
-              items: List.generate(_icons.length, (index) {
-                return Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Icon(
-                      _icons[index],
-                      color: index == _currentIndex
-                          ? app_theme.black
-                          : app_theme.lavenderWhite,
-                      size: 28,
+            actions: [
+              Container(
+                margin: const EdgeInsets.only(right: 12),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white24),
+                ),
+                child: PopupMenuButton<String>(
+                  color: app_theme.surface,
+                  offset: const Offset(0, 45),
+                  icon: const Icon(CupertinoIcons.ellipsis,
+                      color: Colors.white, size: 20),
+                  onSelected: (value) {},
+                  itemBuilder: (BuildContext context) => [
+                    PopupMenuItem<String>(
+                      value: 'profile',
+                      onTap: () async {
+                        await Future.microtask(() {
+                          if (context.mounted) {
+                            navigatePage(context, const MyProfile());
+                          }
+                        });
+                      },
+                      child: Text(context.lwTranslate.profile),
                     ),
-                    if (provider.unreadMsgCount > 0)
-                      Positioned(
-                        right: -12,
-                        top: -10,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: app_theme.error,
-                            shape: BoxShape.circle,
-                          ),
-                          constraints: const BoxConstraints(
-                            minWidth: 18,
-                            minHeight: 18,
-                          ),
-                          child: Text(
-                            provider.unreadMsgCount.toString(),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
+                    PopupMenuItem<String>(
+                      value: 'settings',
+                      onTap: () async {
+                        await Future.microtask(() {
+                          if (context.mounted) {
+                            navigatePage(context, const Settings());
+                          }
+                        });
+                      },
+                      child: Text(context.lwTranslate.settings),
+                    ),
                   ],
-                );
-              }),
-              onTap: (index) {
-                if (mounted) {
-                  setState(() {
-                    _currentIndex = index;
-                    setTabTitle(index);
-                  });
-                }
-              },
-            ),
+                ),
+              ),
+            ],
           ),
+          body: _pages[_currentIndex],
         );
       },
     );

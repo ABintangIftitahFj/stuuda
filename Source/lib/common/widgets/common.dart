@@ -99,13 +99,13 @@ PreferredSizeWidget innerAppBar(
 
 /// confirmation dialog
 ///
-showActionableDialog(
+void showActionableDialog(
   BuildContext context, {
   String? title,
   Widget? description,
   String? confirmActionText,
   String? cancelActionText,
-  Function? onConfirm,
+  dynamic Function()? onConfirm,
   VoidCallback? onCancel,
 }) {
   title ??= context.lwTranslate.areYouSure;
@@ -222,7 +222,7 @@ class AppCachedNetworkImage extends StatelessWidget {
   }
 }
 
-appCachedNetworkImageProvider({imageUrl}) {
+CachedNetworkImageProvider appCachedNetworkImageProvider({required String imageUrl}) {
   return CachedNetworkImageProvider(imageUrl);
 }
 

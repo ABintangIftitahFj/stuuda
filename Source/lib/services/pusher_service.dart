@@ -12,6 +12,7 @@ class PusherService {
 
   Future<void> initPusher(String authToken) async {
     try {
+      pr("Initializing Pusher...");
       await _pusher.init(
         apiKey: configItem('services.pusher.apiKey'),
         cluster: configItem('services.pusher.cluster'),
@@ -20,12 +21,16 @@ class PusherService {
           'auth_token': authToken,
         }).toString(),
         onError: (message, code, exception) {
-          // ignore
+          pr("Pusher Error: $message (code: $code, exception: $exception)");
+        },
+        onConnectionStateChange: (currentState, previousState) {
+          pr("Pusher Connection State changed from $previousState to $currentState");
         },
       );
       await _pusher.connect();
+      pr("Pusher connect called.");
     } catch (e) {
-      // ignore
+      pr("Error initializing Pusher: $e");
     }
   }
 

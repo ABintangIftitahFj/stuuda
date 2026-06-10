@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
 
 import 'data_transport.dart' as data_transport;
@@ -7,10 +8,10 @@ import 'utils.dart';
 typedef OnCallbackType = Function? Function(Map<String, dynamic>? responseData);
 
 class UploadService {
-  void pickAndUploadFile(context, url,
+  void pickAndUploadFile(BuildContext context, String url,
       {OnCallbackType? onSuccess,
       OnCallbackType? thenCallback,
-      Function? onError,
+      void Function(dynamic error)? onError,
       Function? onStart,
       FileType pickingType = FileType.image,
       bool allowMultiple = false,
@@ -24,6 +25,7 @@ class UploadService {
             : null,
       ))
           ?.files;
+      if (!context.mounted) return;
       String uploadedImageName = paths?[0].path ?? '';
       if (onStart != null) {
         onStart(uploadedImageName);

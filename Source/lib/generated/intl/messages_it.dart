@@ -3,6 +3,7 @@
 // messages from the main program should be duplicated here with the same
 // function name.
 
+// ignore_for_file: strict_top_level_inference
 // Ignore issues from commonly used lints in this file.
 // ignore_for_file:unnecessary_brace_in_string_interps, unnecessary_new
 // ignore_for_file:prefer_single_quotes,comment_references, directives_ordering

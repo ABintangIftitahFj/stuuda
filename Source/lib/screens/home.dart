@@ -3,6 +3,7 @@ import 'package:stundaa/screens/landing.dart';
 import 'package:stundaa/services/auth.dart';
 import 'package:flutter/material.dart';
 import 'package:stundaa/support/app_theme.dart' as app_theme;
+import 'package:stundaa/common/widgets/common.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -32,10 +33,34 @@ class _HomePageState extends State<HomePage> {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Scaffold(
             backgroundColor: app_theme.backgroundColor,
-            body: Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(app_theme.primary),
-              ),
+            body: Stack(
+              children: [
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: app_theme.glowOrbDecoration(),
+                  ),
+                ),
+                Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const AppLogo(height: 100),
+                      const SizedBox(height: 40),
+                      SizedBox(
+                        width: 180,
+                        height: 3,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: const LinearProgressIndicator(
+                            backgroundColor: Color.fromRGBO(255, 255, 255, 0.08),
+                            valueColor: AlwaysStoppedAnimation<Color>(app_theme.primary),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           );
         }

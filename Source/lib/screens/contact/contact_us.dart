@@ -6,6 +6,7 @@ import 'package:stundaa/components/input_field.dart';
 import 'package:stundaa/components/email_validator.dart';
 import 'package:stundaa/services/utils.dart';
 import 'package:stundaa/support/app_theme.dart' as app_theme;
+import 'package:stundaa/services/auth.dart' as auth;
 
 class ContactUs extends StatefulWidget {
   const ContactUs({super.key});
@@ -17,6 +18,28 @@ class ContactUs extends StatefulWidget {
 class _ContactUsState extends State<ContactUs> {
   final _formKey = GlobalKey<FormState>();
   bool isLoading = false;
+  late TextEditingController _nameController;
+  late TextEditingController _emailController;
+
+  @override
+  void initState() {
+    super.initState();
+    // Auto-fill from auth info
+    _nameController = TextEditingController(
+      text: auth.getAuthInfo('profile.full_name', ''),
+    );
+    _emailController = TextEditingController(
+      text: auth.getAuthInfo('profile.email', ''),
+    );
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -87,6 +110,7 @@ class _ContactUsState extends State<ContactUs> {
                             child: Column(
                               children: [
                                 InputField(
+                                  controller: _nameController,
                                   labelText: context.lwTranslate.fullName,
                                   prefixIcon: const Icon(
                                     CupertinoIcons.person,
@@ -96,6 +120,7 @@ class _ContactUsState extends State<ContactUs> {
                                       ValidationBuilder().minLength(3).build(),
                                 ),
                                 InputField(
+                                  controller: _emailController,
                                   labelText: context.lwTranslate.email,
                                   validation: (value) => isValidEmail(value)
                                       ? null

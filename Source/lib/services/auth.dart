@@ -12,7 +12,7 @@ String authToken = '';
 var userInfo = {};
 // SharedPreferences? sharedPreferencesCache;
 
-Future redirectIfUnauthenticated(BuildContext context) async {
+Future<bool> redirectIfUnauthenticated(BuildContext context) async {
   await fetchAuthInfo();
   await Future.delayed(Duration.zero, () {
     bool isUserLoggedIn = isLoggedIn();
@@ -39,52 +39,76 @@ void redirectIfAuthenticated(BuildContext context) {
 }
 
 /// set auth token for the later user
-void storeAuthToken(String authToken) async {
+void storeAuthToken(String authTokenValue) async {
   // sharedPreferencesCache ??= await SharedPreferences.getInstance();
-  sharedPreferencesCache!.setString('authToken', authToken);
+  sharedPreferencesCache!.setString('authToken', authTokenValue);
   getAuthToken();
 }
 
 void createLoginSession(
-  responseData,
-  context,
-) {
+  Map<String, dynamic> responseData,
+  BuildContext context,
+) async {
   final vendorUid = responseData['data']['auth_info']['vendor_uid'].toString();
   final uuid = responseData['data']['auth_info']['uuid'].toString();
+  final profile = Map<String, dynamic>.from(
+    responseData['data']['auth_info']['profile'] ?? const {},
+  );
+
   storeAuthToken(responseData['data']['access_token']);
-  storeUserInfo(
-    [responseData['data']['auth_info']['profile']],
+
+  await _syncDemoPhoneNumberFromProfile(profile);
+  await storeUserInfo(
+    [profile],
     vendorUid: vendorUid,
     uuid: uuid,
-  ).then(
-    (userInfo) {
-      // Navigator.pushAndRemoveUntil(
-      //   context,
-      //   MaterialPageRoute(
-      //     builder: (context) => LandingPage(
-      //       initialNotificationCount: getItemValue(
-      //         responseData,
-      //         'data.auth_info.notifications.notificationCount',
-      //         fallbackValue: 0,
-      //       ),
-      //     ),
-      //   ),
-      //       (Route<dynamic> route) => false, // This removes all previous routes
-      // );
-
-      navigatePage(
-        context,
-        LandingPage(
-          initialNotificationCount: getItemValue(
-            responseData,
-            'data.auth_info.notifications.notificationCount',
-            fallbackValue: 0,
-          ),
-          // skipMobileDialog: true,
-        ),
-      );
-    },
   );
+
+  if (!context.mounted) return;
+  navigatePage(
+    context,
+    LandingPage(
+      initialNotificationCount: getItemValue(
+        responseData,
+        'data.auth_info.notifications.notificationCount',
+        fallbackValue: 0,
+      ),
+    ),
+  );
+}
+
+Future<void> _syncDemoPhoneNumberFromProfile(
+    Map<String, dynamic> profile) async {
+  final profileMobileNumber = _extractProfileMobileNumber(profile);
+  if (profileMobileNumber.isEmpty) {
+    return;
+  }
+
+  await setPreferences('user_mobile_number', profileMobileNumber);
+}
+
+String _extractProfileMobileNumber(Map<String, dynamic> profile) {
+  const phoneKeys = [
+    'mobile_number',
+    'phone',
+    'mobile',
+    'phone_number',
+    'whatsapp_number',
+  ];
+
+  for (final key in phoneKeys) {
+    final rawValue = profile[key];
+    if (rawValue == null) {
+      continue;
+    }
+
+    final phoneNumber = rawValue.toString().trim();
+    if (phoneNumber.isNotEmpty) {
+      return phoneNumber;
+    }
+  }
+
+  return '';
 }
 
 bool isLoggedIn() {
@@ -114,12 +138,12 @@ String getAuthToken() {
   return authToken;
 }
 
-Future logout() async {
+Future<void> logout() async {
   storeAuthToken('');
-  return await storeUserInfo({});
+  await storeUserInfo({});
 }
 
-Future storeUserInfo(newUserInfo, {String? vendorUid, String? uuid}) async {
+Future<void> storeUserInfo(dynamic newUserInfo, {String? vendorUid, String? uuid}) async {
   if (vendorUid != null) {
     newUserInfo[0]['vendor_uid'] = vendorUid;
   }
@@ -130,7 +154,7 @@ Future storeUserInfo(newUserInfo, {String? vendorUid, String? uuid}) async {
   await fetchAuthInfo();
 }
 
-dynamic getAuthInfo([String? itemKey, fallbackValue = '']) {
+dynamic getAuthInfo([String? itemKey, dynamic fallbackValue = '']) {
   fetchAuthInfo();
   if (itemKey != null) {
     return getItemValue(userInfo, itemKey, fallbackValue: fallbackValue);
@@ -139,7 +163,7 @@ dynamic getAuthInfo([String? itemKey, fallbackValue = '']) {
   }
 }
 
-Future setUserInfo(key, value) async {
+Future<void> setUserInfo(dynamic key, dynamic value) async {
   // sharedPreferencesCache ??= await SharedPreferences.getInstance();
   var authInfoData = getAuthInfo();
   authInfoData[key] = value;
@@ -148,8 +172,10 @@ Future setUserInfo(key, value) async {
 }
 
 // Add to your AuthService class or at the bottom of auth.dart
-Future<void> checkAndHandleCSRFExpiry(dynamic error, BuildContext context) async {
-  if (error.toString().contains('CSRF token') || error.toString().contains('419')) {
+Future<void> checkAndHandleCSRFExpiry(
+    dynamic error, BuildContext context) async {
+  if (error.toString().contains('CSRF token') ||
+      error.toString().contains('419')) {
     // Clear session data
     authToken = '';
     userInfo = {};
@@ -161,30 +187,27 @@ Future<void> checkAndHandleCSRFExpiry(dynamic error, BuildContext context) async
     if (Navigator.canPop(context)) {
       Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const LoginPage()),
-              (route) => false
-      );
+          (route) => false);
     }
   }
 }
 
 // Add to your AuthService class
- Future<void> simulateCSRFExpiration(BuildContext context) async {
+Future<void> simulateCSRFExpiration(BuildContext context) async {
 // Clear session data
-authToken = '';
-userInfo = {};
-await sharedPreferencesCache!.remove('authToken');
-await sharedPreferencesCache!.remove('userInfo');
+  authToken = '';
+  userInfo = {};
+  await sharedPreferencesCache!.remove('authToken');
+  await sharedPreferencesCache!.remove('userInfo');
 
 // Redirect to login
-if (!context.mounted) return;
-Navigator.of(context).pushAndRemoveUntil(
-MaterialPageRoute(builder: (context) => const LoginPage()),
-(route) => false
-);
+  if (!context.mounted) return;
+  Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => const LoginPage()),
+      (route) => false);
 }
 
-
-refreshUserInfo() async {
+Future<dynamic> refreshUserInfo() async {
   await data_transport.post(
     'get-user-auth-info',
     // inputData: formInputData,

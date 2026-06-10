@@ -9,6 +9,10 @@ const AssetImage backgroundImage = AssetImage(
   'assets/images/ic_background.png',
 );
 
+const AssetImage chatBackgroundImage = AssetImage(
+  'assets/images/stundaa_bg.jpeg',
+);
+
 const Color black = Color(0xFF02040A);
 const Color white = Color(0xFFEEF0FF);
 const Color green = Colors.green;

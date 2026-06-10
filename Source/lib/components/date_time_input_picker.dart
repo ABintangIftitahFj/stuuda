@@ -119,7 +119,7 @@ class _DateTimeInputPickerState extends State<DateTimeInputPicker> {
         });
   }
 
-  _formatDate(date) {
+  String _formatDate(dynamic date) {
     return DateFormat('yyyy-MM-dd')
         .format((date is DateTime ? date : DateTime.tryParse(date)) ??
             DateTime.now())

@@ -1,19 +1,134 @@
+import 'dart:convert';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:stundaa/model/contact_summary.dart';
+import 'package:stundaa/repositories/contact_repository.dart';
 import 'package:stundaa/services/auth.dart';
-import 'package:stundaa/services/data_transport.dart' as data_transport;
-import 'package:stundaa/services/utils.dart';
 
 class ContactProvider with ChangeNotifier {
   List<MapEntry<String, dynamic>> contactsList = [];
   List<MapEntry<String, dynamic>> originalContactsList = [];
   final AudioPlayer _player = AudioPlayer();
+  final ContactRepository _contactRepository = ContactRepository();
   int unreadMsgCount = 0;
   bool isLoading = false;
   bool isLoadingMore = false;
   bool isLoadingList = false;
   int currentPage = 1;
   int totalPages = 5;
+  List<String> pinnedContactUids = [];
+  Map<String, List<String>> pockets = {}; // Pocket Name -> List of Contact UIDs
+
+  ContactProvider() {
+    _loadPinnedContacts();
+    _loadPockets();
+  }
+
+  Future<void> _loadPinnedContacts() async {
+    final prefs = await SharedPreferences.getInstance();
+    pinnedContactUids = prefs.getStringList('pinned_contacts') ?? [];
+    notifyListeners();
+  }
+
+  Future<void> _loadPockets() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? pocketsJson = prefs.getString('chat_pockets');
+    if (pocketsJson != null) {
+      try {
+        final Map<String, dynamic> decoded = json.decode(pocketsJson);
+        pockets = decoded.map(
+            (key, value) => MapEntry(key, List<String>.from(value as List)));
+      } catch (e) {
+        debugPrint('Error decoding pockets: $e');
+        pockets = {};
+      }
+    }
+    notifyListeners();
+  }
+
+  Future<void> savePockets() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('chat_pockets', json.encode(pockets));
+    notifyListeners();
+  }
+
+  Future<void> createPocket(String name) async {
+    if (name.trim().isEmpty) return;
+    if (!pockets.containsKey(name)) {
+      pockets[name] = [];
+      await savePockets();
+    }
+  }
+
+  Future<void> deletePocket(String name) async {
+    if (pockets.containsKey(name)) {
+      pockets.remove(name);
+      await savePockets();
+    }
+  }
+
+  Future<void> toggleInPocket(String pocketName, String contactUid) async {
+    if (!pockets.containsKey(pocketName)) return;
+
+    if (pockets[pocketName]!.contains(contactUid)) {
+      pockets[pocketName]!.remove(contactUid);
+    } else {
+      pockets[pocketName]!.add(contactUid);
+    }
+    await savePockets();
+  }
+
+  Future<void> removeFromPocket(String pocketName, String contactUid) async {
+    if (pockets.containsKey(pocketName)) {
+      pockets[pocketName]?.remove(contactUid);
+      await savePockets();
+    }
+  }
+
+  Future<void> moveContactPocket(String fromPocket, String toPocket, String contactUid) async {
+    if (pockets.containsKey(fromPocket)) {
+      pockets[fromPocket]?.remove(contactUid);
+    }
+    if (pockets.containsKey(toPocket)) {
+      if (!pockets[toPocket]!.contains(contactUid)) {
+        pockets[toPocket]!.add(contactUid);
+      }
+    }
+    await savePockets();
+  }
+
+  Future<void> clearFromAllPockets(String contactUid) async {
+    for (var pocketName in pockets.keys) {
+      pockets[pocketName]?.remove(contactUid);
+    }
+    await savePockets();
+  }
+
+  bool isInPocket(String pocketName, String contactUid) {
+    return pockets[pocketName]?.contains(contactUid) ?? false;
+  }
+
+  List<ContactSummary> getPocketContacts(String pocketName) {
+    final uids = pockets[pocketName] ?? [];
+    return originalContactSummaries.where((c) => uids.contains(c.uid)).toList();
+  }
+
+  Future<void> togglePin(String contactUid) async {
+    if (pinnedContactUids.contains(contactUid)) {
+      pinnedContactUids.remove(contactUid);
+    } else {
+      pinnedContactUids.add(contactUid);
+    }
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('pinned_contacts', pinnedContactUids);
+    notifyListeners();
+  }
+
+  bool isPinned(String contactUid) => pinnedContactUids.contains(contactUid);
+
+  List<ContactSummary> get pinnedContacts =>
+      originalContactSummaries.where((c) => isPinned(c.uid)).toList();
 
   bool _isTabLoading = false;
 
@@ -27,6 +142,76 @@ class ContactProvider with ChangeNotifier {
   bool hasReachedMax = false;
   bool hasError = false;
   String errorMessage = '';
+
+  List<ContactSummary> get contactSummaries =>
+      List<ContactSummary>.unmodifiable(
+        contactsList.map(ContactSummary.fromEntry),
+      );
+
+  List<ContactSummary> get originalContactSummaries =>
+      List<ContactSummary>.unmodifiable(
+        originalContactsList.map(ContactSummary.fromEntry),
+      );
+
+  MapEntry<String, dynamic> normalizeContactEntry(
+      MapEntry<String, dynamic> entry) {
+    return ContactSummary.fromEntry(entry).toEntry();
+  }
+
+  List<MapEntry<String, dynamic>> filterOriginalContacts(String query) {
+    final normalizedQuery = query.trim();
+    if (normalizedQuery.isEmpty) {
+      return List<MapEntry<String, dynamic>>.from(
+        originalContactSummaries.map((contact) => contact.toEntry()),
+      );
+    }
+
+    return originalContactSummaries
+        .where((contact) => contact.matchesQuery(normalizedQuery))
+        .map((contact) => contact.toEntry())
+        .toList();
+  }
+
+  void resetVisibleContacts() {
+    contactsList = List<MapEntry<String, dynamic>>.from(
+      originalContactSummaries.map((contact) => contact.toEntry()),
+    );
+    notifyListeners();
+  }
+
+  void setVisibleContactsFromQuery(String query) {
+    contactsList = filterOriginalContacts(query);
+    notifyListeners();
+  }
+
+  MapEntry<String, dynamic> _buildDummyReplyChatContact() {
+    return const MapEntry('dummy-contact-1', {
+      '_uid': 'dummy-contact-1',
+      'contact_uid': 'dummy-contact-1',
+      'full_name': 'Dummy Reply Chat',
+      'first_name': 'Dummy',
+      'last_name': 'Reply Chat',
+      'wa_id': '+6281234567890',
+      'name_initials': 'DR',
+      'unread_messages_count': 0,
+      'last_message': {
+        '_uid': 'dummy-reply-1',
+        'formatted_message_time': '8:15 AM',
+      },
+    });
+  }
+
+  void injectDummyContactIfEmpty() {
+    assert(() {
+      if (contactsList.isEmpty && originalContactsList.isEmpty) {
+        final dummyContact =
+            normalizeContactEntry(_buildDummyReplyChatContact());
+        contactsList.add(dummyContact);
+        originalContactsList.add(dummyContact);
+      }
+      return true;
+    }());
+  }
 
   Future<void> getUser({bool isRefresh = true, String assigned = ''}) async {
     // Prevent duplicate calls
@@ -53,31 +238,32 @@ class ContactProvider with ChangeNotifier {
         hasReachedMax = false;
       }
 
-      final response = await data_transport.get(
-          'vendor/contact/contacts-data?page=$currentPage&assigned=$assigned'
+      final response = await _contactRepository.fetchContacts(
+        page: currentPage,
+        assigned: assigned,
       );
-
-      final clientContacts = getItemValue(response, 'client_models.contacts');
-      unreadMsgCount = getItemValue(response, 'client_models.unreadMessagesCount') ?? 0;
+      final clientContacts = response.contacts;
+      unreadMsgCount = response.unreadMessagesCount;
 
       if (clientContacts.isEmpty) {
         hasReachedMax = true;
         if (!isRefresh) currentPage--;
       } else {
-        final newContacts = clientContacts.entries.toList();
-
-        for (var entry in newContacts) {
-          if (!contactsList.any((e) => e.key == entry.key)) {
-            contactsList.add(entry);
-            originalContactsList.add(entry);
+        for (var entry in clientContacts) {
+          final normalizedEntry = normalizeContactEntry(entry);
+          if (!contactsList.any((e) => e.key == normalizedEntry.key)) {
+            contactsList.add(normalizedEntry);
+            originalContactsList.add(normalizedEntry);
           }
         }
       }
+      injectDummyContactIfEmpty();
     } catch (e) {
       if (!isRefresh) currentPage--;
       errorMessage = 'Failed to load contacts';
       hasError = true;
       debugPrint('Error loading contacts: $e');
+      injectDummyContactIfEmpty();
     } finally {
       isLoading = false;
       isLoadingMore = false;
@@ -101,22 +287,19 @@ class ContactProvider with ChangeNotifier {
     });
 
     try {
-      final responseData = await data_transport
-          .get('vendor/contact/contacts-data?page=$currentPage');
-      var clientContacts =
-          getItemValue(responseData, 'client_models.contacts');
-      unreadMsgCount =
-          getItemValue(responseData, 'client_models.unreadMessagesCount') ??
-              0;
-      var newContacts = clientContacts.entries;
+      final response =
+          await _contactRepository.fetchContacts(page: currentPage);
+      unreadMsgCount = response.unreadMessagesCount;
+      var newContacts = response.contacts;
 
       for (var entry in newContacts) {
-        if (!contactsList.any((e) => e.key == entry.key)) {
+        final normalizedEntry = normalizeContactEntry(entry);
+        if (!contactsList.any((e) => e.key == normalizedEntry.key)) {
           if (labelId == null ||
-              (entry.value['labels'] as List)
+              (normalizedEntry.value['labels'] as List)
                   .any((label) => label['_id'] == labelId)) {
-            contactsList.add(entry);
-            originalContactsList.add(entry);
+            contactsList.add(normalizedEntry);
+            originalContactsList.add(normalizedEntry);
           }
         }
       }
@@ -140,21 +323,21 @@ class ContactProvider with ChangeNotifier {
   Future<void> fetchSingleContact(String contactUid) async {
     try {
       final vendorUid = getAuthInfo('vendor_uid');
-      final response = await data_transport.get(
-        'vendor/contact/contacts-data/$vendorUid?way=append&request_contact=$contactUid&assigned=',
+      final response = await _contactRepository.fetchSingleContact(
+        vendorUid: vendorUid,
+        contactUid: contactUid,
       );
+      unreadMsgCount = response.unreadMessagesCount;
 
-      final clientContacts = getItemValue(response, 'client_models.contacts');
-      final newUnreadCount = getItemValue(response, 'client_models.unreadMessagesCount') ?? 0;
-
-      unreadMsgCount = newUnreadCount;
-
-      for (var entry in clientContacts.entries) {
-        if (!contactsList.any((e) => e.key == entry.key)) {
-          contactsList.add(entry);
-          originalContactsList.add(entry);
+      for (var entry in response.contacts) {
+        final normalizedEntry = normalizeContactEntry(entry);
+        if (!contactsList.any((e) => e.key == normalizedEntry.key)) {
+          contactsList.add(normalizedEntry);
+          originalContactsList.add(normalizedEntry);
         }
       }
+
+      injectDummyContactIfEmpty();
 
       notifyListeners();
     } catch (e) {
@@ -171,9 +354,7 @@ class ContactProvider with ChangeNotifier {
 
       if (unreadMessages > 0) {
         unreadMsgCount -= unreadMessages;
-        unreadMsgCount = unreadMsgCount < 0
-            ? 0
-            : unreadMsgCount;
+        unreadMsgCount = unreadMsgCount < 0 ? 0 : unreadMsgCount;
         final updatedContact = {
           ...contactEntry.value,
           'unread_messages_count': 0,
@@ -191,9 +372,11 @@ class ContactProvider with ChangeNotifier {
   }
 
   void updateContactWithNewMessage(
-      BuildContext context,
-      String contactUid, String lastMessageUid, String formattedTime,
-      ) {
+    String contactUid,
+    String lastMessageUid,
+    String formattedTime,
+    String justNowLabel,
+  ) {
     final contactIndex =
         contactsList.indexWhere((entry) => entry.key == contactUid);
     if (contactIndex != -1) {
@@ -201,7 +384,7 @@ class ContactProvider with ChangeNotifier {
       final updatedContact = {
         ...contactEntry.value,
         'last_message': {
-          'formatted_message_time': context.lwTranslate.justNow,
+          'formatted_message_time': justNowLabel,
           '_uid': lastMessageUid,
         },
         'unread_messages_count':
@@ -213,7 +396,7 @@ class ContactProvider with ChangeNotifier {
     } else {
       final newContact = MapEntry(contactUid, {
         'last_message': {
-          'formatted_message_time': context.lwTranslate.justNow,
+          'formatted_message_time': justNowLabel,
           '_uid': lastMessageUid,
         },
         'unread_messages_count': 1,
@@ -229,7 +412,7 @@ class ContactProvider with ChangeNotifier {
       final updatedOriginalContact = {
         ...originalEntry.value,
         'last_message': {
-          'formatted_message_time': context.lwTranslate.justNow,
+          'formatted_message_time': justNowLabel,
           '_uid': lastMessageUid,
         },
         'unread_messages_count':
@@ -241,7 +424,7 @@ class ContactProvider with ChangeNotifier {
     } else {
       final newOriginalContact = MapEntry(contactUid, {
         'last_message': {
-          'formatted_message_time': context.lwTranslate.justNow,
+          'formatted_message_time': justNowLabel,
           '_uid': lastMessageUid,
         },
         'unread_messages_count': 1,

@@ -13,7 +13,7 @@ SharedPreferences? sharedPreferencesCache;
 String? userMobileNumber;
 
 /// Top-level delegate functions for backwards compatibility.
-dynamic configItem(String itemRequested, {fallbackValue}) =>
+dynamic configItem(String itemRequested, {dynamic fallbackValue}) =>
     AppUtils.configItem(itemRequested, fallbackValue: fallbackValue);
 
 void pr(dynamic params, {int lineNumber = 1}) =>
@@ -23,7 +23,7 @@ void printLongString(String text) => AppUtils.printLongString(text);
 
 void dd(dynamic params) => AppUtils.dd(params);
 
-dynamic getItemValue(sourceItem, String keyToAccess, {dynamic fallbackValue}) =>
+dynamic getItemValue(dynamic sourceItem, String keyToAccess, {dynamic fallbackValue}) =>
     AppUtils.getItemValue(sourceItem, keyToAccess, fallbackValue: fallbackValue);
 
 void showSuccessMessage(BuildContext context, String? message) =>
@@ -40,10 +40,10 @@ void showToastMessage(BuildContext context, String message, {String type = 'mess
 Uri apiUrl(String url, {Map<String, dynamic>? queryParameters, BuildContext? context, bool useApiUrl = true}) =>
     AppUtils.apiUrl(url, queryParameters: queryParameters, context: context, useApiUrl: useApiUrl);
 
-void navigatePage(BuildContext context, pageClass) =>
+void navigatePage(BuildContext context, dynamic pageClass) =>
     AppUtils.navigatePage(context, pageClass);
 
-void jsdd(response) => AppUtils.jsdd(response);
+void jsdd(dynamic response) => AppUtils.jsdd(response);
 
 bool isIOSPlatform() => AppUtils.isIOSPlatform();
 
@@ -51,19 +51,21 @@ MaterialColor createMaterialColor(Color color) => AppUtils.createMaterialColor(c
 
 Future<void> initPreferences() => AppUtils.initPreferences();
 
-dynamic getPreferences(key, {defaultValue}) =>
+dynamic getPreferences(dynamic key, {dynamic defaultValue}) =>
     AppUtils.getPreferences(key, defaultValue: defaultValue);
 
-getCurrentLocale() => AppUtils.getCurrentLocale();
+Locale getCurrentLocale() => AppUtils.getCurrentLocale();
+
+String localizedJustNowLabel() => AppUtils.localizedJustNowLabel();
 
 String geUpdatedMobileNumber() => AppUtils.geUpdatedMobileNumber();
 
-Future<bool?> setPreferences(key, value) => AppUtils.setPreferences(key, value);
+Future<bool?> setPreferences(dynamic key, dynamic value) => AppUtils.setPreferences(key, value);
 
 /// Structured class containing all utility helpers.
 class AppUtils {
   /// get configuration settings from app_config file
-  static dynamic configItem(String itemRequested, {fallbackValue}) {
+  static dynamic configItem(String itemRequested, {dynamic fallbackValue}) {
     return getItemValue(app_config.configItems, itemRequested,
         fallbackValue: fallbackValue);
   }
@@ -106,7 +108,7 @@ class AppUtils {
   }
 
   /// access the array/map values using . notation
-  static dynamic getItemValue(sourceItem, String keyToAccess, {dynamic fallbackValue}) {
+  static dynamic getItemValue(dynamic sourceItem, String keyToAccess, {dynamic fallbackValue}) {
     if (sourceItem == null) {
       return fallbackValue;
     }
@@ -219,7 +221,7 @@ class AppUtils {
   }
 
   // Navigate page helper
-  static void navigatePage(BuildContext context, pageClass) {
+  static void navigatePage(BuildContext context, Widget pageClass) {
     Navigator.push(
       context,
       SlideLeftRoute(page: pageClass),
@@ -227,7 +229,7 @@ class AppUtils {
   }
 
   // response debug messages print from server
-  static void jsdd(response) {
+  static void jsdd(dynamic response) {
     if (app_config.debug) {
       bool ddExecuted = false;
       bool prExecuted = false;
@@ -318,7 +320,7 @@ class AppUtils {
     sharedPreferencesCache ??= await SharedPreferences.getInstance();
   }
 
-  static dynamic getPreferences(key, {defaultValue}) {
+  static dynamic getPreferences(String key, {dynamic defaultValue}) {
     return sharedPreferencesCache?.get(key) ?? defaultValue;
   }
 
@@ -332,6 +334,20 @@ class AppUtils {
         defaultLocale);
   }
 
+  static String localizedJustNowLabel() {
+    final localeCode = getPreferences('locale',
+            defaultValue:
+                configItem('default_language_code', fallbackValue: 'en'))
+        ?.toString()
+        .toLowerCase();
+    switch (localeCode) {
+      case 'it':
+        return 'Proprio adesso';
+      default:
+        return 'Just Now';
+    }
+  }
+
   static String geUpdatedMobileNumber() {
     String? mobileNumber =
         userMobileNumber ?? getPreferences('user_mobile_number');
@@ -339,7 +355,7 @@ class AppUtils {
     return mobileNumber ?? '';
   }
 
-  static Future<bool?> setPreferences(key, value) async {
+  static Future<bool?> setPreferences(String key, dynamic value) async {
     if (key == 'user_mobile_number') {
       userMobileNumber = value.toString();
     }

@@ -1,11 +1,11 @@
 {
-     "name": "Stunnda",
-     "short_name": "Stunnda",
+     "name": "stundaa",
+     "short_name": "stundaa",
      "start_url": ".",
      "display": "standalone",
      "background_color": "#0175C2",
      "theme_color": "#0175C2",
-     "description": "Stunnda mobile application.",
+     "description": "stundaa mobile application.",
      "orientation": "portrait-primary",
      "prefer_related_applications": false,
      "icons": [

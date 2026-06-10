@@ -280,13 +280,13 @@ class QRDialogContent extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(10.0),
                     decoration: app_theme.insetPanelDecoration(radius: 18)
-                        .copyWith(color: app_theme.backgroundColor),
+                        .copyWith(color: Colors.white),
                     child: Column(
                       children: [
                         const Text(
                           "STUNDAA",
                           style: TextStyle(
-                            color: app_theme.lavenderWhite,
+                            color: Colors.black,
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
                           ),
@@ -294,9 +294,9 @@ class QRDialogContent extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           testNumber,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 14,
-                            color: Theme.of(context).primaryColor,
+                            color: Colors.blue,
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -307,6 +307,14 @@ class QRDialogContent extends StatelessWidget {
                             data: qrData,
                             version: QrVersions.auto,
                             size: 180.0,
+                            eyeStyle: const QrEyeStyle(
+                              eyeShape: QrEyeShape.square,
+                              color: Colors.black,
+                            ),
+                            dataModuleStyle: const QrDataModuleStyle(
+                              dataModuleShape: QrDataModuleShape.square,
+                              color: Colors.black,
+                            ),
                             embeddedImage: const AssetImage('assets/images/whatsapp_logo.png'),
                             embeddedImageStyle: const QrEmbeddedImageStyle(
                               size: Size(40, 40),

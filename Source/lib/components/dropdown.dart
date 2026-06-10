@@ -122,10 +122,10 @@ class _CustomDropdownState extends State<CustomDropdown> {
   }
 
   List<DropdownMenuItem<String>> _buildSelectOptions(
-    selectOptions, {
-    keyName = 'id',
-    valueName = 'value',
-    showKeyInBracket = false,
+    dynamic selectOptions, {
+    String keyName = 'id',
+    String valueName = 'value',
+    bool showKeyInBracket = false,
   }) {
     if (selectOptions.isEmpty) {
       return [

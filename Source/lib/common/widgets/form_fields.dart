@@ -93,13 +93,13 @@ class SelectField extends StatelessWidget {
   }
 
   List<DropdownMenuItem<String>> _buildSelectOptions(
-    selectOptions, {
-    title = '',
-    keyName = 'id',
-    valueName = 'value',
-    showKeyInBracket = false,
+    dynamic selectOptions, {
+    String title = '',
+    String keyName = 'id',
+    String valueName = 'value',
+    bool showKeyInBracket = false,
   }) {
-    Map processedOptions = {};
+    Map<dynamic, dynamic> processedOptions = {};
     if (selectOptions is List) {
       processedOptions = {
         for (var selectOption in selectOptions)

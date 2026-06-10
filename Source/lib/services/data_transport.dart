@@ -1,3 +1,6 @@
+// ignore_for_file: use_build_context_synchronously
+
+import 'dart:async';
 import 'dart:convert';
 import 'package:http_parser/http_parser.dart';
 import 'package:stundaa/services/input_security.dart';
@@ -5,15 +8,23 @@ import 'package:fbroadcast/fbroadcast.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
 import 'package:stundaa/screens/user/login.dart';
-import 'package:stundaa/support/app_config.dart' as app_config;
 import 'auth.dart' as auth;
 import 'package:path/path.dart' as p;
+import 'package:universal_io/io.dart';
 import 'utils.dart';
 
 String token = '';
+const Duration requestTimeout = Duration(seconds: 30);
 
-_setHeaders() {
+http.Client httpClient = http.Client();
+
+Map<String, String> _setHeaders() {
   token = auth.getAuthToken();
+  if (token.isEmpty) {
+    pr("WARNING: Token is empty in _setHeaders");
+  } else {
+    pr("Token prefix: ${token.substring(0, 10)}...");
+  }
   return {
     'Content-type': 'application/json; charset=UTF-8',
     'Accept': 'application/json',
@@ -37,7 +48,7 @@ Future<String> post(
   List<String>? unSecuredFields,
   OnCallbackType? onSuccess,
   OnCallbackType? thenCallback,
-  Function? onError,
+  void Function(dynamic error)? onError,
   OnCallbackType? onFailed,
 }) async {
   Map<String, dynamic> newInputData = {};
@@ -46,7 +57,8 @@ Future<String> post(
       if ((unSecuredFields != null) && unSecuredFields.contains(key)) {
         newInputData[key] = value;
       } else {
-        newInputData[InputSecurity().text(key)] = InputSecurity().text(value.toString());
+        newInputData[InputSecurity().text(key)] =
+            InputSecurity().text(value.toString());
       }
     });
   }
@@ -56,20 +68,24 @@ Future<String> post(
     pr('http post data: $inputData');
     pr(jsonEncode(newInputData.isEmpty ? inputData : newInputData));
   }
-  final httpResponse = await http
-      .post(
-    urlToProcess,
-    headers: _setHeaders(),
-    body: jsonEncode(newInputData.isEmpty ? inputData : newInputData),
-  )
-      .then((value) {
-    // process the further request
-    if (context != null && !context.mounted) return value;
-    _thenProcessing(value, inputData, onSuccess, context, thenCallback, onError,
+
+  try {
+    final httpResponse = await httpClient
+        .post(
+          urlToProcess,
+          headers: _setHeaders(),
+          body: jsonEncode(newInputData.isEmpty ? inputData : newInputData),
+        )
+        .timeout(requestTimeout);
+
+    _thenProcessing(httpResponse, inputData, onSuccess,
+        context?.mounted == true ? context : null, thenCallback, onError,
         failedCallbackAction: onFailed);
-    return value;
-  });
-  return httpResponse.body;
+
+    return httpResponse.body;
+  } catch (error) {
+    return _handleNetworkError(error, context, thenCallback, onError, onFailed);
+  }
 }
 
 // http.Response
@@ -82,30 +98,36 @@ Future<String> get(
   Map<String, dynamic>? queryParameters,
   OnCallbackType? onFailed,
 }) async {
-  Uri urlToProcess = apiUrl(requestedUrl, queryParameters: queryParameters, context: context);
+  // Capture context reference before any await — checked for mounted after await
+  final capturedContext = context;
+  Uri urlToProcess = apiUrl(requestedUrl,
+      queryParameters: queryParameters, context: capturedContext);
   pr('http GET request: $urlToProcess', lineNumber: 2);
-  var httpResponse = await http
-      .get(
-    urlToProcess,
-    headers: _setHeaders(),
-  )
-      .then((value) {
-    // process the further request
-    if (context != null && !context.mounted) return value;
-    _thenProcessing(value, {}, onSuccess, context, thenCallback, null,
+
+  try {
+    final httpResponse = await httpClient
+        .get(
+          urlToProcess,
+          headers: _setHeaders(),
+        )
+        .timeout(requestTimeout);
+
+    BuildContext? safeContext = capturedContext?.mounted == true ? capturedContext : null;
+
+    _thenProcessing(
+        httpResponse,
+        {},
+        onSuccess,
+        safeContext,
+        thenCallback,
+        onError,
         failedCallbackAction: onFailed);
-    return value;
-  }).catchError((error) {
-    if (context != null && !context.mounted) return http.Response(error.toString(), 500);
-    if ((context != null) && (app_config.debug == true)) {
-      showToastMessage(context, error.toString(), type: 'error');
-    }
-    pr("error $error");
-    _thenProcessing(error.toString(), {}, null, context, thenCallback, onError,
-        failedCallbackAction: onFailed);
-    return http.Response(error.toString(), 500);
-  });
-  return httpResponse.body;
+
+    return httpResponse.body;
+  } catch (error) {
+    return _handleNetworkError(
+        error, capturedContext, thenCallback, onError, onFailed);
+  }
 }
 
 void uploadFile(String filename, String url,
@@ -113,8 +135,8 @@ void uploadFile(String filename, String url,
     OnCallbackType? onSuccess,
     OnCallbackType? thenCallback,
     Map<String, String> inputData = const {},
-    Function? onError,
-    Function? onFailed}) async {
+    void Function(dynamic error)? onError,
+    OnCallbackType? onFailed}) async {
   String fileName = p.basename(filename);
   String fileExtension = p.extension(fileName).toLowerCase();
   Map<String, String> mimeTypes = {
@@ -129,7 +151,8 @@ void uploadFile(String filename, String url,
     '.aac': 'audio/aac',
     '.pdf': 'application/pdf',
     '.doc': 'application/msword',
-    '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    '.docx':
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     '.txt': 'text/plain',
   };
 
@@ -147,23 +170,20 @@ void uploadFile(String filename, String url,
         contentType: MediaType.parse(mimeType)));
 
     try {
-      var response = await request.send();
+      var response = await request.send().timeout(requestTimeout);
       var responseFromStream = await http.Response.fromStream(response);
-      if (context != null && !context.mounted) return;
+      
       _thenProcessing(
         responseFromStream,
         fileName,
         onSuccess,
-        context,
+        context?.mounted == true ? context : null,
         thenCallback,
         onError,
         failedCallbackAction: onFailed,
       );
     } catch (e) {
-      pr("Error during upload: $e");
-      if (onError != null) {
-        onError(e.toString());
-      }
+      _handleNetworkError(e, context, thenCallback, onError, onFailed);
     }
   } else {
     pr("Unsupported file type: $fileExtension");
@@ -173,10 +193,49 @@ void uploadFile(String filename, String url,
   }
 }
 
-void _thenProcessing(dynamic value, dynamic inputData, OnCallbackType? successCallbackAction,
-    BuildContext? context, OnCallbackType? thenCallbackAction, Function? onError,
+String _handleNetworkError(
+    dynamic error,
+    BuildContext? context,
+    OnCallbackType? thenCallback,
+    dynamic onError,
+    OnCallbackType? onFailed) {
+  String errorMessage = error.toString();
+  if (error is SocketException) {
+    errorMessage = 'No internet connection. Please check your network.';
+  } else if (error is TimeoutException) {
+    errorMessage = 'Request timed out. Please try again.';
+  } else if (error is http.ClientException) {
+    errorMessage = 'Network error. Please try again later.';
+  }
+
+  var errorResponse = http.Response(
+      jsonEncode({
+        'reaction': 0,
+        'data': {'message': errorMessage}
+      }),
+      500);
+
+  final safeCtx = context?.mounted == true ? context : null;
+  if (safeCtx != null) {
+    showToastMessage(safeCtx, errorMessage, type: 'error');
+  }
+
+  pr("Network error: $error");
+
+  _thenProcessing(errorResponse, {}, null, safeCtx, thenCallback, onError,
+      failedCallbackAction: onFailed);
+
+  return errorResponse.body;
+}
+
+void _thenProcessing(
+    dynamic value,
+    dynamic inputData,
+    OnCallbackType? successCallbackAction,
+    BuildContext? context,
+    OnCallbackType? thenCallbackAction,
+    Function? onError,
     {Function? failedCallbackAction}) {
-  if (context != null && !context.mounted) return;
   Map<String, dynamic> responseData;
 
   try {
@@ -191,7 +250,7 @@ void _thenProcessing(dynamic value, dynamic inputData, OnCallbackType? successCa
     pr("Error parsing response: $e");
 
     // Show error message in the UI
-    if (context != null) {
+    if (context != null && context.mounted) {
       showToastMessage(context, 'Failed to parse server response', type: 'error');
     }
 
@@ -226,7 +285,7 @@ void _thenProcessing(dynamic value, dynamic inputData, OnCallbackType? successCa
   // Check if the user is authenticated
   if (responseData['data']?['auth_info']?['authorized'] == false) {
     auth.logout();
-    if (context != null) {
+    if (context != null && context.mounted) {
       navigatePage(context, const LoginPage());
     }
   } else if (value.statusCode == 200) {
@@ -242,7 +301,7 @@ void _thenProcessing(dynamic value, dynamic inputData, OnCallbackType? successCa
         successCallbackAction(responseData);
       }
       final String? message = responseData['data']?['message'] as String?;
-      if (context != null && message != null) {
+      if (context != null && context.mounted && message != null) {
         showSuccessMessage(context, message);
       }
     } else {
@@ -250,7 +309,7 @@ void _thenProcessing(dynamic value, dynamic inputData, OnCallbackType? successCa
         failedCallbackAction(responseData);
       }
       final String? message = responseData['data']?['message'] as String?;
-      if (context != null && message != null) {
+      if (context != null && context.mounted && message != null) {
         showToastMessage(context, message, type: 'error');
       }
     }
@@ -270,15 +329,15 @@ void _thenProcessing(dynamic value, dynamic inputData, OnCallbackType? successCa
         }
       });
 
-      if (context != null) {
+      if (context != null && context.mounted) {
         showToastMessage(context, errorString, type: 'error');
       }
-    } else if (context != null) {
+    } else if (context != null && context.mounted) {
       showToastMessage(context, baseMessage, type: 'error');
     }
   } else {
     // Handle other errors
-    if (context != null) {
+    if (context != null && context.mounted) {
       showToastMessage(context, 'Server error (${value.statusCode})', type: 'error');
     }
     if (onError != null) {

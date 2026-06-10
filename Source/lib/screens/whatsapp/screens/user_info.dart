@@ -5,13 +5,13 @@ import 'package:stundaa/common/widgets/common.dart';
 import 'package:stundaa/components/dropdown.dart';
 import 'package:stundaa/provider/contacts_provider.dart';
 import 'package:stundaa/services/utils.dart';
+import 'package:stundaa/repositories/contact_info_repository.dart';
 import 'package:stundaa/screens/whatsapp/controller/chatbox_controller.dart';
 import 'package:stundaa/support/app_theme.dart' as app_theme;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:stundaa/screens/whatsapp/controller/user_info_controller.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
-import 'package:stundaa/services/data_transport.dart' as data_transport;
 import 'package:stundaa/services/whatsapp_call_service.dart';
 
 class UserInfo extends StatefulWidget {
@@ -33,10 +33,10 @@ class UserInfo extends StatefulWidget {
 }
 
 class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
-  late String holduser;
   final _formKey = GlobalKey<FormState>();
   final Userinfocontroller controller = Get.put(Userinfocontroller());
   final ChatboxController chatController = Get.put(ChatboxController());
+  final ContactInfoRepository _contactInfoRepository = ContactInfoRepository();
   TextEditingController textController = TextEditingController();
   Color color1 = Colors.white;
   Color color2 = Colors.black;
@@ -44,6 +44,7 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
   String? selectedUserUid = "";
   List<String> selectedLabelIds = [];
   bool isEdit = false;
+  bool isProfileEdit = false;
   String? assignUserId;
   bool isAssignUserLoader = false;
   bool isAssignLableLoader = false;
@@ -54,7 +55,6 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
     super.initState();
     isCheckedAI = widget.enableAiBot ?? false;
     isCheckedReply = widget.enableReplyBot ?? false;
-    holduser = widget.username;
     setState(() {
       userId = widget.userId;
       controller.setUserId(userId!);
@@ -64,18 +64,13 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
   }
 
   Future<void> updateNotesApi() async {
-    final Map<String, dynamic> payload = {
-      'contactIdOrUid': userId,
-      'contact_notes': controller.notesController.text.trim(),
-    };
     try {
-      await data_transport.post(
-        'vendor/whatsapp/contact/chat/update-notes',
-        inputData: payload,
+      await _contactInfoRepository.updateNotes(
         context: context,
-        onSuccess: (responseData) async {},
-        onFailed: (responseData) {},
+        contactUid: userId ?? '',
+        notes: controller.notesController.text.trim(),
       );
+      controller.notes.value = controller.notesController.text.trim();
     } catch (e) {
       pr("Update notes failed: $e");
     } finally {
@@ -100,15 +95,13 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
       'bg_color': toHex(bgColor),
     };
     try {
-      await data_transport.post(
-        'vendor/whatsapp/contact/create-label',
-        inputData: payload,
+      await _contactInfoRepository.createLabel(
         context: context,
-        onSuccess: (responseData) async {
-          controller.getChatLabels();
-        },
-        onFailed: (responseData) {},
+        title: payload['title'].toString(),
+        textColor: payload['text_color'].toString(),
+        backgroundColor: payload['bg_color'].toString(),
       );
+      controller.getChatLabels();
     } catch (e) {
       pr("Add label failed: $e");
     }
@@ -124,23 +117,15 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
       return '#${color.toARGB32().toRadixString(16).substring(2, 8)}';
     }
 
-    final Map<String, dynamic> payload = {
-      'labelUid': uid,
-      'title': label,
-      'text_color': toHex(textColor),
-      'bg_color': toHex(bgColor),
-    };
-
     try {
-      await data_transport.post(
-        'vendor/whatsapp/contact/chat/edit-label',
-        inputData: payload,
+      await _contactInfoRepository.editLabel(
         context: context,
-        onSuccess: (responseData) async {
-          controller.getChatLabels();
-        },
-        onFailed: (responseData) {},
+        labelUid: uid,
+        title: label,
+        textColor: toHex(textColor),
+        backgroundColor: toHex(bgColor),
       );
+      controller.getChatLabels();
     } catch (e) {
       pr("Edit label failed: $e");
     }
@@ -150,16 +135,15 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
     required String uid,
   }) async {
     try {
-      await data_transport.post(
-        'vendor/whatsapp/contact/chat/delete-label/$uid',
-        inputData: {},
+      await _contactInfoRepository.deleteLabel(
         context: context,
-        onSuccess: (responseData) async {
-          controller.getChatLabels();
-          Navigator.pop(context);
-        },
-        onFailed: (responseData) {},
+        labelUid: uid,
       );
+      if (!mounted) {
+        return;
+      }
+      controller.getChatLabels();
+      Navigator.pop(context);
     } catch (e) {
       pr("Delete label failed: $e");
     }
@@ -167,32 +151,21 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
 
   Future<void> assignUserApi(String? selectedUserUid) async {
     if (selectedUserUid == null || selectedUserUid.isEmpty) return;
-    final Map<String, dynamic> payload = {
-      'contactIdOrUid': userId,
-      'assigned_users_uid': selectedUserUid,
-      'enable_ai_bot': isCheckedAI,
-      'enable_reply_bot': isCheckedReply,
-    };
     try {
       setState(() {
         isAssignUserLoader = true;
       });
-      await data_transport.post(
-        'vendor/whatsapp/contact/chat/assign-user',
-        inputData: payload,
+      await _contactInfoRepository.assignUser(
         context: context,
-        onSuccess: (responseData) async {
-          setState(() {
-            isAssignUserLoader = false;
-            chatController.getUserChat();
-          });
-        },
-        onFailed: (responseData) {
-          setState(() {
-            isAssignUserLoader = false;
-          });
-        },
+        contactUid: userId ?? '',
+        assignedUserUid: selectedUserUid,
+        enableAiBot: isCheckedAI,
+        enableReplyBot: isCheckedReply,
       );
+      setState(() {
+        isAssignUserLoader = false;
+      });
+      chatController.getUserChat();
     } catch (e) {
       setState(() {
         isAssignUserLoader = false;
@@ -201,29 +174,18 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
   }
 
   Future<void> assignLableApi(List<String> selectedLabelIds) async {
-    final Map<String, dynamic> payload = {
-      'contactUid': userId,
-      'contact_labels': selectedLabelIds,
-    };
     try {
       setState(() {
         isAssignLableLoader = true;
       });
-      await data_transport.post(
-        'vendor/whatsapp/contact/chat/assign-labels',
-        inputData: payload,
+      await _contactInfoRepository.assignLabels(
         context: context,
-        onSuccess: (responseData) async {
-          setState(() {
-            isAssignLableLoader = false;
-          });
-        },
-        onFailed: (responseData) {
-          setState(() {
-            isAssignLableLoader = false;
-          });
-        },
+        contactUid: userId ?? '',
+        labelIds: selectedLabelIds,
       );
+      setState(() {
+        isAssignLableLoader = false;
+      });
     } catch (e) {
       setState(() {
         isAssignLableLoader = false;
@@ -267,8 +229,8 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
   Widget _buildProfileCard(BuildContext context) {
     return Container(
       decoration: app_theme.insetPanelDecoration(radius: 24).copyWith(
-        gradient: app_theme.cardGradient,
-      ),
+            gradient: app_theme.cardGradient,
+          ),
       child: Column(
         children: [
           Container(
@@ -318,6 +280,28 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
                         color: app_theme.lavenderWhite,
                       ),
                     ),
+                    if (controller.firstName.value == 'Unknown' || controller.firstName.value.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            setState(() {
+                              isProfileEdit = true;
+                            });
+                          },
+                          icon: const Icon(CupertinoIcons.person_add, size: 18),
+                          label: const Text('Add to Contacts'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: app_theme.primary,
+                            foregroundColor: app_theme.black,
+                            minimumSize: const Size(120, 36),
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                          ),
+                        ),
+                      ),
                     SizedBox(height: 4),
                     Text(
                       controller.waId.value.isNotEmpty
@@ -344,13 +328,45 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              context.lwTranslate.userInformation,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: app_theme.primary,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  context.lwTranslate.userInformation,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: app_theme.primary,
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(
+                    isProfileEdit ? CupertinoIcons.check_mark : CupertinoIcons.pencil,
+                    color: app_theme.primary,
+                  ),
+                  onPressed: () async {
+                    if (isProfileEdit) {
+                      await controller.updateProfileApi(
+                        context: context,
+                        firstNameValue: controller.nameController.text,
+                        emailValue: controller.emailController.text,
+                        languageCodeValue: controller.languageCodeController.text,
+                      );
+                      if (mounted) {
+                        final provider = Provider.of<ContactProvider>(context, listen: false);
+                        await provider.getUser(isRefresh: true, assigned: '');
+                      }
+                      setState(() {
+                        isProfileEdit = false;
+                      });
+                    } else {
+                      setState(() {
+                        isProfileEdit = true;
+                      });
+                    }
+                  },
+                ),
+              ],
             ),
             SizedBox(height: 16),
             Obx(() {
@@ -364,13 +380,19 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
               }
               return Column(
                 children: [
-                  _buildDetailItem(
-                    icon: CupertinoIcons.person,
-                    label: context.lwTranslate.name,
-                    value: controller.firstName.value.isNotEmpty
-                        ? controller.firstName.value
-                        : context.lwTranslate.loading,
-                  ),
+                  isProfileEdit
+                      ? _buildEditItem(
+                          icon: CupertinoIcons.person,
+                          label: context.lwTranslate.name,
+                          controller: controller.nameController,
+                        )
+                      : _buildDetailItem(
+                          icon: CupertinoIcons.person,
+                          label: context.lwTranslate.name,
+                          value: controller.firstName.value.isNotEmpty
+                              ? controller.firstName.value
+                              : context.lwTranslate.loading,
+                        ),
                   const Divider(
                       height: 24, color: Color.fromRGBO(167, 223, 255, 0.12)),
                   _buildDetailItem(
@@ -387,28 +409,95 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
                   ),
                   const Divider(
                       height: 24, color: Color.fromRGBO(167, 223, 255, 0.12)),
-                  _buildDetailItem(
-                    icon: CupertinoIcons.mail,
-                    label: context.lwTranslate.email,
-                    value: controller.emailV.value.isNotEmpty
-                        ? controller.emailV.value
-                        : "...",
-                  ),
+                  isProfileEdit
+                      ? _buildEditItem(
+                          icon: CupertinoIcons.mail,
+                          label: context.lwTranslate.email,
+                          controller: controller.emailController,
+                        )
+                      : _buildDetailItem(
+                          icon: CupertinoIcons.mail,
+                          label: context.lwTranslate.email,
+                          value: controller.emailV.value.isNotEmpty
+                              ? controller.emailV.value
+                              : "...",
+                        ),
                   const Divider(
                       height: 24, color: Color.fromRGBO(167, 223, 255, 0.12)),
-                  _buildDetailItem(
-                    icon: CupertinoIcons.globe,
-                    label: context.lwTranslate.language,
-                    value: controller.languageCode.value.isNotEmpty
-                        ? controller.languageCode.value
-                        : "...",
-                  ),
+                  isProfileEdit
+                      ? _buildEditItem(
+                          icon: CupertinoIcons.globe,
+                          label: context.lwTranslate.language,
+                          controller: controller.languageCodeController,
+                        )
+                      : _buildDetailItem(
+                          icon: CupertinoIcons.globe,
+                          label: context.lwTranslate.language,
+                          value: controller.languageCode.value.isNotEmpty
+                              ? controller.languageCode.value
+                              : "...",
+                        ),
                 ],
               );
             }),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildEditItem({
+    required IconData icon,
+    required String label,
+    required TextEditingController controller,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: app_theme.surfaceMuted,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Icon(icon, size: 20, color: app_theme.primary),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: app_theme.secondary,
+                ),
+              ),
+              const SizedBox(height: 4),
+              TextField(
+                controller: controller,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: app_theme.lavenderWhite,
+                ),
+                decoration: InputDecoration(
+                  isDense: true,
+                  contentPadding: EdgeInsets.symmetric(vertical: 8),
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: app_theme.outlineSoft),
+                  ),
+                  focusedBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: app_theme.primary),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -576,10 +665,10 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
                     } else {
                       controller.assignedUserId.value = value!;
                       final selectedUser = controller.vendorMessagingUsers
-                          .firstWhereOrNull((user) => user['id'] == value);
+                          .firstWhereOrNull((user) => user.id == value);
                       controller.selectedUserName.value =
-                          selectedUser?['value'] ?? '';
-                      selectedUserUid = selectedUser?['_uid'];
+                          selectedUser?.name ?? '';
+                      selectedUserUid = selectedUser?.uid;
                     }
                   });
                 },
@@ -588,7 +677,7 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
                     'id': 'no_one',
                     'value': context.lwTranslate.unassignedFilter
                   },
-                  ...controller.vendorMessagingUsers,
+                  ...controller.vendorMessagingUsersDropdownItems,
                 ],
                 optionKeyName: 'id',
                 optionLabelName: 'value',
@@ -619,10 +708,10 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
                     if (selectedUserUid == null || selectedUserUid!.isEmpty) {
                       final selectedUser = controller.vendorMessagingUsers
                           .firstWhereOrNull((user) =>
-                              user['id'] == controller.assignedUserId.value);
+                              user.id == controller.assignedUserId.value);
                       if (selectedUser != null) {
                         setState(() {
-                          selectedUserUid = selectedUser['_uid']?.toString();
+                          selectedUserUid = selectedUser.uid;
                         });
                       }
                     }
