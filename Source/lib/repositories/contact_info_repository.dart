@@ -62,14 +62,20 @@ class ContactInfoRepository {
     required String languageCode,
   }) async {
     final completer = Completer<void>();
+    final Map<String, dynamic> inputData = {
+      'contactIdOrUid': contactUid,
+      'first_name': firstName,
+      'language_code': languageCode,
+    };
+    
+    // Only add email if it's a non-empty string and not the placeholder "..."
+    if (email.trim().isNotEmpty && email != "...") {
+      inputData['email'] = email.trim();
+    }
+
     await data_transport.post(
       'vendor/contacts/update-process',
-      inputData: <String, dynamic>{
-        'contactIdOrUid': contactUid,
-        'first_name': firstName,
-        'email': email,
-        'language_code': languageCode,
-      },
+      inputData: inputData,
       context: context,
       onSuccess: (_) {
         if (!completer.isCompleted) {

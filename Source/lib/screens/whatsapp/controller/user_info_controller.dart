@@ -49,19 +49,11 @@ class Userinfocontroller extends GetxController {
   }) async {
     isLoadingUpdateData.value = true;
     try {
-      // If the email field is empty and we have an existing email, use that.
-      // If both are empty, send an empty string (or whatever the backend expects for optional).
-      // If the backend strictly requires a valid email even if not changed, we ensure we don't send "empty".
-      String emailToSend = emailValue.trim();
-      if (emailToSend.isEmpty && emailV.value.isNotEmpty && emailV.value != "...") {
-        emailToSend = emailV.value;
-      }
-      
       await _contactInfoRepository.updateContactProfile(
         context: context,
         contactUid: userId ?? '',
         firstName: firstNameValue,
-        email: emailToSend,
+        email: emailValue,
         languageCode: languageCodeValue,
       );
       firstName.value = firstNameValue;
