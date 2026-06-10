@@ -70,6 +70,10 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
       controller.getUserChat();
       controllerUser.getUserInfo();
       _fetchAssignedLabels();
+      
+      // Update unread message count to zero when chat is opened
+      final provider = Provider.of<ContactProvider>(context, listen: false);
+      provider.updateMessageCountToZero(userId!);
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {

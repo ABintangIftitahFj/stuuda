@@ -555,13 +555,13 @@ class _WhatsAppChatState extends State<WhatsAppChat>
                                 children: [
                                   Flexible(
                                     child: Text(
-                                      contact.displayName,
+                                      "${contact.displayName} - ${contact.waId}",
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(
                                           color: Colors.white,
                                           fontWeight: FontWeight.bold,
-                                          fontSize: 16),
+                                          fontSize: 15),
                                     ),
                                   ),
                                   if (isPinned) ...[
@@ -574,54 +574,56 @@ class _WhatsAppChatState extends State<WhatsAppChat>
                                 ],
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            Text(
-                              contact.lastMessageTime,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                  color: unreadCount > 0
-                                      ? app_theme.primary
-                                      : Colors.white38,
-                                  fontSize: 12,
-                                  fontWeight: unreadCount > 0
-                                      ? FontWeight.bold
-                                      : FontWeight.normal),
-                            ),
                           ],
                         ),
                         const SizedBox(height: 4),
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Flexible(
+                            Expanded(
                               child: Text(
-                                contact.waId,
+                                contact.lastMessage,
                                 style: TextStyle(
                                     color: Colors.white.withValues(alpha: 0.5),
-                                    fontSize: 14),
+                                    fontSize: 13,
+                                    fontWeight: unreadCount > 0
+                                        ? FontWeight.w600
+                                        : FontWeight.normal),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                            if (unreadCount > 0)
-                              Padding(
-                                padding: const EdgeInsets.only(left: 8),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: app_theme.primary,
-                                    borderRadius: BorderRadius.circular(10),
+                            const SizedBox(width: 8),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (unreadCount > 0)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: app_theme.primary,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Text(
+                                      unreadCount.toString(),
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold),
+                                    ),
                                   ),
-                                  child: Text(
-                                    unreadCount.toString(),
-                                    style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold),
-                                  ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  contact.lastMessageTime,
+                                  style: TextStyle(
+                                      color: unreadCount > 0
+                                          ? app_theme.primary
+                                          : Colors.white38,
+                                      fontSize: 11),
                                 ),
-                              ),
+                              ],
+                            ),
                           ],
                         ),
                       ],
