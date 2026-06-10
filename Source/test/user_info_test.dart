@@ -69,7 +69,7 @@ void main() {
       expect(controller.languageCode.value, 'en');
     });
 
-    test('updateProfileApi omits email when empty to bypass validation', () async {
+    test('updateProfileApi sends email as empty string when empty', () async {
       final mockResponse = {'reaction': 1, 'message': 'Updated'};
 
       data_transport.httpClient = MockClient((request) async {
@@ -77,7 +77,7 @@ void main() {
           final body = jsonDecode(request.body);
           expect(body['contactIdOrUid'], 'user-123');
           expect(body['first_name'], 'Updated Name');
-          expect(body.containsKey('email'), isFalse);
+          expect(body['email'], ''); // Should be empty string
           return http.Response(jsonEncode(mockResponse), 200);
         }
         return http.Response('Not Found', 404);
