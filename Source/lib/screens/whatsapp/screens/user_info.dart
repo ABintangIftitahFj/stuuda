@@ -339,32 +339,62 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
                     color: app_theme.primary,
                   ),
                 ),
-                IconButton(
-                  icon: Icon(
-                    isProfileEdit ? CupertinoIcons.check_mark : CupertinoIcons.pencil,
-                    color: app_theme.primary,
-                  ),
-                  onPressed: () async {
-                    if (isProfileEdit) {
-                      await controller.updateProfileApi(
-                        context: context,
-                        firstNameValue: controller.nameController.text,
-                        emailValue: controller.emailController.text,
-                        languageCodeValue: controller.languageCodeController.text,
-                      );
-                      if (context.mounted) {
-                        final provider = Provider.of<ContactProvider>(context, listen: false);
-                        await provider.getUser(isRefresh: true, assigned: '');
-                      }
-                      setState(() {
-                        isProfileEdit = false;
-                      });
-                    } else {
-                      setState(() {
-                        isProfileEdit = true;
-                      });
-                    }
-                  },
+                Row(
+                  children: [
+                    if (isProfileEdit)
+                      TextButton(
+                        onPressed: () async {
+                          await controller.updateProfileApi(
+                            context: context,
+                            firstNameValue: controller.nameController.text,
+                            emailValue: controller.emailController.text,
+                            languageCodeValue: controller.languageCodeController.text,
+                          );
+                          if (context.mounted) {
+                            final provider = Provider.of<ContactProvider>(context, listen: false);
+                            await provider.getUser(isRefresh: true, assigned: '');
+                          }
+                          setState(() {
+                            isProfileEdit = false;
+                          });
+                        },
+                        child: Text(
+                          "SAVE",
+                          style: TextStyle(
+                            color: app_theme.primary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    IconButton(
+                      icon: Icon(
+                        isProfileEdit ? CupertinoIcons.check_mark : CupertinoIcons.pencil,
+                        color: app_theme.primary,
+                      ),
+                      onPressed: () async {
+                        if (isProfileEdit) {
+                          await controller.updateProfileApi(
+                            context: context,
+                            firstNameValue: controller.nameController.text,
+                            emailValue: controller.emailController.text,
+                            languageCodeValue: controller.languageCodeController.text,
+                          );
+                          if (context.mounted) {
+                            final provider = Provider.of<ContactProvider>(context, listen: false);
+                            await provider.getUser(isRefresh: true, assigned: '');
+                          }
+                          setState(() {
+                            isProfileEdit = false;
+                          });
+                        } else {
+                          setState(() {
+                            isProfileEdit = true;
+                          });
+                        }
+                      },
+                    ),
+                  ],
                 ),
               ],
             ),
