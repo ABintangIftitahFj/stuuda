@@ -352,7 +352,7 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
                         emailValue: controller.emailController.text,
                         languageCodeValue: controller.languageCodeController.text,
                       );
-                      if (mounted) {
+                      if (context.mounted) {
                         final provider = Provider.of<ContactProvider>(context, listen: false);
                         await provider.getUser(isRefresh: true, assigned: '');
                       }
