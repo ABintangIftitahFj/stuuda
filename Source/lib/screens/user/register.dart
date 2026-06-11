@@ -184,6 +184,7 @@ class _RegisterPageState extends State<RegisterPage> {
                               children: [
                                 InputField(
                                   labelText: context.lwTranslate.vendorCompName,
+                                  helperText: context.lwTranslate.mustBe2Character,
                                   prefixIcon: const Icon(
                                     CupertinoIcons.building_2_fill,
                                     color: app_theme.iceBlue,
@@ -215,6 +216,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                 const SizedBox(height: 14),
                                 InputField(
                                   labelText: context.lwTranslate.username,
+                                  helperText: context.lwTranslate.mustBe2Character,
                                   prefixIcon: const Icon(
                                     CupertinoIcons.person_crop_circle_badge_plus,
                                     color: app_theme.iceBlue,

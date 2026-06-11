@@ -102,12 +102,7 @@ class ChatboxController extends ChangeNotifier {
   }
 
   bool canReplyToMessage(Map<String, dynamic> message) {
-    if (message['isSystem'] == true) {
-      return false;
-    }
-
-    final wamid = message['wamid']?.toString() ?? '';
-    return wamid.isNotEmpty;
+    return message['isSystem'] != true;
   }
 
   String buildReplyPreviewText(Map<String, dynamic>? message,
@@ -496,7 +491,9 @@ class ChatboxController extends ChangeNotifier {
     // Only use wamid — local UIDs are not valid WhatsApp message IDs and
     // cannot be forwarded to WhatsApp Cloud API as context.message_id.
     final quotedMessageId =
-        selectedReplyMessage.value?['wamid']?.toString() ?? '';
+        selectedReplyMessage.value?['wamid']?.toString().isNotEmpty == true
+            ? selectedReplyMessage.value!['wamid'].toString()
+            : selectedReplyMessage.value?['uid']?.toString() ?? '';
     // wamid must look like a real WA ID (not a local optimistic ID)
     final isValidWamid = quotedMessageId.isNotEmpty &&
         !quotedMessageId.startsWith('local-');

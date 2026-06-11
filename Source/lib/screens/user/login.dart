@@ -146,7 +146,7 @@ class _LoginPageState extends State<LoginPage> {
                                     formInputData['email'] = value;
                                   },
                                   validation:
-                                      ValidationBuilder().minLength(3).build(),
+                                      ValidationBuilder().minLength(2).build(),
                                 ),
                                 const SizedBox(height: 14),
                                 InputField(

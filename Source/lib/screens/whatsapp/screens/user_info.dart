@@ -353,13 +353,13 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
                           if (context.mounted) {
                             final provider = Provider.of<ContactProvider>(context, listen: false);
                             await provider.getUser(isRefresh: true, assigned: '');
-                            
-                            // Show success message
-                            showToastMessage(
-                              context, 
-                              'Contact updated successfully!', 
-                              type: 'success'
-                            );
+                            if (context.mounted) {
+                              showToastMessage(
+                                context,
+                                'Contact updated successfully!',
+                                type: 'success',
+                              );
+                            }
                           }
                           setState(() {
                             isProfileEdit = false;
