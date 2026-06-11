@@ -1,0 +1,50 @@
+name: Fast Deploy (ZIP + PHP)
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create Deployment ZIP
+        run: |
+          zip -r deploy.zip . \
+            -x "*.git*" \
+            -x ".github/*" \
+            -x "node_modules/*" \
+            -x "storage/*" \
+            -x "vendor/*" \
+            -x "*.log" \
+            -x "tests/*" \
+            -x "bootstrap/cache/*" \
+            -x "public/static-assets/*" \
+            -x "public/dist/*" \
+            -x "public/argon/*" \
+            -x "public/media-storage/*"
+          echo "ZIP size: $(du -sh deploy.zip | cut -f1)"
+          unzip -l deploy.zip | head -n 20
+
+      - name: Upload ZIP and Test File to public_html
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: stundaa.com
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./
+          server-dir: ./public_html/
+          exclude: |
+            **/*
+            !deploy.zip
+            !test.txt
+
+      - name: Trigger Unzip via URL
+        run: |
+          sleep 15
+          curl -v "https://stundaa.com/unzip_deploy.php?token=${{ secrets.DEPLOY_TOKEN }}" 2>&1 | tail -20

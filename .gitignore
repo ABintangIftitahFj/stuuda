@@ -11,11 +11,34 @@ progress.md
 task_plan.md
 desain_theme.md
 
-# Backend (separate repo)
+# Backend sensitive / generated files
 backend_repo/
+backend stundaa/public_html/.env
+backend stundaa/public_html/vendor/
+backend stundaa/public_html/storage/framework/cache/
+backend stundaa/public_html/storage/framework/sessions/
+backend stundaa/public_html/storage/framework/views/
+backend stundaa/public_html/storage/logs/
+backend stundaa/public_html/bootstrap/cache/*.php
+backend stundaa/public_html/node_modules/
+backend stundaa/public_html/public/hot
+backend stundaa/public_html/public/storage
+backend stundaa/public_html/.ftp_state.json
+
+# Sensitive root files
+env_x.md
+Source.zip
+ftp_sync.py
+*.log
+
+# SQL dumps (may contain secrets)
+*.sql
 
 # Temp / Downloads
 5_6096171031121109264/
+.ftp_state.json
+__pycache__/
+*.pyc
 
 # Flutter audio temp & coverage
 Source/coverage/
