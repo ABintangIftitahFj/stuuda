@@ -25,6 +25,7 @@ class InputField extends StatelessWidget {
   final InputBorder? focusborder;
   final InputBorder? unfocusborder;
   final InputBorder? errorborder;
+  final FocusNode? focusNode;
 
   const InputField({
     super.key,
@@ -50,11 +51,13 @@ class InputField extends StatelessWidget {
     this.unfocusborder,
     this.errorborder,
     this.minLines,
+    this.focusNode,
   });
 
   @override
   Widget build(BuildContext context) {
     return TextFormField(
+      focusNode: focusNode,
       readOnly: readOnly,
       initialValue: controller == null ? initialValue : null,
       validator: validation,

@@ -115,7 +115,8 @@ class UserController extends BaseController
                 }
             ],
             'email' => [
-                'required',
+                'sometimes',
+                'nullable',
                 'email',
                 (getAppSettings('disallow_disposable_emails') ? 'indisposable' : ''),
                 Rule::unique((new AuthModel())->getTable())->ignore(auth()->id(), '_id')

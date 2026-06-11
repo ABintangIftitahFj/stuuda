@@ -51,7 +51,7 @@ class UserRepository extends AuthRepository implements UserRepositoryInterface
             'last_name' => $updateData['last_name'],
             'mobile_number'=> $updateData['mobile_number'],
         ];
-        if ($user->email !== $updateData['email']) {
+        if (!empty($updateData['email']) && $user->email !== $updateData['email']) {
             $dataToUpdate['email'] = $updateData['email'];
             $dataToUpdate['email_verified_at'] = null;
         }

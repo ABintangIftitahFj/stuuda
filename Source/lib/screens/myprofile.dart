@@ -26,6 +26,7 @@ class MyProfileState extends State<MyProfile>
   final _lastNameController = TextEditingController();
   final _mobileNumberController = TextEditingController();
   final _emailController = TextEditingController();
+  final _firstNameFocus = FocusNode();
   late SharedPreferences _prefs;
 
   @override
@@ -73,8 +74,10 @@ class MyProfileState extends State<MyProfile>
       'first_name': _firstNameController.text,
       'last_name': _lastNameController.text,
       'mobile_number': _mobileNumberController.text,
-      'email': _emailController.text,
     };
+    if (_emailController.text.isNotEmpty) {
+      payload['email'] = _emailController.text;
+    }
     try {
       await data_transport.post(
         'user/profile-update',
@@ -99,6 +102,7 @@ class MyProfileState extends State<MyProfile>
     _lastNameController.dispose();
     _mobileNumberController.dispose();
     _emailController.dispose();
+    _firstNameFocus.dispose();
     super.dispose();
   }
 
@@ -142,6 +146,9 @@ class MyProfileState extends State<MyProfile>
                       onPressed: () {
                         setState(() {
                           isEditable = true;
+                        });
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          _firstNameFocus.requestFocus();
                         });
                       },
                       child: const Row(
@@ -194,10 +201,9 @@ class MyProfileState extends State<MyProfile>
 
               _buildProfileField(
                 label: context.lwTranslate.firstName,
-                // initialValue: auth.getAuthInfo('first_name'),
                 controller: _firstNameController,
-                // controller: auth.getAuthInfo('first_name')?? "",
                 isEditable: isEditable,
+                focusNode: _firstNameFocus,
               ),
               _buildProfileField(
                 label: context.lwTranslate.lastName,
@@ -215,9 +221,9 @@ class MyProfileState extends State<MyProfile>
                   keyboardType: TextInputType.phone),
               _buildProfileField(
                 label: context.lwTranslate.email,
-                // initialValue: auth.getAuthInfo('email'),
                 controller: _emailController,
                 isEditable: isEditable,
+                emailField: true,
               ),
               if (isEditable)
                 Padding(
@@ -252,7 +258,19 @@ class MyProfileState extends State<MyProfile>
     required TextEditingController controller,
     int? maxLength,
     TextInputType keyboardType = TextInputType.text,
+    bool emailField = false,
+    FocusNode? focusNode,
   }) {
+    String? Function(String?)? validator;
+    if (emailField) {
+      validator = (value) {
+        if (value == null || value.isEmpty) return null;
+        if (!value.contains('@')) return context.lwTranslate.pleaseEntValEmail;
+        return null;
+      };
+    } else {
+      validator = ValidationBuilder().minLength(2).build();
+    }
     return InputField(
       focusborder: const OutlineInputBorder(
         borderSide: BorderSide(color: app_theme.primary),
@@ -267,9 +285,10 @@ class MyProfileState extends State<MyProfile>
       initialValue: initialValue,
       readOnly: !isEditable,
       maxlength: maxLength,
-      inputType: keyboardType,
+      inputType: emailField ? TextInputType.emailAddress : keyboardType,
       onSaved: (String? value) {},
-      validation: ValidationBuilder().minLength(2).build(),
+      validation: validator,
+      focusNode: focusNode,
     );
   }
 }
