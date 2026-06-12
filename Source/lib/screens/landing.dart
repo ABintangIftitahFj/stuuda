@@ -852,22 +852,37 @@ class _LandingPageState extends State<LandingPage> with WidgetsBindingObserver {
           case 0:
             tabTitle = Text(
               context.lwTranslate.whatsAppChat,
-              style: TextStyle(color: Colors.white, fontSize: 14),
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold),
             );
             break;
           case 1:
-            tabTitle = Text(
-              context.lwTranslate.whatsAppChat,
+            tabTitle = const Text(
+              'Calls',
               style: TextStyle(
                   color: Colors.white,
-                  fontSize: 16,
+                  fontSize: 18,
                   fontWeight: FontWeight.bold),
             );
             break;
           case 2:
+            tabTitle = const Text(
+              'Broadcasts',
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold),
+            );
+            break;
+          case 3:
             tabTitle = Text(
-              context.lwTranslate.whatsAppChat,
-              style: TextStyle(color: Colors.white, fontSize: 14),
+              context.lwTranslate.settings,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold),
             );
             break;
         }
@@ -886,6 +901,9 @@ class _LandingPageState extends State<LandingPage> with WidgetsBindingObserver {
 
   final List<Widget> _pages = [
     const WhatsAppChat(),
+    const Center(child: Text("Calls coming soon", style: TextStyle(color: Colors.white))),
+    const Center(child: Text("Broadcasts coming soon", style: TextStyle(color: Colors.white))),
+    const Settings(),
   ];
 
   @override
@@ -984,8 +1002,35 @@ class _LandingPageState extends State<LandingPage> with WidgetsBindingObserver {
             ],
           ),
           body: _pages[_currentIndex],
+          bottomNavigationBar: BottomNavigationBar(
+            backgroundColor: const Color(0xFF02040A),
+            type: BottomNavigationBarType.fixed,
+            selectedItemColor: app_theme.primary,
+            unselectedItemColor: Colors.white54,
+            currentIndex: _currentIndex,
+            onTap: onTabTapped,
+            items: const [
+              BottomNavigationBarItem(
+                icon: Icon(CupertinoIcons.chat_bubble_2_fill),
+                label: 'Chat',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(CupertinoIcons.phone_fill),
+                label: 'Call',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(CupertinoIcons.speaker_2_fill),
+                label: 'Broadcast',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(CupertinoIcons.settings),
+                label: 'Settings',
+              ),
+            ],
+          ),
         );
       },
     );
   }
+
 }
