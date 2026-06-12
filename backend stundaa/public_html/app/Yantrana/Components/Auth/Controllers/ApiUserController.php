@@ -117,9 +117,43 @@ class ApiUserController extends BaseController
      *
      *-----------------------------------------------------------------------*/
     public function storeUserDeviceToken(StoreDeviceTokenRequest $request)
-    {        
+    {
         $processReaction = $this->userEngine->processStoreUserDeviceToken($request->only('device_token', 'device_id', 'device_type'));
-        
-        return $this->processResponse($processReaction, [], [], true);   
+
+        return $this->processResponse($processReaction, [], [], true);
+    }
+
+    /**
+     * Get current vendor subscription / plan info.
+     *
+     *-----------------------------------------------------------------------*/
+    public function subscriptionInfo()
+    {
+        $planDetails = vendorPlanDetails('contacts');
+        $freePlan = getFreePlan();
+        $subscription = getVendorCurrentActiveSubscription(getVendorId());
+
+        $features = [];
+        $featureKeys = ['contacts', 'campaigns', 'bot_replies', 'bot_flows', 'contact_custom_fields', 'system_users', 'ai_chat_bot', 'api_access'];
+
+        foreach ($featureKeys as $key) {
+            $details = vendorPlanDetails($key);
+            $features[] = [
+                'key'         => $key,
+                'description' => $details['feature'] ?? $key,
+                'limit'       => $details['plan_feature_limit'] ?? 0,
+            ];
+        }
+
+        return response()->json([
+            'reaction_code' => 1,
+            'data' => [
+                'plan_title'      => $planDetails['plan_title'] ?? 'Free',
+                'plan_type'       => $planDetails['plan_type'] ?? 'free',
+                'has_active_plan' => $planDetails['has_active_plan'] ?? false,
+                'ends_at'         => $subscription->ends_at ?? null,
+                'features'        => $features,
+            ],
+        ]);
     }
 }

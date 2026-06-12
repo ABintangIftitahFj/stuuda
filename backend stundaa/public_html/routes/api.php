@@ -228,6 +228,12 @@ Route::group([
         ])->name('api.user.device_token.write');
     });
 
+    // Subscription / plan info
+    Route::get('/vendor/subscription-info', [
+        ApiUserController::class,
+        'subscriptionInfo',
+    ])->name('api.vendor.subscription.info');
+
     Route::group([
         'prefix' => 'vendor/',
     ], function () {

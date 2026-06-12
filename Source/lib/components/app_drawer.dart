@@ -1,6 +1,7 @@
 import 'package:stundaa/services/utils.dart';
 import 'package:stundaa/common/widgets/common.dart';
 import 'package:stundaa/screens/myprofile.dart';
+import 'package:stundaa/screens/my_plan.dart';
 import 'package:stundaa/screens/user/change_password.dart';
 import 'package:flutter/material.dart';
 import 'package:stundaa/screens/contact/contact_us.dart';
@@ -103,6 +104,15 @@ class AppDrawer extends StatelessWidget {
                 context,
                 const UserSettingsPage(),
               );
+            },
+          ),
+          _drawerItem(
+            context,
+            icon: Icons.workspace_premium_outlined,
+            label: 'My Plan',
+            onTap: () {
+              Navigator.pop(context);
+              navigatePage(context, const MyPlanScreen());
             },
           ),
           _drawerItem(
