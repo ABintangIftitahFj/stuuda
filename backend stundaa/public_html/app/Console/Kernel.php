@@ -32,13 +32,19 @@ class Kernel extends ConsoleKernel
                     ->withoutOverlapping(2) // Prevent overlapping executions
                 ;
             }
-            // process campaign messages every five seconds if queue jobs for campaigns is disabled
             $schedule->command('whatsapp:campaign:process')
                 ->everyFiveSeconds()
                 ->name('process_messages_via_cron')
                 ->withoutOverlapping(2) // Prevent overlapping executions
             ;
         }
+
+        // process background media downloads every minute
+        $schedule->command('whatsapp:media:download')
+            ->everyMinute()
+            ->name('download_wa_media_via_cron')
+            ->withoutOverlapping(5)
+        ;
     }
 
     /**

@@ -9,7 +9,7 @@ return [
         'features' => [
             'contacts' => [
                 'description' => __tr('Contacts'),
-                'limit' => 2, // 0 for none, -1 for unlimited
+                'limit' => 5, // 0 for none, -1 for unlimited
             ],
             'campaigns' => [
                 'limit_duration' => 'monthly',

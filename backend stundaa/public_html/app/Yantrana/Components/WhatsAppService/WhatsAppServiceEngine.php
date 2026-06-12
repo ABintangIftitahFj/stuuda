@@ -3895,27 +3895,14 @@ class WhatsAppServiceEngine extends BaseEngine implements WhatsAppServiceEngineI
                 'document',
                 'sticker',
             ])) {
-                try {
-                    $downloadedFileInfo = $this->mediaEngine->downloadAndStoreMediaFile($this->whatsAppApiService->downloadMedia(Arr::get($messageObject, "0.$messageType.id"), $vendorId), $vendorUid, $messageType);
-                    $mediaData = [
-                        'type' => $messageType,
-                        'link' => Arr::get($downloadedFileInfo, 'path'),
-                        'caption' => Arr::get($messageObject, "0.$messageType.caption"),
-                        'mime_type' => Arr::get($messageObject, "0.$messageType.mime_type"),
-                        'file_name' => Arr::get($downloadedFileInfo, 'fileName'),
-                        'original_filename' => Arr::get($downloadedFileInfo, 'fileName'),
-                    ];
-                } catch (\Exception $e) {
-                    \Log::error($e);
-                    $mediaData = [
-                        'type' => $messageType,
-                        'link' => null,
-                        'caption' => Arr::get($messageObject, "0.$messageType.caption") . ' (' . __tr('Media download failed') . ')',
-                        'mime_type' => Arr::get($messageObject, "0.$messageType.mime_type"),
-                        'file_name' => null,
-                        'original_filename' => null,
-                    ];
-                }
+                $mediaData = [
+                    'type' => $messageType,
+                    'media_id' => Arr::get($messageObject, "0.$messageType.id"),
+                    'is_download_pending' => true,
+                    'caption' => Arr::get($messageObject, "0.$messageType.caption"),
+                    'mime_type' => Arr::get($messageObject, "0.$messageType.mime_type"),
+                    'link' => null,
+                ];
             } elseif (in_array($messageType, [
                 'location',
                 'contacts',
