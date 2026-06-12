@@ -3895,15 +3895,27 @@ class WhatsAppServiceEngine extends BaseEngine implements WhatsAppServiceEngineI
                 'document',
                 'sticker',
             ])) {
-                $downloadedFileInfo = $this->mediaEngine->downloadAndStoreMediaFile($this->whatsAppApiService->downloadMedia(Arr::get($messageObject, "0.$messageType.id"), $vendorId), $vendorUid, $messageType);
-                $mediaData = [
-                    'type' => $messageType,
-                    'link' => Arr::get($downloadedFileInfo, 'path'),
-                    'caption' => Arr::get($messageObject, "0.$messageType.caption"),
-                    'mime_type' => Arr::get($messageObject, "0.$messageType.mime_type"),
-                    'file_name' => Arr::get($downloadedFileInfo, 'fileName'),
-                    'original_filename' => Arr::get($downloadedFileInfo, 'fileName'),
-                ];
+                try {
+                    $downloadedFileInfo = $this->mediaEngine->downloadAndStoreMediaFile($this->whatsAppApiService->downloadMedia(Arr::get($messageObject, "0.$messageType.id"), $vendorId), $vendorUid, $messageType);
+                    $mediaData = [
+                        'type' => $messageType,
+                        'link' => Arr::get($downloadedFileInfo, 'path'),
+                        'caption' => Arr::get($messageObject, "0.$messageType.caption"),
+                        'mime_type' => Arr::get($messageObject, "0.$messageType.mime_type"),
+                        'file_name' => Arr::get($downloadedFileInfo, 'fileName'),
+                        'original_filename' => Arr::get($downloadedFileInfo, 'fileName'),
+                    ];
+                } catch (\Exception $e) {
+                    \Log::error($e);
+                    $mediaData = [
+                        'type' => $messageType,
+                        'link' => null,
+                        'caption' => Arr::get($messageObject, "0.$messageType.caption") . ' (' . __tr('Media download failed') . ')',
+                        'mime_type' => Arr::get($messageObject, "0.$messageType.mime_type"),
+                        'file_name' => null,
+                        'original_filename' => null,
+                    ];
+                }
             } elseif (in_array($messageType, [
                 'location',
                 'contacts',
@@ -4084,6 +4096,8 @@ class WhatsAppServiceEngine extends BaseEngine implements WhatsAppServiceEngineI
                 'isNewIncomingMessage' => $isNewIncomingMessage,
                 'campaignUid' => $campaignUid,
                 'lastMessageUid' => $contact->lastMessage?->_uid,
+                'lastMessageText' => $contact->lastMessage?->message,
+                'lastMessageIsIncoming' => $contact->lastMessage?->is_incoming_message,
                 'assignedUserId' => $contact->assigned_users__id,
                 'formatted_last_message_time' => $contact->lastMessage?->formatted_message_time,
                 'contactDescription' => $contactDescription,
