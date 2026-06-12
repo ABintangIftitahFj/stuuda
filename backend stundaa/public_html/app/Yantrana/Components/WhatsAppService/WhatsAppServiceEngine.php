@@ -2729,11 +2729,9 @@ class WhatsAppServiceEngine extends BaseEngine implements WhatsAppServiceEngineI
         $interactionMessageData = null;
         $mediaMessageData = null;
         $fromPhoneNumberId = null;
-        $quotedMessageWamid = null;
         if (is_array($request) === true) {
             $messageBody = $request['messageBody'];
             $contactUid = $request['contactUid'];
-            $quotedMessageWamid = $request['quoted_message_wamid'] ?? null;
             if (isset($options['interaction_message_data']) and !empty($options['interaction_message_data'])) {
                 $interactionMessageData = $options['interaction_message_data'];
             }
@@ -2744,12 +2742,23 @@ class WhatsAppServiceEngine extends BaseEngine implements WhatsAppServiceEngineI
             $messageBody = $request->message_body;
             $contactUid = $request->contact_uid;
             $fromPhoneNumberId = $request->from_phone_number_id;
-            $quotedMessageWamid = $request->quoted_message_wamid;
+        }
+        // Resolve quoted_message_wamid → _uid so we can store the reply reference
+        $repliedToMessageLogUid = null;
+        if (!is_array($request)) {
+            $quotedWamid = $request->quoted_message_wamid ?? null;
+            if ($quotedWamid) {
+                $repliedToLog = $this->whatsAppMessageLogRepository->fetchIt(['wamid' => $quotedWamid]);
+                if (!__isEmpty($repliedToLog)) {
+                    $repliedToMessageLogUid = $repliedToLog->_uid;
+                }
+            }
         }
         // options extend
         $options = array_merge([
             'from_phone_number_id' => $fromPhoneNumberId,
-            'messageWamid' => $quotedMessageWamid,
+            'messageWamid' => null,
+            'repliedToMessageLogUid' => $repliedToMessageLogUid,
         ], $options);
 
         $contact = $this->contactRepository->getVendorContact($contactUid, $vendorId);
@@ -2796,6 +2805,7 @@ class WhatsAppServiceEngine extends BaseEngine implements WhatsAppServiceEngineI
                 'wab_phone_number_id' => $currentBusinessPhoneNumber,
                 'message' => $messageBody,
                 'messaged_at' => now(),
+                'replied_to_whatsapp_message_logs__uid' => $options['repliedToMessageLogUid'] ?? null,
                 '__data' => [
                     'options' => Arr::only($options, [
                         'bot_reply',
@@ -3679,8 +3689,14 @@ class WhatsAppServiceEngine extends BaseEngine implements WhatsAppServiceEngineI
         if (__isEmpty($webhookEntry)) {
             return response()->json(['status' => 'failed'], 500);
         }
-        if (getAppSettings('enable_queue_jobs_for_campaigns')) {
-            ProcessMessageWebhookJob::dispatch();
+        try {
+            $this->processWebhookRequest($request, $vendorUid);
+            $webhookEntry->delete();
+        } catch (\Throwable $e) {
+            \Log::error('WhatsApp webhook immediate processing failed: ' . $e->getMessage());
+            if (getAppSettings('enable_queue_jobs_for_campaigns')) {
+                ProcessMessageWebhookJob::dispatch();
+            }
         }
         // response
         return response()->json(['status' => 'success']);
@@ -3895,13 +3911,14 @@ class WhatsAppServiceEngine extends BaseEngine implements WhatsAppServiceEngineI
                 'document',
                 'sticker',
             ])) {
+                $downloadedFileInfo = $this->mediaEngine->downloadAndStoreMediaFile($this->whatsAppApiService->downloadMedia(Arr::get($messageObject, "0.$messageType.id"), $vendorId), $vendorUid, $messageType);
                 $mediaData = [
                     'type' => $messageType,
-                    'media_id' => Arr::get($messageObject, "0.$messageType.id"),
-                    'is_download_pending' => true,
+                    'link' => Arr::get($downloadedFileInfo, 'path'),
                     'caption' => Arr::get($messageObject, "0.$messageType.caption"),
                     'mime_type' => Arr::get($messageObject, "0.$messageType.mime_type"),
-                    'link' => null,
+                    'file_name' => Arr::get($downloadedFileInfo, 'fileName'),
+                    'original_filename' => Arr::get($downloadedFileInfo, 'fileName'),
                 ];
             } elseif (in_array($messageType, [
                 'location',
@@ -4083,8 +4100,6 @@ class WhatsAppServiceEngine extends BaseEngine implements WhatsAppServiceEngineI
                 'isNewIncomingMessage' => $isNewIncomingMessage,
                 'campaignUid' => $campaignUid,
                 'lastMessageUid' => $contact->lastMessage?->_uid,
-                'lastMessageText' => $contact->lastMessage?->message,
-                'lastMessageIsIncoming' => $contact->lastMessage?->is_incoming_message,
                 'assignedUserId' => $contact->assigned_users__id,
                 'formatted_last_message_time' => $contact->lastMessage?->formatted_message_time,
                 'contactDescription' => $contactDescription,
@@ -4269,44 +4284,6 @@ class WhatsAppServiceEngine extends BaseEngine implements WhatsAppServiceEngineI
     }
 
     /**
-     * Get Extended Health Data
-     *
-     * @param int|null $vendorId
-     * @return array
-     */
-    public function getExtendedHealthData($vendorId = null)
-    {
-        $vendorId = $vendorId ?: getVendorId();
-        $vendorUid = getPublicVendorUid($vendorId);
-        
-        $failedJobsCount = \DB::table('failed_jobs')->count();
-        $pendingMediaDownloads = \App\Yantrana\Components\WhatsAppService\Models\WhatsAppMessageLogModel::where('__data->media_values->is_download_pending', true)
-            ->where('vendors__id', $vendorId)
-            ->count();
-        
-        $webhookVerifiedAt = getVendorSettings('webhook_verified_at', null, null, $vendorId);
-        $webhookMessagesVerifiedAt = getVendorSettings('webhook_messages_field_verified_at', null, null, $vendorId);
-        
-        $planDetails = vendorPlanDetails('contacts', $this->contactRepository->countIt([
-            'vendors__id' => $vendorId
-        ]), $vendorId);
-
-        $whatsAppBusinessAccountId = getVendorSettings('whatsapp_business_account_id', null, null, $vendorId);
-        
-        return [
-            'whatsapp_business_account_id' => $whatsAppBusinessAccountId,
-            'failed_jobs_count' => $failedJobsCount,
-            'pending_media_downloads' => $pendingMediaDownloads,
-            'webhook_verified_at' => $webhookVerifiedAt ? formatDateTime($webhookVerifiedAt) : null,
-            'webhook_messages_verified_at' => $webhookMessagesVerifiedAt ? formatDateTime($webhookMessagesVerifiedAt) : null,
-            'contact_limit' => $planDetails->plan_feature_limit,
-            'current_contacts' => $planDetails->current_usage,
-            'plan_title' => $planDetails->planTitle(),
-            'is_token_expired' => getVendorSettings('whatsapp_access_token_expired', null, null, $vendorId) ? true : false,
-        ];
-    }
-
-    /**
      * Update the unread count via client model updates
      *
      * @return EngineResponse
@@ -4319,8 +4296,6 @@ class WhatsAppServiceEngine extends BaseEngine implements WhatsAppServiceEngineI
             return $this->engineFailedResponse([], __tr('WhatsApp Business Account ID not found'));
         }
         $now = now();
-        $extendedHealthData = $this->getExtendedHealthData();
-
         $healthData = [
             'whatsapp_health_status_data' => [
                 $whatsAppBusinessAccountId => [
@@ -4328,7 +4303,6 @@ class WhatsAppServiceEngine extends BaseEngine implements WhatsAppServiceEngineI
                     'health_status_updated_at' => $now,
                     'health_status_updated_at_formatted' => formatDateTime($now),
                     'health_data' => $healthStatus,
-                    'extended_health_data' => $extendedHealthData,
                 ]
             ]
         ];
