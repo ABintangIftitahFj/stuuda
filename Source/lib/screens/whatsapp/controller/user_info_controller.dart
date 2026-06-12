@@ -35,6 +35,11 @@ class Userinfocontroller extends GetxController {
   RxBool isLoading = true.obs;
   RxBool isLoadingUpdateData = true.obs;
 
+  String _optionalValue(String value) {
+    final trimmedValue = value.trim();
+    return (trimmedValue == '-' || trimmedValue == '...') ? '' : trimmedValue;
+  }
+
   List<Map<String, dynamic>> get vendorMessagingUsersDropdownItems =>
       vendorMessagingUsers.map((user) => user.toDropdownItem()).toList();
 
@@ -48,17 +53,22 @@ class Userinfocontroller extends GetxController {
     required String languageCodeValue,
   }) async {
     isLoadingUpdateData.value = true;
+    final nextFirstName = firstNameValue.trim();
+    final nextEmail = _optionalValue(emailValue);
+    final nextLanguageCode = _optionalValue(languageCodeValue);
     try {
       await _contactInfoRepository.updateContactProfile(
         context: context,
         contactUid: userId ?? '',
-        firstName: firstNameValue,
-        email: emailValue,
-        languageCode: languageCodeValue,
+        firstName: nextFirstName,
+        email: nextEmail,
+        languageCode: nextLanguageCode,
       );
-      firstName.value = firstNameValue;
-      emailV.value = emailValue;
-      languageCode.value = languageCodeValue;
+      firstName.value = nextFirstName;
+      emailV.value = nextEmail;
+      emailController.text = nextEmail;
+      languageCode.value = nextLanguageCode;
+      languageCodeController.text = nextLanguageCode;
     } catch (e) {
       pr("Update profile failed: $e");
     } finally {

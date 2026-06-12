@@ -527,6 +527,11 @@ class ContactController extends BaseController
     public function processContactUpdate(BaseRequest $request)
     {
         validateVendorAccess('manage_contacts', 'add_edit_contacts');
+        if (in_array(trim((string) $request->get('email')), ['-', '...'], true)) {
+            $request->merge([
+                'email' => null,
+            ]);
+        }
         // process the validation based on the provided rules
         $request->validate([
             'contactIdOrUid' => 'required',

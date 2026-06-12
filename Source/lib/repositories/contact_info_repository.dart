@@ -62,14 +62,18 @@ class ContactInfoRepository {
     required String languageCode,
   }) async {
     final completer = Completer<void>();
-    
+    String optionalValue(String value) {
+      final trimmedValue = value.trim();
+      return (trimmedValue == '-' || trimmedValue == '...') ? '' : trimmedValue;
+    }
+
     await data_transport.post(
       'vendor/contacts/update-process',
       inputData: <String, dynamic>{
         'contactIdOrUid': contactUid,
-        'first_name': firstName,
-        'email': email.trim() == "..." ? "" : email.trim(),
-        'language_code': languageCode,
+        'first_name': firstName.trim(),
+        'email': optionalValue(email),
+        'language_code': optionalValue(languageCode),
       },
       context: context,
       onSuccess: (_) {
@@ -79,7 +83,8 @@ class ContactInfoRepository {
       },
       onFailed: (responseData) {
         if (!completer.isCompleted) {
-          completer.completeError(responseData ?? 'Failed to update contact profile');
+          completer.completeError(
+              responseData ?? 'Failed to update contact profile');
         }
       },
       onError: (error) {

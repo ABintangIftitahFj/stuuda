@@ -313,7 +313,14 @@ class AuthEngine extends BaseEngine implements AuthEngineInterface
             if ($newUser) {
                  //check if welcome email setting active
                 if (getAppSettings('send_welcome_email')) {
-                    $this->userWelcomeNotifyMail($newUser);
+                    try {
+                        $this->userWelcomeNotifyMail($newUser);
+                    } catch (\Throwable $exception) {
+                        logger()->error('Welcome email failed during registration.', [
+                            'user_uid' => $newUser->_uid,
+                            'message' => $exception->getMessage(),
+                        ]);
+                    }
                 }
                     return $this->authRepository->transactionResponse(1, array_merge(['show_message' => true], $newUser->toArray()), __tr('Your account created successfully.'));
             }
@@ -384,6 +391,9 @@ class AuthEngine extends BaseEngine implements AuthEngineInterface
             // Store user
             $newUser = $this->authRepository->storeUser($inputData);
             // Check if user not stored successfully
+            if (! $newUser) {
+                return $this->authRepository->transactionResponse(2, ['show_message' => true], __tr('Something went wrong on server, please contact to administrator.'));
+            }
             $emailData = [
                 'fullName' => $newUser->first_name,
                 'email' => $newUser->email,
@@ -391,11 +401,18 @@ class AuthEngine extends BaseEngine implements AuthEngineInterface
                 'activation_url' => URL::temporarySignedRoute('user.account.activation', Carbon::now()->addHours(configItem('account.expiry')), ['userUid' => $newUser->_uid]),
             ];
             $activationEmailSubject = __tr('Your account registered successfully.');
-            if ($this->baseMailer->notifyToUser($activationEmailSubject, 'user.account.activation', $emailData, $newUser->email)) {
-                return $this->authRepository->transactionResponse(1, [
-                    'show_message' => true,
-                    'activation_required' => true,
-                ], __tr('Your account has been created successfully, to activate your account please check your email.'));
+            try {
+                if ($this->baseMailer->notifyToUser($activationEmailSubject, 'user.account.activation', $emailData, $newUser->email)) {
+                    return $this->authRepository->transactionResponse(1, [
+                        'show_message' => true,
+                        'activation_required' => true,
+                    ], __tr('Your account has been created successfully, to activate your account please check your email.'));
+                }
+            } catch (\Throwable $exception) {
+                logger()->error('Activation email failed during registration.', [
+                    'user_uid' => $newUser->_uid,
+                    'message' => $exception->getMessage(),
+                ]);
             }
 
             return $this->authRepository->transactionResponse(2, ['show_message' => true], __tr('Something went wrong on server, please contact to administrator.'));

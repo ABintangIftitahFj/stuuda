@@ -12,6 +12,31 @@ import 'package:stundaa/services/utils.dart';
 import 'package:stundaa/support/app_theme.dart' as app_theme;
 import 'login.dart';
 
+@visibleForTesting
+Map<String, dynamic> buildRegisterInputData({
+  required String vendorTitle,
+  required String username,
+  required String firstName,
+  required String lastName,
+  required String mobileNumber,
+  required String email,
+  required String password,
+  required String passwordConfirmation,
+  required bool termsAccepted,
+}) {
+  return <String, dynamic>{
+    'vendor_title': vendorTitle.trim(),
+    'username': username.trim(),
+    'first_name': firstName.trim(),
+    'last_name': lastName.trim(),
+    'mobile_number': mobileNumber.trim(),
+    'email': email.trim(),
+    'password': password,
+    'password_confirmation': passwordConfirmation,
+    'terms_and_conditions': termsAccepted ? 'on' : '',
+  };
+}
+
 class RegisterPage extends StatefulWidget {
   final void Function()? ontap;
 
@@ -27,12 +52,22 @@ class _RegisterPageState extends State<RegisterPage> {
   bool isChecked = false;
   bool isPasswordVisibleCom = false;
   String? _termsError;
-  final Map<String, dynamic> formInputData = {};
+  final TextEditingController vendorTitleController = TextEditingController();
+  final TextEditingController usernameController = TextEditingController();
+  final TextEditingController firstNameController = TextEditingController();
+  final TextEditingController lastNameController = TextEditingController();
+  final TextEditingController mobileNumberController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+  final TextEditingController passwordConfirmationController =
+      TextEditingController();
   bool isLoading = false;
 
   void register() async {
+    if (isLoading) {
+      return;
+    }
     try {
-      _formKey.currentState?.save();
       if (_formKey.currentState?.validate() ?? false) {
         if (!isChecked) {
           setState(() {
@@ -44,9 +79,20 @@ class _RegisterPageState extends State<RegisterPage> {
           isLoading = true;
           _termsError = '';
         });
+        final formInputData = buildRegisterInputData(
+          vendorTitle: vendorTitleController.text,
+          username: usernameController.text,
+          firstName: firstNameController.text,
+          lastName: lastNameController.text,
+          mobileNumber: mobileNumberController.text,
+          email: emailController.text,
+          password: passwordController.text,
+          passwordConfirmation: passwordConfirmationController.text,
+          termsAccepted: isChecked,
+        );
         try {
           await data_transport.post(
-            Account.registerVendor,
+            Account.registerVendorN,
             inputData: formInputData,
             context: context,
             secured: true,
@@ -80,6 +126,24 @@ class _RegisterPageState extends State<RegisterPage> {
     super.initState();
     isPasswordVisible = false;
     isPasswordVisibleCom = false;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        auth.redirectIfAuthenticated(context);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    vendorTitleController.dispose();
+    usernameController.dispose();
+    firstNameController.dispose();
+    lastNameController.dispose();
+    mobileNumberController.dispose();
+    emailController.dispose();
+    passwordController.dispose();
+    passwordConfirmationController.dispose();
+    super.dispose();
   }
 
   void _openPolicyPage(String title, Uri url) {
@@ -100,7 +164,6 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
-    auth.redirectIfAuthenticated(context);
     return Scaffold(
       body: Stack(
         children: [
@@ -183,15 +246,14 @@ class _RegisterPageState extends State<RegisterPage> {
                             child: Column(
                               children: [
                                 InputField(
+                                  controller: vendorTitleController,
                                   labelText: context.lwTranslate.vendorCompName,
-                                  helperText: context.lwTranslate.mustBe2Character,
+                                  helperText:
+                                      context.lwTranslate.mustBe2Character,
                                   prefixIcon: const Icon(
                                     CupertinoIcons.building_2_fill,
                                     color: app_theme.iceBlue,
                                   ),
-                                  onSaved: (String? value) {
-                                    formInputData['vendor_title'] = value;
-                                  },
                                   validation: (String? value) {
                                     if (value == null || value.isEmpty) {
                                       return context.lwTranslate.fieldRequired;
@@ -215,15 +277,15 @@ class _RegisterPageState extends State<RegisterPage> {
                                 ),
                                 const SizedBox(height: 14),
                                 InputField(
+                                  controller: usernameController,
                                   labelText: context.lwTranslate.username,
-                                  helperText: context.lwTranslate.mustBe2Character,
+                                  helperText:
+                                      context.lwTranslate.mustBe2Character,
                                   prefixIcon: const Icon(
-                                    CupertinoIcons.person_crop_circle_badge_plus,
+                                    CupertinoIcons
+                                        .person_crop_circle_badge_plus,
                                     color: app_theme.iceBlue,
                                   ),
-                                  onSaved: (String? value) {
-                                    formInputData['username'] = value;
-                                  },
                                   validation: (String? value) {
                                     if (value == null || value.isEmpty) {
                                       return context.lwTranslate.fieldRequired;
@@ -237,14 +299,12 @@ class _RegisterPageState extends State<RegisterPage> {
                                 ),
                                 const SizedBox(height: 14),
                                 InputField(
+                                  controller: firstNameController,
                                   labelText: context.lwTranslate.firstName,
                                   prefixIcon: const Icon(
                                     CupertinoIcons.person,
                                     color: app_theme.iceBlue,
                                   ),
-                                  onSaved: (String? value) {
-                                    formInputData['first_name'] = value;
-                                  },
                                   validation: (String? value) {
                                     if (value == null || value.isEmpty) {
                                       return context.lwTranslate.fieldRequired;
@@ -254,14 +314,12 @@ class _RegisterPageState extends State<RegisterPage> {
                                 ),
                                 const SizedBox(height: 14),
                                 InputField(
+                                  controller: lastNameController,
                                   labelText: context.lwTranslate.lastName,
                                   prefixIcon: const Icon(
                                     Icons.badge_outlined,
                                     color: app_theme.iceBlue,
                                   ),
-                                  onSaved: (String? value) {
-                                    formInputData['last_name'] = value;
-                                  },
                                   validation: (String? value) {
                                     if (value == null || value.isEmpty) {
                                       return context.lwTranslate.fieldRequired;
@@ -271,15 +329,13 @@ class _RegisterPageState extends State<RegisterPage> {
                                 ),
                                 const SizedBox(height: 14),
                                 InputField(
+                                  controller: mobileNumberController,
                                   labelText: context.lwTranslate.mobileNumber,
                                   inputType: TextInputType.phone,
                                   prefixIcon: const Icon(
                                     Icons.phone_android_outlined,
                                     color: app_theme.iceBlue,
                                   ),
-                                  onSaved: (String? value) {
-                                    formInputData['mobile_number'] = value;
-                                  },
                                   validation: (String? value) {
                                     if (value == null || value.isEmpty) {
                                       return context.lwTranslate.fieldRequired;
@@ -304,15 +360,13 @@ class _RegisterPageState extends State<RegisterPage> {
                                   ),
                                 ),
                                 InputField(
+                                  controller: emailController,
                                   labelText: context.lwTranslate.email,
                                   inputType: TextInputType.emailAddress,
                                   prefixIcon: const Icon(
                                     Icons.alternate_email,
                                     color: app_theme.iceBlue,
                                   ),
-                                  onSaved: (String? value) {
-                                    formInputData['email'] = value;
-                                  },
                                   validation: ValidationBuilder(
                                     requiredMessage:
                                         context.lwTranslate.fieldRequired,
@@ -323,6 +377,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                 ),
                                 const SizedBox(height: 14),
                                 InputField(
+                                  controller: passwordController,
                                   placeholder: context.lwTranslate.password,
                                   labelText: context.lwTranslate.password,
                                   password: !isPasswordVisible,
@@ -340,9 +395,6 @@ class _RegisterPageState extends State<RegisterPage> {
                                     Icons.lock_outline,
                                     color: app_theme.iceBlue,
                                   ),
-                                  onSaved: (String? value) {
-                                    formInputData['password'] = value;
-                                  },
                                   suffixIcon: IconButton(
                                     icon: Icon(
                                       isPasswordVisible
@@ -359,6 +411,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                 ),
                                 const SizedBox(height: 14),
                                 InputField(
+                                  controller: passwordConfirmationController,
                                   placeholder:
                                       context.lwTranslate.confirmPassword,
                                   labelText:
@@ -372,7 +425,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                       return context
                                           .lwTranslate.mustBe8Character;
                                     }
-                                    if (value != formInputData['password']) {
+                                    if (value != passwordController.text) {
                                       return context
                                           .lwTranslate.passwordConfirMatch;
                                     }
@@ -382,10 +435,6 @@ class _RegisterPageState extends State<RegisterPage> {
                                     Icons.verified_user_outlined,
                                     color: app_theme.iceBlue,
                                   ),
-                                  onSaved: (String? value) {
-                                    formInputData['password_confirmation'] =
-                                        value;
-                                  },
                                   suffixIcon: IconButton(
                                     icon: Icon(
                                       isPasswordVisibleCom
@@ -416,9 +465,6 @@ class _RegisterPageState extends State<RegisterPage> {
                                       onChanged: (bool? value) {
                                         setState(() {
                                           isChecked = value ?? false;
-                                          formInputData[
-                                                  'terms_and_conditions'] =
-                                              isChecked ? 'on' : '';
                                           _termsError = null;
                                         });
                                       },
@@ -429,9 +475,6 @@ class _RegisterPageState extends State<RegisterPage> {
                                         onTap: () {
                                           setState(() {
                                             isChecked = !isChecked;
-                                            formInputData[
-                                                    'terms_and_conditions'] =
-                                                isChecked ? 'on' : '';
                                             _termsError = null;
                                           });
                                         },

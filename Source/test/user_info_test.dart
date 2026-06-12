@@ -42,6 +42,33 @@ void main() {
       expect(controller.notesController.text, 'Some notes');
     });
 
+    test('getUserInfo keeps optional placeholders out of edit fields',
+        () async {
+      final mockResponse = {
+        'reaction': 1,
+        'data': {
+          'first_name': 'Bintang',
+          'wa_id': '628123',
+          'email': null,
+          'language_code': '-',
+          '__data': {'contact_notes': null}
+        }
+      };
+
+      data_transport.httpClient = MockClient((request) async {
+        return http.Response(jsonEncode(mockResponse), 200);
+      });
+
+      await controller.getUserInfo();
+
+      expect(controller.emailV.value, '');
+      expect(controller.emailController.text, '');
+      expect(controller.languageCode.value, '');
+      expect(controller.languageCodeController.text, '');
+      expect(controller.notes.value, '');
+      expect(controller.notesController.text, '');
+    });
+
     test('updateProfileApi sends correct data and updates state', () async {
       final mockResponse = {'reaction': 1, 'message': 'Updated'};
 
@@ -92,6 +119,35 @@ void main() {
 
       expect(controller.firstName.value, 'Updated Name');
       expect(controller.emailV.value, '');
+    });
+
+    test('updateProfileApi does not send placeholder email values', () async {
+      final mockResponse = {'reaction': 1, 'message': 'Updated'};
+
+      data_transport.httpClient = MockClient((request) async {
+        if (request.url.path.contains('vendor/contacts/update-process')) {
+          final body = jsonDecode(request.body);
+          expect(body['contactIdOrUid'], 'user-123');
+          expect(body['first_name'], 'Updated Name');
+          expect(body['email'], '');
+          expect(body['language_code'], '');
+          return http.Response(jsonEncode(mockResponse), 200);
+        }
+        return http.Response('Not Found', 404);
+      });
+
+      await controller.updateProfileApi(
+        context: null as dynamic,
+        firstNameValue: 'Updated Name',
+        emailValue: '-',
+        languageCodeValue: '...',
+      );
+
+      expect(controller.firstName.value, 'Updated Name');
+      expect(controller.emailV.value, '');
+      expect(controller.emailController.text, '');
+      expect(controller.languageCode.value, '');
+      expect(controller.languageCodeController.text, '');
     });
   });
 }
