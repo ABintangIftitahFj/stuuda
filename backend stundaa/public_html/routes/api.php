@@ -14,6 +14,7 @@ use App\Yantrana\Components\{
 };
 use App\Yantrana\Components\BotReply\Controllers\BotReplyController;
 use App\Yantrana\Components\Campaign\Controllers\CampaignController;
+use App\Yantrana\Components\Home\Controllers\HomeController;
 
 /*
 |--------------------------------------------------------------------------
@@ -29,6 +30,12 @@ use App\Yantrana\Components\Campaign\Controllers\CampaignController;
 Route::middleware('auth:api')->get('/user', function (Request $request) {
     return $request->user();
 });
+
+// Contact us form (mobile app)
+Route::post('/contact-process', [
+    HomeController::class,
+    'contactProcess',
+])->name('api.contact.process');
 
 // external apis
 // base url

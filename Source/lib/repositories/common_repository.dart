@@ -24,6 +24,11 @@ class CommonRepository {
           completer.complete(responseData);
         }
       },
+      onFailed: (responseData) {
+        if (!completer.isCompleted) {
+          completer.completeError(responseData ?? 'Failed to submit contact form');
+        }
+      },
       onError: (error) {
         if (!completer.isCompleted) {
           completer.completeError(error ?? 'Failed to submit contact form');
