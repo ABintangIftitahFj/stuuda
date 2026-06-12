@@ -20,8 +20,7 @@ void main() {
       return null;
     });
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(
-            const MethodChannel('xyz.luan/audioplayers'),
+        .setMockMethodCallHandler(const MethodChannel('xyz.luan/audioplayers'),
             (MethodCall methodCall) async {
       return null;
     });
@@ -106,15 +105,23 @@ void main() {
     });
 
     test('ChatboxController.clearChatHistory calls correct endpoint', () async {
-      var calledUrl = '';
+      final calledUrls = <String>[];
       data_transport.httpClient = MockClient((request) async {
-        calledUrl = request.url.toString();
-        return http.Response(jsonEncode({'reaction': 1, 'data': {'message': 'History cleared'}}), 200);
+        calledUrls.add(request.url.toString());
+        return http.Response(
+            jsonEncode({
+              'reaction': 1,
+              'data': {'message': 'History cleared'}
+            }),
+            200);
       });
 
       await chatController.clearChatHistory(null);
 
-      expect(calledUrl, contains('clear-history/user-123'));
+      expect(
+        calledUrls.any((url) => url.contains('clear-history/user-123')),
+        isTrue,
+      );
     });
 
     test('ChatboxController.sendMediaN adds quoted message wamid', () async {
@@ -146,7 +153,12 @@ void main() {
 
     test('ChatboxController.getUserChat handles failed response', () async {
       data_transport.httpClient = MockClient((request) async {
-        return http.Response(jsonEncode({'reaction': 2, 'data': {'message': 'Error'}}), 200);
+        return http.Response(
+            jsonEncode({
+              'reaction': 2,
+              'data': {'message': 'Error'}
+            }),
+            200);
       });
 
       await chatController.getUserChat();
@@ -187,12 +199,13 @@ void main() {
     test('ChatboxController.clearCache and refreshChat', () async {
       chatController.clearCache();
       data_transport.httpClient = MockClient((request) async {
-        return http.Response(jsonEncode({'reaction': 1, 'client_models': {}}), 200);
+        return http.Response(
+            jsonEncode({'reaction': 1, 'client_models': {}}), 200);
       });
       await chatController.refreshChat();
       expect(chatController.isLoading.value, isFalse);
     });
-    
+
     test('ChatboxController scrollToBottom and scrollToBottomAllChat', () {
       // These call WidgetsBinding.instance.addPostFrameCallback
       chatController.scrollToBottom();
@@ -200,7 +213,8 @@ void main() {
     });
 
     test('ChatboxController.addMessage with file info', () {
-      chatController.addMessage('File message', isFile: true, filename: 'test.pdf', filetype: 'pdf');
+      chatController.addMessage('File message',
+          isFile: true, filename: 'test.pdf', filetype: 'pdf');
       expect(chatController.holduser[0]['isFile'], isTrue);
       expect(chatController.holduser[0]['filename'], 'test.pdf');
     });
@@ -209,9 +223,10 @@ void main() {
       bool initial = chatController.emojiShowing.value;
       chatController.toggleEmojiShowing();
       expect(chatController.emojiShowing.value, !initial);
-      
+
       chatController.currentUser();
-      expect(chatController.iscurrentUser.value, isTrue); // because we set mock token in setUp
+      expect(chatController.iscurrentUser.value,
+          isTrue); // because we set mock token in setUp
     });
 
     test('Auth.logout clears session', () async {

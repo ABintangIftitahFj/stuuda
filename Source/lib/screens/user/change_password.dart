@@ -8,6 +8,18 @@ import 'package:stundaa/services/data_transport.dart' as data_transport;
 import 'package:stundaa/support/app_theme.dart' as app_theme;
 import 'package:stundaa/services/utils.dart';
 
+Map<String, dynamic> buildChangePasswordInputData({
+  required String oldPassword,
+  required String password,
+  required String passwordConfirmation,
+}) {
+  return <String, dynamic>{
+    'old_password': oldPassword,
+    'password': password,
+    'password_confirmation': passwordConfirmation,
+  };
+}
+
 class ChangePasswordPage extends StatefulWidget {
   const ChangePasswordPage({super.key});
 
@@ -22,9 +34,6 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
   bool isPasswordVisibleNew = false;
   bool isPasswordVisibleConfirm = false;
 
-  final Map<String, dynamic> formInputData = {};
-  // final String encryptionKey = EncryptionHelper.generateRandomKey();
-
   final _currentPassController = TextEditingController();
   final _newPassController = TextEditingController();
   final _confirmNewPassController = TextEditingController();
@@ -35,6 +44,14 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
     isPasswordVisibleOld = false;
     isPasswordVisibleNew = false;
     isPasswordVisibleConfirm = false;
+  }
+
+  @override
+  void dispose() {
+    _currentPassController.dispose();
+    _newPassController.dispose();
+    _confirmNewPassController.dispose();
+    super.dispose();
   }
 
   @override
@@ -56,7 +73,8 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                   key: _formKey,
                   child: Container(
                     padding: const EdgeInsets.all(22),
-                    decoration: app_theme.insetPanelDecoration(radius: 24)
+                    decoration: app_theme
+                        .insetPanelDecoration(radius: 24)
                         .copyWith(gradient: app_theme.cardGradient),
                     child: Column(
                       children: [
@@ -118,11 +136,8 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                                     });
                                   },
                                 ),
-                                onSaved: (String? value) {
-                                  formInputData['old_password'] = value;
-                                },
                                 validation:
-                                    ValidationBuilder().minLength(3).build(),
+                                    ValidationBuilder().minLength(6).build(),
                               ),
                               InputField(
                                 labelText: context.lwTranslate.newPassword,
@@ -146,10 +161,17 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                                     });
                                   },
                                 ),
-                                validation:
-                                    ValidationBuilder().minLength(6).build(),
-                                onSaved: (String? value) {
-                                  formInputData['password'] = value;
+                                validation: (value) {
+                                  final baseError = ValidationBuilder()
+                                      .minLength(6)
+                                      .build()(value);
+                                  if (baseError != null) {
+                                    return baseError;
+                                  }
+                                  if (value == _currentPassController.text) {
+                                    return 'New password must be different from current password';
+                                  }
+                                  return null;
                                 },
                               ),
                               InputField(
@@ -175,11 +197,18 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                                     });
                                   },
                                 ),
-                                validation:
-                                    ValidationBuilder().minLength(6).build(),
-                                onSaved: (String? value) {
-                                  formInputData['password_confirmation'] =
-                                      value;
+                                validation: (value) {
+                                  final baseError = ValidationBuilder()
+                                      .minLength(6)
+                                      .build()(value);
+                                  if (baseError != null) {
+                                    return baseError;
+                                  }
+                                  if (value != _newPassController.text) {
+                                    return context
+                                        .lwTranslate.passwordConfirMatch;
+                                  }
+                                  return null;
                                 },
                               ),
                               LoadingButton(
@@ -190,8 +219,14 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                                 width: MediaQuery.of(context).size.width,
                                 color: app_theme.cyanGlow,
                                 onPressed: () async {
-                                  _formKey.currentState?.save();
                                   if (_formKey.currentState!.validate()) {
+                                    final formInputData =
+                                        buildChangePasswordInputData(
+                                      oldPassword: _currentPassController.text,
+                                      password: _newPassController.text,
+                                      passwordConfirmation:
+                                          _confirmNewPassController.text,
+                                    );
                                     await data_transport.post(
                                       'update-password',
                                       inputData: formInputData,
