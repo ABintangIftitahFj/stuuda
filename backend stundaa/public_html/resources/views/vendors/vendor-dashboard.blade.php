@@ -76,6 +76,38 @@ $vendorViewBySuperAdmin = null;
     @endif
     @if(!$vendorViewBySuperAdmin)
     <div class="row">
+        <div class="col-12 mb-4">
+            <div class="card bg-gradient-default shadow border-0">
+                <div class="card-body">
+                    <h3 class="text-white mb-3"><i class="fas fa-heartbeat mr-2"></i> {{ __tr('WhatsApp Health Summary') }}</h3>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <h6 class="text-uppercase text-muted ls-1 mb-1">{{ __tr('Token Status') }}</h6>
+                            <span class="badge {{ $healthStatusData['is_token_expired'] ? 'badge-danger' : 'badge-success' }}">
+                                {{ $healthStatusData['is_token_expired'] ? __tr('Expired') : __tr('Active') }}
+                            </span>
+                        </div>
+                        <div class="col-md-3">
+                            <h6 class="text-uppercase text-muted ls-1 mb-1">{{ __tr('Failed Jobs') }}</h6>
+                            <span class="badge {{ $healthStatusData['failed_jobs_count'] > 0 ? 'badge-danger' : 'badge-success' }}">
+                                {{ $healthStatusData['failed_jobs_count'] }}
+                            </span>
+                        </div>
+                        <div class="col-md-3">
+                            <h6 class="text-uppercase text-muted ls-1 mb-1">{{ __tr('Pending Downloads') }}</h6>
+                            <span class="badge {{ $healthStatusData['pending_media_downloads'] > 0 ? 'badge-warning' : 'badge-success' }}">
+                                {{ $healthStatusData['pending_media_downloads'] }}
+                            </span>
+                        </div>
+                        <div class="col-md-3 text-right">
+                            <a href="{{ route('vendor.settings.read', ['pageType' => 'whatsapp-cloud-api-setup']) }}" class="btn btn-sm btn-outline-white">
+                                {{ __tr('Full Health Check') }}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
         <div class="col-12 mb-5">
             <fieldset>
                 <legend>{{ __tr('Quick Start') }}</legend>

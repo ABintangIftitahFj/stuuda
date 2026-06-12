@@ -578,6 +578,31 @@
                 <dd x-text="healthStatusData?.health_status_updated_at_formatted"></dd>
                 <dt>{{ __tr('Overall Health') }}</dt>
                 <dd x-text="healthStatusData?.health_data?.health_status.can_send_message"></dd>
+            </dl>
+            <hr>
+            <h4>{{ __tr('System Diagnostics') }}</h4>
+            <div class="row">
+                <div class="col-md-6">
+                    <dl>
+                        <dt>{{ __tr('Failed Background Jobs') }}</dt>
+                        <dd :class="healthStatusData?.extended_health_data?.failed_jobs_count > 0 ? 'text-danger font-weight-bold' : 'text-success'" x-text="healthStatusData?.extended_health_data?.failed_jobs_count"></dd>
+                        <dt>{{ __tr('Pending Media Downloads') }}</dt>
+                        <dd :class="healthStatusData?.extended_health_data?.pending_media_downloads > 0 ? 'text-warning font-weight-bold' : 'text-success'" x-text="healthStatusData?.extended_health_data?.pending_media_downloads"></dd>
+                        <dt>{{ __tr('Token Status') }}</dt>
+                        <dd :class="healthStatusData?.extended_health_data?.is_token_expired ? 'text-danger font-weight-bold' : 'text-success'" x-text="healthStatusData?.extended_health_data?.is_token_expired ? '{{ __tr('Expired') }}' : '{{ __tr('Active') }}'"></dd>
+                    </dl>
+                </div>
+                <div class="col-md-6">
+                    <dl>
+                        <dt>{{ __tr('Webhook Verified At') }}</dt>
+                        <dd x-text="healthStatusData?.extended_health_data?.webhook_verified_at || '{{ __tr('Not Verified') }}'"></dd>
+                        <dt>{{ __tr('Current Plan') }}</dt>
+                        <dd x-text="healthStatusData?.extended_health_data?.plan_title"></dd>
+                        <dt>{{ __tr('Contact Usage') }}</dt>
+                        <dd x-text="(healthStatusData?.extended_health_data?.current_contacts || 0) + ' / ' + (healthStatusData?.extended_health_data?.contact_limit == -1 ? '{{ __tr('Unlimited') }}' : healthStatusData?.extended_health_data?.contact_limit)"></dd>
+                    </dl>
+                </div>
+            </div>
             </fieldset>
                 <template x-for="healthEntity in healthStatusData?.health_data?.health_status.entities">
                         <fieldset>

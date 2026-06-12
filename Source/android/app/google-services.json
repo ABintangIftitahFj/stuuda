@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1027985349826",
+    "project_id": "stundaa-69933",
+    "storage_bucket": "stundaa-69933.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1027985349826:android:5ea64a9515730c870f6f5b",
+        "android_client_info": {
+          "package_name": "com.stunnda.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBLV5VSGgRPbbtUvVf2tzk5vvDf50xo7OY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

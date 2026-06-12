@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import 'package:firebase_core/firebase_core.dart';
+import 'package:stundaa/services/fcm_service.dart';
 import 'package:stundaa/provider/contacts_provider.dart';
 import 'package:stundaa/screens/home.dart';
 import 'package:flutter/material.dart';
@@ -73,6 +75,13 @@ void main() async {
     debugPrintStack(stackTrace: stack);
     return true;
   };
+
+  try {
+    await Firebase.initializeApp();
+    await FcmService().init();
+  } catch (e) {
+    debugPrint("Firebase init error: $e");
+  }
 
   try {
     await initPreferences();

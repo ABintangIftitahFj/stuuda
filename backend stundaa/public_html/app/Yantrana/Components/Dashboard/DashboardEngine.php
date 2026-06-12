@@ -227,7 +227,8 @@ class DashboardEngine extends BaseEngine implements DashboardEngineInterface
             'totalMessagesProcessed' => $this->whatsAppMessageLogRepository->countIt(
                 array_merge($vendorWhereClause, ['is_system_message' => null])
             ),
-            'vendorInfo' => $this->vendorEngine->getBasicSettings($vendorId)
+            'vendorInfo' => $this->vendorEngine->getBasicSettings($vendorId),
+            'healthStatusData' => app()->make(\App\Yantrana\Components\WhatsAppService\WhatsAppServiceEngine::class)->getExtendedHealthData($vendorId)
         ]);
     }
 

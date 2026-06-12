@@ -91,6 +91,9 @@ dependencies:
   rename_app: ^1.6.5
   uuid: ^4.0.0
   flutter_animate: ^4.5.2
+  firebase_core: ^3.13.1
+  firebase_messaging: ^15.2.5
+  flutter_local_notifications: ^18.0.1
 
 dependency_overrides: null
 # added to fix the issue on ios - 28JUN2023
