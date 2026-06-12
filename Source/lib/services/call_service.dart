@@ -157,7 +157,6 @@ class CallService {
   }
 
   /// Handle when call is declined
-  /// TODO: Send decline notification to caller
   void _handleCallDecline(CallEvent event) async {
     debugPrint('✗ Call Declined - Event: ${event.body}');
 
@@ -174,24 +173,51 @@ class CallService {
         },
       );
     }
+    _webRTCManager.onSignalingData = null;
+    await _webRTCManager.dispose();
   }
 
   /// Handle when call ends
-  /// TODO: Clean up resources and close call screen
   void _handleCallEnded(CallEvent event) async {
     debugPrint('⊘ Call Ended - Event: ${event.body}');
+
+    final String? contactUid = event.body?['extra']?['userId'] as String?;
+    final String? callId = event.body?['id'] as String?;
+
+    if (contactUid != null) {
+      await data_transport.post(
+        'vendor-console/whatsapp-calling/stop-in-progress-call',
+        inputData: {
+          'contact_uid': contactUid,
+          'call_id': callId,
+        },
+      );
+    }
 
     _webRTCManager.onSignalingData = null;
     await _webRTCManager.dispose();
   }
 
   /// Handle when call times out (no answer)
-  /// TODO: Send missed call notification
-  void _handleCallTimeout(CallEvent event) {
+  void _handleCallTimeout(CallEvent event) async {
     debugPrint('⏱ Call Timeout - Event: ${event.body}');
 
-    // TODO: Mark as missed call in backend
-    // TODO: Send notification to user
-    // TODO: Log call attempt
+    final String? contactUid = event.body?['extra']?['userId'] as String?;
+    final String? callId = event.body?['id'] as String?;
+
+    if (contactUid != null) {
+      // Send missed call status to backend
+      await data_transport.post(
+        'vendor-console/whatsapp-calling/answer-user-initiated-call',
+        inputData: {
+          'contact_uid': contactUid,
+          'call_id': callId,
+          'type': 'timeout',
+        },
+      );
+    }
+    
+    _webRTCManager.onSignalingData = null;
+    await _webRTCManager.dispose();
   }
 }
