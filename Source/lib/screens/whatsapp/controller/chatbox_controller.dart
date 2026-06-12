@@ -161,7 +161,19 @@ class ChatboxController extends ChangeNotifier {
     }
   }
 
+  bool _pusherConnected = false;
+
+  void setPusherConnected(bool connected) {
+    _pusherConnected = connected;
+    if (connected) {
+      _stopPolling();
+    } else {
+      _startPolling();
+    }
+  }
+
   void _startPolling() {
+    if (_pusherConnected) return;
     _pollingTimer?.cancel();
     _pollingTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
       if (userId != null && userId!.isNotEmpty) {

@@ -11,6 +11,7 @@ import 'package:stundaa/common/widgets/appinio_video_player.dart';
 import 'package:stundaa/services/html_formatter.dart';
 import 'package:stundaa/support/app_theme.dart' as app_theme;
 import 'package:stundaa/screens/user/user_common.dart';
+import 'package:stundaa/screens/whatsapp/componets/imagedetails.dart';
 import 'package:chewie/chewie.dart';
 import 'package:video_player/video_player.dart';
 import 'package:just_audio/just_audio.dart';
@@ -419,6 +420,79 @@ class _MessageBubbleState extends State<MessageBubble>
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         color: app_theme.lavenderWhite,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+    } else if (widget.mediaType == 'image' && widget.mediaLink != null) {
+      return GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => Imagedetails(imageUrl: widget.mediaLink),
+            ),
+          );
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            color: app_theme.surface,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: app_theme.outlineSoft),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(17),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Image.network(
+                  widget.mediaLink!,
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  loadingBuilder: (context, child, progress) {
+                    if (progress == null) return child;
+                    return Container(
+                      height: 180,
+                      alignment: Alignment.center,
+                      child: CircularProgressIndicator(
+                        color: app_theme.cyanGlow,
+                        value: progress.expectedTotalBytes != null
+                            ? progress.cumulativeBytesLoaded /
+                                progress.expectedTotalBytes!
+                            : null,
+                      ),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    height: 120,
+                    alignment: Alignment.center,
+                    child: const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.broken_image_outlined,
+                            color: app_theme.error, size: 32),
+                        SizedBox(height: 4),
+                        Text('Image unavailable',
+                            style: TextStyle(
+                                color: app_theme.secondary, fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                ),
+                if (widget.mediaCaption != null &&
+                    widget.mediaCaption!.isNotEmpty)
+                  Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    child: Text(
+                      widget.mediaCaption!,
+                      style: const TextStyle(
+                        color: app_theme.lavenderWhite,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),

@@ -11,6 +11,7 @@ import 'package:stundaa/screens/whatsapp/componets/documents_picker.dart';
 import 'package:stundaa/screens/whatsapp/componets/message_bubble.dart';
 import 'package:stundaa/screens/whatsapp/componets/audioplayer.dart';
 import 'package:stundaa/screens/whatsapp/componets/imagedetails.dart';
+import 'package:stundaa/screens/whatsapp/screens/media_gallery.dart';
 import 'package:stundaa/screens/whatsapp/controller/chatbox_controller.dart';
 import 'package:stundaa/services/utils.dart';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
@@ -651,15 +652,29 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                               letterSpacing: -0.2,
                             ),
                           ),
-                          Text(
-                            widget.contact.waId,
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.35),
-                              fontSize: 11,
-                              fontWeight: FontWeight.w400,
-                            ),
+                          Row(
+                            children: [
+                              Text(
+                                widget.contact.waId,
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.35),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w400,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              if (widget.contact.isServiceWindowActive)
+                                Container(
+                                  width: 6,
+                                  height: 6,
+                                  decoration: const BoxDecoration(
+                                    color: Colors.green,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                            ],
                           ),
                         ],
                       ),
@@ -719,6 +734,48 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                     Text(
                       context.lwTranslate.userInformation,
                       style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: app_theme.lavenderWhite),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                onTap: () {
+                  final allMedia = controller.holduser
+                      .where((m) =>
+                          (m['media'] as Map<String, dynamic>?)?['type'] ==
+                              'image' &&
+                          ((m['media'] as Map<String, dynamic>?)?['link'] ?? '')
+                              .toString()
+                              .isNotEmpty)
+                      .map((m) => {
+                            'link': (m['media']
+                                    as Map<String, dynamic>)['link'] as String,
+                            'type': 'image',
+                            'caption': (m['media']
+                                        as Map<String, dynamic>)['caption']
+                                    as String? ??
+                                '',
+                          })
+                      .toList();
+                  navigatePage(
+                    context,
+                    MediaGalleryScreen(
+                      mediaItems: allMedia,
+                      contactName: widget.contact.displayName,
+                    ),
+                  );
+                },
+                child: Row(
+                  children: [
+                    const Icon(CupertinoIcons.photo_on_rectangle,
+                        color: app_theme.cyanGlow),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Media Gallery',
+                      style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
                           color: app_theme.lavenderWhite),

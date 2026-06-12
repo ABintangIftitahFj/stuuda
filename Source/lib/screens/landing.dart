@@ -665,6 +665,8 @@ import 'package:stundaa/support/app_theme.dart' as app_theme;
 import 'package:pusher_channels_flutter/pusher_channels_flutter.dart';
 import 'package:stundaa/services/auth.dart' as auth;
 import 'package:stundaa/screens/whatsapp/controller/chatbox_controller.dart';
+import 'package:stundaa/model/contact_summary.dart';
+import 'package:stundaa/screens/whatsapp/screens/chatbox.dart';
 
 import 'package:stundaa/services/call_service.dart';
 import 'package:stundaa/services/webrtc_manager.dart';
@@ -710,10 +712,12 @@ class _LandingPageState extends State<LandingPage> with WidgetsBindingObserver {
       final pusherService = PusherService();
       pusherService.initPusher(authToken).then((_) {
         if (mounted) {
+          controller.setPusherConnected(true);
           setupContactListUpdates(pusherService, contactProvider);
         }
       }).catchError((error) {
         if (mounted) {
+          controller.setPusherConnected(false);
           auth.checkAndHandleCSRFExpiry(error, context);
         }
       });
@@ -778,6 +782,7 @@ class _LandingPageState extends State<LandingPage> with WidgetsBindingObserver {
             eventData['message_status'] == null) {
           final contactUid = eventData['contactUid'];
           final justNowLabel = localizedJustNowLabel();
+          final isNewIncoming = eventData['isNewIncomingMessage'] == true;
 
           // Check if this is a new contact not in our list
           if (!contactProvider.contactExists(contactUid)) {
@@ -789,10 +794,37 @@ class _LandingPageState extends State<LandingPage> with WidgetsBindingObserver {
           } else {
             // Existing contact - just update message
             contactProvider.updateContactWithNewMessage(
-                contactUid,
-                eventData['lastMessageUid'],
-                eventData['formatted_last_message_time'],
-                justNowLabel);
+              contactUid,
+              eventData['lastMessageUid'],
+              eventData['formatted_last_message_time'],
+              justNowLabel,
+              lastMessageText: eventData['lastMessageText'],
+              lastMessageIsIncoming: eventData['lastMessageIsIncoming'] == 1 ||
+                  eventData['lastMessageIsIncoming'] == true,
+            );
+          }
+
+          // Show notification if it's a new incoming message
+          if (isNewIncoming) {
+            Get.snackbar(
+              eventData['contactDescription'] ?? 'New Message',
+              'You have a new message',
+              snackPosition: SnackPosition.TOP,
+              backgroundColor: app_theme.surface.withValues(alpha: 0.9),
+              colorText: Colors.white,
+              icon: const Icon(CupertinoIcons.chat_bubble_2_fill, color: app_theme.primary),
+              duration: const Duration(seconds: 4),
+              margin: const EdgeInsets.all(12),
+              borderRadius: 12,
+              onTap: (_) {
+                // Find the contact in the list and navigate to chatbox
+                final contactEntry = contactProvider.contactsList.firstWhereOrNull((e) => e.value['_uid'] == contactUid);
+                if (contactEntry != null) {
+                  final contactSummary = ContactSummary.fromEntry(contactEntry);
+                  Get.to(() => ChatboxScreen(contact: contactSummary));
+                }
+              },
+            );
           }
           controller.getUserChatSend();
         } else if (eventName == 'VendorChannelBroadcast' &&
