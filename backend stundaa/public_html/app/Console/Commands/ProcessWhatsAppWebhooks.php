@@ -19,18 +19,19 @@ class ProcessWhatsAppWebhooks extends Command
         WhatsAppWebhookModel::where('status', 'pending')
             ->where(function ($q) {
                 $q->whereNull('attempted_at')
-                ->orWhere('attempted_at', '<', now()->subMinutes(5)); // only records not attempted in last 5 minutes
+                  ->orWhereRaw('attempted_at < DATE_SUB(NOW(), INTERVAL POW(2, IFNULL(attempts, 0)) MINUTE)'); // Exponential backoff: 1, 2, 4, 8, 16 mins
             })
             ->latest()
             ->limit($webhooksCount)
             ->get()
             ->each(function ($webhook) {
                 try {
-                    // if attempted more than 25 minutes ago, delete it as it may had 5 attempts already
-                    if ($webhook->attempted_at and $webhook->attempted_at->gt(
-                        $webhook->created_at->copy()->addMinutes(25)
-                    )) {
-                        $webhook->delete();
+                    // if attempted 5 times or created more than 2 days ago, mark as failed
+                    if (($webhook->attempts >= 5) || ($webhook->created_at->copy()->addDays(2)->isPast())) {
+                        $webhook->update([
+                            'status' => 'failed',
+                            'attempted_at' => now(),
+                        ]);
                     } else {
                         $request = new Request(
                             query: [],
@@ -47,14 +48,14 @@ class ProcessWhatsAppWebhooks extends Command
                     }
                 } catch (\Throwable $e) {
                     $errorMessage = trim($e->getMessage());
-                    //__logDebug($errorMessage);
-                    // throw $e;
+                    \Log::error('Webhook processing error: ' . $errorMessage);
                     if (str_starts_with($errorMessage, 'Unsupported')) {
                         $webhook->delete();
                     } else {
                         $webhook->update([
                             'status' => 'pending',
                             'attempted_at' => now(),
+                            'attempts' => ($webhook->attempts ?? 0) + 1,
                         ]);
                     }
                 }

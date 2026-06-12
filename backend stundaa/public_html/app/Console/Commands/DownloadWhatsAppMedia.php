@@ -52,6 +52,7 @@ class DownloadWhatsAppMedia extends Command
             $mediaId = $mediaValues['media_id'];
             $vendorId = $log->vendors__id;
             $mediaType = $mediaValues['type'];
+            $attempts = isset($mediaValues['download_attempts']) ? $mediaValues['download_attempts'] : 0;
             
             // Get vendor UID
             $vendorUid = getPublicVendorUid($vendorId);
@@ -77,7 +78,18 @@ class DownloadWhatsAppMedia extends Command
                 $this->info("Successfully downloaded media for Log ID: {$log->_id}");
             } catch (\Exception $e) {
                 $this->error("Failed to download media for Log ID: {$log->_id}. Error: " . $e->getMessage());
-                // Optionally mark as failed or retry later
+                $attempts++;
+                $mediaValues['download_attempts'] = $attempts;
+                
+                if ($attempts >= 3) {
+                    unset($mediaValues['is_download_pending']);
+                    $mediaValues['is_download_failed'] = true;
+                    $mediaValues['caption'] = ($mediaValues['caption'] ?? '') . ' (' . __tr('Media download failed permanently') . ')';
+                }
+                
+                $data['media_values'] = $mediaValues;
+                $log->__data = $data;
+                $log->save();
             }
         }
 
