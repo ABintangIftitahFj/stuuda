@@ -198,7 +198,7 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
     return Scaffold(
       backgroundColor: app_theme.backgroundColor,
       appBar: innerAppBar(
-        title: context.lwTranslate.userInformation,
+        title: 'Contact Info',
         context: context,
       ),
       body: SingleChildScrollView(
@@ -280,7 +280,6 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
                         color: app_theme.lavenderWhite,
                       ),
                     ),
-                    if (controller.firstName.value == 'Unknown' || controller.firstName.value.isEmpty)
                       Padding(
                         padding: const EdgeInsets.only(top: 8.0),
                         child: ElevatedButton.icon(
@@ -290,7 +289,7 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
                             });
                           },
                           icon: const Icon(CupertinoIcons.person_add, size: 18),
-                          label: const Text('Add to Contacts'),
+                          label: const Text('Save Contact'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: app_theme.primary,
                             foregroundColor: app_theme.black,
@@ -332,7 +331,7 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  context.lwTranslate.userInformation,
+                  'Contact Info',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -342,57 +341,57 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
                 Row(
                   children: [
                     if (isProfileEdit)
-                      ElevatedButton(
-                        onPressed: () async {
-                          await controller.updateProfileApi(
-                            context: context,
-                            firstNameValue: controller.nameController.text,
-                            emailValue: controller.emailController.text,
-                            languageCodeValue: controller.languageCodeController.text,
-                          );
-                          if (context.mounted) {
-                            final provider = Provider.of<ContactProvider>(context, listen: false);
-                            await provider.getUser(isRefresh: true, assigned: '');
-                            if (context.mounted) {
-                              showToastMessage(
-                                context,
-                                'Contact updated successfully!',
-                                type: 'success',
+                      Row(
+                        children: [
+                          TextButton(
+                            onPressed: () {
+                              controller.nameController.text = controller.firstName.value;
+                              setState(() => isProfileEdit = false);
+                            },
+                            child: const Text('Cancel',
+                                style: TextStyle(color: app_theme.secondary, fontSize: 12)),
+                          ),
+                          const SizedBox(width: 4),
+                          ElevatedButton(
+                            onPressed: () async {
+                              await controller.updateProfileApi(
+                                context: context,
+                                firstNameValue: controller.nameController.text,
+                                emailValue: controller.emailV.value,
+                                languageCodeValue: controller.languageCode.value,
                               );
-                            }
-                          }
-                          setState(() {
-                            isProfileEdit = false;
-                          });
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: app_theme.primary,
-                          foregroundColor: app_theme.black,
-                          minimumSize: const Size(70, 32),
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                              if (context.mounted) {
+                                final provider = Provider.of<ContactProvider>(context, listen: false);
+                                await provider.getUser(isRefresh: true, assigned: '');
+                                if (context.mounted) {
+                                  showToastMessage(
+                                    context,
+                                    'Contact name saved!',
+                                    type: 'success',
+                                  );
+                                }
+                              }
+                              setState(() => isProfileEdit = false);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: app_theme.primary,
+                              foregroundColor: app_theme.black,
+                              minimumSize: const Size(60, 32),
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text('SAVE',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                           ),
-                        ),
-                        child: const Text(
-                          "SAVE",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
-                        ),
+                        ],
                       )
                     else
                       IconButton(
-                        icon: const Icon(
-                          CupertinoIcons.pencil,
-                          color: app_theme.primary,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            isProfileEdit = true;
-                          });
-                        },
+                        icon: const Icon(CupertinoIcons.pencil, color: app_theme.primary),
+                        tooltip: 'Edit contact name',
+                        onPressed: () => setState(() => isProfileEdit = true),
                       ),
                   ],
                 ),
@@ -439,34 +438,22 @@ class _UserInfoState extends State<UserInfo> with TickerProviderStateMixin {
                   ),
                   const Divider(
                       height: 24, color: Color.fromRGBO(167, 223, 255, 0.12)),
-                  isProfileEdit
-                      ? _buildEditItem(
-                          icon: CupertinoIcons.mail,
-                          label: context.lwTranslate.email,
-                          controller: controller.emailController,
-                        )
-                      : _buildDetailItem(
-                          icon: CupertinoIcons.mail,
-                          label: context.lwTranslate.email,
-                          value: controller.emailV.value.isNotEmpty
-                              ? controller.emailV.value
-                              : "...",
-                        ),
+                  _buildDetailItem(
+                    icon: CupertinoIcons.mail,
+                    label: context.lwTranslate.email,
+                    value: controller.emailV.value.isNotEmpty
+                        ? controller.emailV.value
+                        : "...",
+                  ),
                   const Divider(
                       height: 24, color: Color.fromRGBO(167, 223, 255, 0.12)),
-                  isProfileEdit
-                      ? _buildEditItem(
-                          icon: CupertinoIcons.globe,
-                          label: context.lwTranslate.language,
-                          controller: controller.languageCodeController,
-                        )
-                      : _buildDetailItem(
-                          icon: CupertinoIcons.globe,
-                          label: context.lwTranslate.language,
-                          value: controller.languageCode.value.isNotEmpty
-                              ? controller.languageCode.value
-                              : "...",
-                        ),
+                  _buildDetailItem(
+                    icon: CupertinoIcons.globe,
+                    label: context.lwTranslate.language,
+                    value: controller.languageCode.value.isNotEmpty
+                        ? controller.languageCode.value
+                        : "...",
+                  ),
                 ],
               );
             }),
