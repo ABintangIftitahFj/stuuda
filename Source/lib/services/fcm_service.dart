@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 import 'package:stundaa/services/utils.dart';
 import 'package:stundaa/services/auth.dart' as auth;
 
@@ -94,18 +96,33 @@ class FcmService {
     }
   }
 
+  Future<String> _getOrCreateDeviceId() async {
+    final prefs = await SharedPreferences.getInstance();
+    var deviceId = prefs.getString('device_id');
+    if (deviceId == null || deviceId.isEmpty) {
+      deviceId = const Uuid().v4();
+      await prefs.setString('device_id', deviceId);
+    }
+    return deviceId;
+  }
+
   Future<void> _sendTokenToBackend(String token) async {
     try {
       final authToken = auth.getAuthToken();
       if (authToken.isEmpty) return;
-      final url = apiUrl('fcm/register-token');
+      final deviceId = await _getOrCreateDeviceId();
+      final url = apiUrl('vendor/user-device/token');
       await http.post(
         url,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $authToken',
         },
-        body: jsonEncode({'fcm_token': token}),
+        body: jsonEncode({
+          'device_token': token,
+          'device_id': deviceId,
+          'device_type': 'android',
+        }),
       );
       pr('FCM token registered: $token');
     } catch (e) {
