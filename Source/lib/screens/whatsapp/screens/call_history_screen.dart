@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:stundaa/support/app_theme.dart' as app_theme;
 import 'package:flutter/cupertino.dart';
 
 class CallHistoryScreen extends StatelessWidget {
