@@ -5,6 +5,10 @@ List<Map> appLocales = <Map>[
     'code': 'en',
     'name': 'English',
   },
+  {
+    'code': 'id',
+    'name': 'Bahasa Indonesia',
+  },
   // {
   //   'code': 'fr',
   //   'name': 'Français',
