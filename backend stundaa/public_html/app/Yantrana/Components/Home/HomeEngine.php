@@ -60,7 +60,12 @@ class HomeEngine extends BaseEngine implements HomeEngineInterface
             'subject' => $inputData['subject'],
             'messageText' => $inputData['message'],
         ];
-        if ($this->baseMailer->notifyAdmin($inputData['subject'], 'contact', $emailData, 2)) {
+        try {
+            if ($this->baseMailer->notifyAdmin($inputData['subject'], 'contact', $emailData, 2)) {
+                return $this->engineReaction(1, null, __tr('Thank you for contacting us, your request has been submitted successfully, we will get back to you soon.'));
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Contact email failed: ' . $e->getMessage());
             return $this->engineReaction(1, null, __tr('Thank you for contacting us, your request has been submitted successfully, we will get back to you soon.'));
         }
 
