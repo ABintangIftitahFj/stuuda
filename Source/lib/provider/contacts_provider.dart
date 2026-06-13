@@ -169,14 +169,21 @@ class ContactProvider with ChangeNotifier {
 
   List<ContactSummary> contactSummariesForAssigned([String assigned = '']) {
     final assignedKey = _assignedKey(assigned);
-    final entries = _originalContactsByAssigned[assignedKey] ??
-        (assignedKey == _activeAssignedKey
+    final cachedEntries = _originalContactsByAssigned[assignedKey];
+    final entries =
+        assignedKey == _activeAssignedKey && originalContactsList.isNotEmpty
             ? originalContactsList
-            : const <MapEntry<String, dynamic>>[]);
+            : cachedEntries ?? const <MapEntry<String, dynamic>>[];
 
     return List<ContactSummary>.unmodifiable(
       entries.map(ContactSummary.fromEntry),
     );
+  }
+
+  bool isLoadingAssigned([String assigned = '']) {
+    final assignedKey = _assignedKey(assigned);
+    return _refreshingAssigned.contains(assignedKey) ||
+        _loadingMoreAssigned.contains(assignedKey);
   }
 
   String _assignedKey(String assigned) => assigned.trim();
@@ -318,14 +325,21 @@ class ContactProvider with ChangeNotifier {
       );
       final clientContacts = response.contacts;
       unreadMsgCount = response.unreadMessagesCount;
+      final existingContacts = List<MapEntry<String, dynamic>>.from(
+        _originalContactsByAssigned[assignedKey] ??
+            (assignedKey == _activeAssignedKey
+                ? originalContactsList
+                : const <MapEntry<String, dynamic>>[]),
+      );
       final nextContacts = isRefresh
           ? <MapEntry<String, dynamic>>[]
-          : List<MapEntry<String, dynamic>>.from(
-              _originalContactsByAssigned[assignedKey] ?? originalContactsList,
-            );
+          : List<MapEntry<String, dynamic>>.from(existingContacts);
 
       if (clientContacts.isEmpty) {
         _hasReachedMaxByAssigned[assignedKey] = true;
+        if (isRefresh && existingContacts.isNotEmpty) {
+          _cacheContactsForAssigned(assignedKey, existingContacts);
+        }
         if (!isRefresh) {
           currentPage = previousPage;
           _currentPageByAssigned[assignedKey] = previousPage;

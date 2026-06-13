@@ -441,6 +441,12 @@ class _WhatsAppChatState extends State<WhatsAppChat>
         : contacts;
     filteredContacts = _filterContactsByQuery(filteredContacts);
 
+    if (filteredContacts.isEmpty && provider.isLoadingAssigned(assigned)) {
+      return const Center(
+        child: CupertinoActivityIndicator(radius: 14),
+      );
+    }
+
     if (filteredContacts.isEmpty && !provider.isLoading) {
       return Center(
         child: SingleChildScrollView(
