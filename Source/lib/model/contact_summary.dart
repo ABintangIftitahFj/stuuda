@@ -63,8 +63,13 @@ class ContactSummary {
     final lastMessageTime =
         (lastMessage['formatted_message_time'] ?? '').toString().trim();
 
-    final lastMessageText =
+    var lastMessageText =
         (lastMessage['message'] ?? lastMessage['message_body'] ?? lastMessage['text'] ?? '').toString().trim();
+    
+    final isIncoming = lastMessage['is_incoming_message'] == 1 || lastMessage['is_incoming_message'] == true;
+    if (lastMessageText.isNotEmpty && !isIncoming) {
+      lastMessageText = "Me: $lastMessageText";
+    }
 
     return ContactSummary(
       uid: uid.isEmpty ? fallbackUid : uid,
@@ -142,6 +147,15 @@ class ContactSummary {
   }
 
   String get displayName => fullName.isEmpty ? waId : fullName;
+
+  bool get isServiceWindowActive {
+    if (lastMessageTime.isEmpty) return false;
+    // This is a rough approximation as lastMessageTime is formatted by backend (e.g. "2:30 PM" or "Yesterday")
+    // For a real check, we'd need the raw timestamp.
+    // Assuming if it has "Just now" or today's time format, it's active.
+    final time = lastMessageTime.toLowerCase();
+    return time.contains('am') || time.contains('pm') || time.contains('just now') || time.contains('minute');
+  }
 
   Map<String, dynamic> toChatboxPayload() {
     return <String, dynamic>{

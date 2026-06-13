@@ -14,6 +14,7 @@ desain_theme.md
 # Backend sensitive / generated files
 backend_repo/
 backend stundaa/public_html/.env
+backend stundaa/public_html/cred.txt
 backend stundaa/public_html/vendor/
 backend stundaa/public_html/storage/framework/cache/
 backend stundaa/public_html/storage/framework/sessions/
@@ -26,10 +27,18 @@ backend stundaa/public_html/public/storage
 backend stundaa/public_html/.ftp_state.json
 
 # Sensitive root files
+.env
+.env.*
+!.env.example
 env_x.md
 Source.zip
 ftp_sync.py
 *.log
+*.pem
+*.key
+*credentials*.json
+*secret*.json
+**/cred.txt
 
 # SQL dumps (may contain secrets)
 *.sql

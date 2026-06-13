@@ -116,6 +116,9 @@ class WhatsAppMessageLogRepository extends BaseRepository implements WhatsAppMes
         if ($options['full_name']) {
             $dataToUpdate['full_name'] = $options['full_name'];
         }
+        if (!empty($options['repliedToMessageLogUid'])) {
+            $dataToUpdate['replied_to_whatsapp_message_logs__uid'] = $options['repliedToMessageLogUid'];
+        }
         if (__isEmpty($messageLogModel)) {
             $dataToUpdate['contacts__id'] = $contactId;
             $dataToUpdate['contact_wa_id'] = (string) $messageRecipientId;
@@ -190,16 +193,15 @@ class WhatsAppMessageLogRepository extends BaseRepository implements WhatsAppMes
     public function markAsRead($contact, $vendorId = null)
     {
         $vendorId = $vendorId ?: getVendorId();
-        return \DB::transaction(function () use ($contact, $vendorId) {
-            return $this->primaryModel::where([
-                'contacts__id' => $contact->_id,
-                'vendors__id' => $vendorId,
-                'is_incoming_message' => 1,
-                'status' => 'received',
-            ])->update([
-                'status' => 'read',
-            ]);
-        }, 3);
+        return $this->primaryModel::where([
+            'contacts__id' => $contact->_id,
+            'vendors__id' => $vendorId,
+            // 'wab_phone_number_id' => (string) getVendorSettings('current_phone_number_id', null, null, $vendorId),
+            'is_incoming_message' => 1,
+            'status' => 'received',
+        ])->update([
+            'status' => 'read',
+        ]);
     }
 
     /**

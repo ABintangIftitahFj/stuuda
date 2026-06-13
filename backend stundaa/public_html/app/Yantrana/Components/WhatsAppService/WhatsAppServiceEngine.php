@@ -3730,6 +3730,7 @@ class WhatsAppServiceEngine extends BaseEngine implements WhatsAppServiceEngineI
      */
     public function processWebhookRequest($request, $vendorUid)
     {
+        \Log::info('WhatsApp Webhook Payload for ' . $vendorUid . ': ' . json_encode($request->all()));
         emptyFlashCache(); // Clear flash cache before processing
         $vendorId = is_int($vendorUid) ? $vendorUid : getPublicVendorId($vendorUid);
         if (! $vendorId) {
@@ -3857,8 +3858,7 @@ class WhatsAppServiceEngine extends BaseEngine implements WhatsAppServiceEngineI
             });
             if (getVendorSettings('current_phone_number_id', null, null, $vendorId) != $phoneNumberId) {
                 if (empty($findPhoneNumber)) {
-                    // return false;
-                    // abort(403, 'from phone number not available.');
+                    \Log::warning('WhatsApp Webhook: Phone Number ID mismatch. Incoming: ' . $phoneNumberId . ', Expected: ' . getVendorSettings('current_phone_number_id', null, null, $vendorId));
                     return false;
                 }
             }
@@ -3867,6 +3867,7 @@ class WhatsAppServiceEngine extends BaseEngine implements WhatsAppServiceEngineI
             } else {
                 $waId = Arr::get($messageObject, '0.from');
             }
+            \Log::info('WhatsApp Webhook Incoming message from: ' . $waId);
             $messageWamid = Arr::get($messageObject, '0.id');
             $messageType = Arr::get($messageObject, '0.type');
             // welcome trigger
@@ -3973,8 +3974,7 @@ class WhatsAppServiceEngine extends BaseEngine implements WhatsAppServiceEngineI
                     'vendors__id' => $vendorId
                 ]), $vendorId);
                 if (!$vendorPlanDetails['is_limit_available']) {
-                    // return false;
-                    // abort(403, 'plan limit not available.');
+                    \Log::warning('WhatsApp Webhook: Contact limit reached for vendor ' . $vendorId . '. Limit: ' . $vendorPlanDetails['plan_feature_limit']);
                     return false;
                 }
                 $profileName = Arr::get($messageEntry, '0.changes.0.value.contacts.0.profile.name');
@@ -4105,6 +4105,8 @@ class WhatsAppServiceEngine extends BaseEngine implements WhatsAppServiceEngineI
                 'isNewIncomingMessage' => $isNewIncomingMessage,
                 'campaignUid' => $campaignUid,
                 'lastMessageUid' => $contact->lastMessage?->_uid,
+                'lastMessageText' => $messageBody ?: $messageType,
+                'lastMessageIsIncoming' => $isNewIncomingMessage,
                 'assignedUserId' => $contact->assigned_users__id,
                 'formatted_last_message_time' => $contact->lastMessage?->formatted_message_time,
                 'contactDescription' => $contactDescription,
