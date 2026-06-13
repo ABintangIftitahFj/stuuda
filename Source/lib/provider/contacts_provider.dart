@@ -233,8 +233,9 @@ class ContactProvider with ChangeNotifier {
         currentPage++;
       } else {
         currentPage = 1;
-        contactsList.clear();
-        originalContactsList.clear();
+        // Do not clear lists immediately to avoid blank screen
+        // contactsList.clear();
+        // originalContactsList.clear();
         hasReachedMax = false;
       }
 
@@ -244,6 +245,11 @@ class ContactProvider with ChangeNotifier {
       );
       final clientContacts = response.contacts;
       unreadMsgCount = response.unreadMessagesCount;
+
+      if (isRefresh) {
+        contactsList.clear();
+        originalContactsList.clear();
+      }
 
       if (clientContacts.isEmpty) {
         hasReachedMax = true;
@@ -332,8 +338,9 @@ class ContactProvider with ChangeNotifier {
       for (var entry in response.contacts) {
         final normalizedEntry = normalizeContactEntry(entry);
         if (!contactsList.any((e) => e.key == normalizedEntry.key)) {
-          contactsList.add(normalizedEntry);
-          originalContactsList.add(normalizedEntry);
+          contactsList.insert(0, normalizedEntry);
+          originalContactsList.insert(0, normalizedEntry);
+          _player.play(AssetSource('audio/receivesound.mp3'));
         }
       }
 
@@ -375,8 +382,10 @@ class ContactProvider with ChangeNotifier {
     String contactUid,
     String lastMessageUid,
     String formattedTime,
-    String justNowLabel,
-  ) {
+    String justNowLabel, {
+    String? lastMessageText,
+    bool? lastMessageIsIncoming,
+  }) {
     final contactIndex =
         contactsList.indexWhere((entry) => entry.key == contactUid);
     if (contactIndex != -1) {
@@ -386,6 +395,8 @@ class ContactProvider with ChangeNotifier {
         'last_message': {
           'formatted_message_time': justNowLabel,
           '_uid': lastMessageUid,
+          'message': lastMessageText ?? contactEntry.value['last_message']?['message'],
+          'is_incoming_message': lastMessageIsIncoming ?? contactEntry.value['last_message']?['is_incoming_message'],
         },
         'unread_messages_count':
             (contactEntry.value['unread_messages_count'] ?? 0) + 1,
@@ -398,6 +409,8 @@ class ContactProvider with ChangeNotifier {
         'last_message': {
           'formatted_message_time': justNowLabel,
           '_uid': lastMessageUid,
+          'message': lastMessageText,
+          'is_incoming_message': lastMessageIsIncoming,
         },
         'unread_messages_count': 1,
       });
@@ -414,18 +427,21 @@ class ContactProvider with ChangeNotifier {
         'last_message': {
           'formatted_message_time': justNowLabel,
           '_uid': lastMessageUid,
+          'message': lastMessageText ?? originalEntry.value['last_message']?['message'],
+          'is_incoming_message': lastMessageIsIncoming ?? originalEntry.value['last_message']?['is_incoming_message'],
         },
         'unread_messages_count':
             (originalEntry.value['unread_messages_count'] ?? 0) + 1,
       };
       originalContactsList.removeAt(originalContactIndex);
-      originalContactsList.insert(
-          0, MapEntry(contactUid, updatedOriginalContact));
+      originalContactsList.insert(0, MapEntry(contactUid, updatedOriginalContact));
     } else {
       final newOriginalContact = MapEntry(contactUid, {
         'last_message': {
           'formatted_message_time': justNowLabel,
           '_uid': lastMessageUid,
+          'message': lastMessageText,
+          'is_incoming_message': lastMessageIsIncoming,
         },
         'unread_messages_count': 1,
       });

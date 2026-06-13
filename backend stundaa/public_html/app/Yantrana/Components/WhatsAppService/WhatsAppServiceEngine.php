@@ -2745,19 +2745,24 @@ class WhatsAppServiceEngine extends BaseEngine implements WhatsAppServiceEngineI
         }
         // Resolve quoted_message_wamid → _uid so we can store the reply reference
         $repliedToMessageLogUid = null;
+        $quotedWamid = null;
         if (!is_array($request)) {
             $quotedWamid = $request->quoted_message_wamid ?? null;
-            if ($quotedWamid) {
-                $repliedToLog = $this->whatsAppMessageLogRepository->fetchIt(['wamid' => $quotedWamid]);
-                if (!__isEmpty($repliedToLog)) {
-                    $repliedToMessageLogUid = $repliedToLog->_uid;
-                }
+        } else {
+            $quotedWamid = $request['quoted_message_wamid'] ?? null;
+        }
+
+        if ($quotedWamid) {
+            $repliedToLog = $this->whatsAppMessageLogRepository->fetchIt(['wamid' => $quotedWamid]);
+            if (!__isEmpty($repliedToLog)) {
+                $repliedToMessageLogUid = $repliedToLog->_uid;
             }
         }
+
         // options extend
         $options = array_merge([
             'from_phone_number_id' => $fromPhoneNumberId,
-            'messageWamid' => null,
+            'messageWamid' => $quotedWamid,
             'repliedToMessageLogUid' => $repliedToMessageLogUid,
         ], $options);
 

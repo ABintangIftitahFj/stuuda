@@ -703,6 +703,7 @@ class _LandingPageState extends State<LandingPage> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _fetchMyData = checkUserLoggedIn();
     final contactProvider =
         Provider.of<ContactProvider>(context, listen: false);
@@ -722,6 +723,27 @@ class _LandingPageState extends State<LandingPage> with WidgetsBindingObserver {
           auth.checkAndHandleCSRFExpiry(error, context);
         }
       });
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      pr("App resumed, checking Pusher connection...");
+      final authToken = auth.getAuthToken();
+      if (authToken.isNotEmpty) {
+        PusherService().initPusher(authToken).then((_) {
+          if (mounted) {
+            controller.setPusherConnected(true);
+          }
+        });
+      }
     }
   }
 
