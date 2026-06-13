@@ -37,6 +37,7 @@ class _WhatsAppChatState extends State<WhatsAppChat>
   bool _isTabLoading = false;
   final ScrollController _scrollController = ScrollController();
   bool _showAllText = false;
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -44,7 +45,7 @@ class _WhatsAppChatState extends State<WhatsAppChat>
 
     _scrollController.addListener(_scrollListener);
     final provider = Provider.of<ContactProvider>(context, listen: false);
-    provider.getUser(isRefresh: true);
+    provider.getUser(isRefresh: true, assigned: '');
 
     // Count the current vendorMessagingUsers to set correct initial length
     final filteredUsers = controller.vendorMessagingUsers
@@ -53,6 +54,7 @@ class _WhatsAppChatState extends State<WhatsAppChat>
     _tabController = TabController(
       length: 4 + filteredUsers.length + provider.pockets.length + 1,
       vsync: this,
+      initialIndex: 1, // Default to "All" instead of "Pinned"
     );
     _setupTabListener(provider);
 
@@ -61,7 +63,8 @@ class _WhatsAppChatState extends State<WhatsAppChat>
         final currentFilteredUsers = controller.vendorMessagingUsers
             .where((user) => user.vendorId == 'null')
             .toList();
-        int tabCount = 4 + currentFilteredUsers.length + provider.pockets.length + 1;
+        int tabCount =
+            4 + currentFilteredUsers.length + provider.pockets.length + 1;
 
         if (_tabController.length != tabCount) {
           final oldController = _tabController;
@@ -89,7 +92,7 @@ class _WhatsAppChatState extends State<WhatsAppChat>
           final currentFilteredUsers = controller.vendorMessagingUsers
               .where((user) => user.vendorId == 'null')
               .toList();
-          
+
           int index = _tabController.index;
           if (index == 0) {
             // Pinned
@@ -116,12 +119,7 @@ class _WhatsAppChatState extends State<WhatsAppChat>
   }
 
   void search(String query) {
-    final provider = Provider.of<ContactProvider>(context, listen: false);
-    if (query.isEmpty) {
-      provider.resetVisibleContacts();
-    } else {
-      provider.setVisibleContactsFromQuery(query);
-    }
+    setState(() => _searchQuery = query);
   }
 
   @override
@@ -306,11 +304,11 @@ class _WhatsAppChatState extends State<WhatsAppChat>
             children: [
               buildPinnedTabContent(),
               buildAllTabContent(),
-              buildAllTabContent(),
-              buildAllTabContent(),
+              buildAllTabContent(assigned: 'to-me'),
+              buildAllTabContent(assigned: 'unassigned'),
               ...controller.vendorMessagingUsers
                   .where((user) => user.vendorId == 'null')
-                  .map((_) => buildAllTabContent()),
+                  .map((user) => buildAllTabContent(assigned: user.id)),
               ...provider.pockets.keys
                   .map((pocketName) => buildPocketTabContent(pocketName)),
               const Center(
@@ -344,7 +342,8 @@ class _WhatsAppChatState extends State<WhatsAppChat>
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () => provider.deletePocket(pocketName),
-                style: ElevatedButton.styleFrom(backgroundColor: app_theme.error),
+                style:
+                    ElevatedButton.styleFrom(backgroundColor: app_theme.error),
                 child: const Text("Delete Pocket"),
               ),
             ],
@@ -427,13 +426,20 @@ class _WhatsAppChatState extends State<WhatsAppChat>
     return buildContactList(pinnedContacts);
   }
 
-  Widget buildAllTabContent() {
+  List<ContactSummary> _filterContactsByQuery(List<ContactSummary> contacts) {
+    final query = _searchQuery.trim();
+    if (query.isEmpty) return contacts;
+
+    return contacts.where((contact) => contact.matchesQuery(query)).toList();
+  }
+
+  Widget buildAllTabContent({String assigned = ''}) {
     final provider = Provider.of<ContactProvider>(context);
+    final contacts = provider.contactSummariesForAssigned(assigned);
     List<ContactSummary> filteredContacts = _showAllText
-        ? provider.contactSummaries
-            .where((contact) => contact.unreadMessagesCount > 0)
-            .toList()
-        : provider.contactSummaries;
+        ? contacts.where((contact) => contact.unreadMessagesCount > 0).toList()
+        : contacts;
+    filteredContacts = _filterContactsByQuery(filteredContacts);
 
     if (filteredContacts.isEmpty && !provider.isLoading) {
       return Center(
@@ -481,7 +487,8 @@ class _WhatsAppChatState extends State<WhatsAppChat>
     return buildContactList(filteredContacts);
   }
 
-  Widget buildContactList(List<ContactSummary> filteredContacts, {String? currentPocketName}) {
+  Widget buildContactList(List<ContactSummary> filteredContacts,
+      {String? currentPocketName}) {
     final provider = Provider.of<ContactProvider>(context, listen: false);
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -505,7 +512,8 @@ class _WhatsAppChatState extends State<WhatsAppChat>
               );
             },
             onLongPress: () {
-              _showPinOptions(context, contact, isPinned, currentPocketName: currentPocketName);
+              _showPinOptions(context, contact, isPinned,
+                  currentPocketName: currentPocketName);
             },
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -639,7 +647,8 @@ class _WhatsAppChatState extends State<WhatsAppChat>
   }
 
   void _showPinOptions(
-      BuildContext context, ContactSummary contact, bool isPinned, {String? currentPocketName}) {
+      BuildContext context, ContactSummary contact, bool isPinned,
+      {String? currentPocketName}) {
     final provider = Provider.of<ContactProvider>(context, listen: false);
     showCupertinoModalPopup(
       context: context,
@@ -667,7 +676,8 @@ class _WhatsAppChatState extends State<WhatsAppChat>
                 child: const Text("Move to another Pocket"),
                 onPressed: () {
                   Navigator.pop(context);
-                  _showMovePocketChooser(context, contact, currentPocketName, provider);
+                  _showMovePocketChooser(
+                      context, contact, currentPocketName, provider);
                 },
               ),
           ] else ...[
@@ -709,7 +719,8 @@ class _WhatsAppChatState extends State<WhatsAppChat>
               },
             );
           }),
-          if (provider.pockets.keys.any((name) => provider.isInPocket(name, contact.uid)))
+          if (provider.pockets.keys
+              .any((name) => provider.isInPocket(name, contact.uid)))
             CupertinoActionSheetAction(
               isDestructiveAction: true,
               child: const Text("Remove from All Pockets"),
@@ -727,8 +738,8 @@ class _WhatsAppChatState extends State<WhatsAppChat>
     );
   }
 
-  void _showMovePocketChooser(
-      BuildContext context, ContactSummary contact, String currentPocketName, ContactProvider provider) {
+  void _showMovePocketChooser(BuildContext context, ContactSummary contact,
+      String currentPocketName, ContactProvider provider) {
     showCupertinoModalPopup(
       context: context,
       builder: (BuildContext context) => CupertinoActionSheet(
@@ -742,7 +753,8 @@ class _WhatsAppChatState extends State<WhatsAppChat>
               child: Text(pocketName),
               onPressed: () {
                 Navigator.pop(context);
-                provider.moveContactPocket(currentPocketName, pocketName, contact.uid);
+                provider.moveContactPocket(
+                    currentPocketName, pocketName, contact.uid);
               },
             );
           }),

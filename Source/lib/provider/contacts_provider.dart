@@ -7,10 +7,20 @@ import 'package:stundaa/repositories/contact_repository.dart';
 import 'package:stundaa/services/auth.dart';
 
 class ContactProvider with ChangeNotifier {
+  static const String _allAssignedKey = '';
+
   List<MapEntry<String, dynamic>> contactsList = [];
   List<MapEntry<String, dynamic>> originalContactsList = [];
   final AudioPlayer _player = AudioPlayer();
   final ContactRepository _contactRepository = ContactRepository();
+  final Map<String, List<MapEntry<String, dynamic>>> _contactsByAssigned = {};
+  final Map<String, List<MapEntry<String, dynamic>>>
+      _originalContactsByAssigned = {};
+  final Map<String, int> _currentPageByAssigned = {};
+  final Map<String, bool> _hasReachedMaxByAssigned = {};
+  final Set<String> _refreshingAssigned = {};
+  final Set<String> _loadingMoreAssigned = {};
+  String _activeAssignedKey = _allAssignedKey;
   int unreadMsgCount = 0;
   bool isLoading = false;
   bool isLoadingMore = false;
@@ -86,7 +96,8 @@ class ContactProvider with ChangeNotifier {
     }
   }
 
-  Future<void> moveContactPocket(String fromPocket, String toPocket, String contactUid) async {
+  Future<void> moveContactPocket(
+      String fromPocket, String toPocket, String contactUid) async {
     if (pockets.containsKey(fromPocket)) {
       pockets[fromPocket]?.remove(contactUid);
     }
@@ -111,7 +122,7 @@ class ContactProvider with ChangeNotifier {
 
   List<ContactSummary> getPocketContacts(String pocketName) {
     final uids = pockets[pocketName] ?? [];
-    return originalContactSummaries.where((c) => uids.contains(c.uid)).toList();
+    return allContactSummaries.where((c) => uids.contains(c.uid)).toList();
   }
 
   Future<void> togglePin(String contactUid) async {
@@ -128,7 +139,7 @@ class ContactProvider with ChangeNotifier {
   bool isPinned(String contactUid) => pinnedContactUids.contains(contactUid);
 
   List<ContactSummary> get pinnedContacts =>
-      originalContactSummaries.where((c) => isPinned(c.uid)).toList();
+      allContactSummaries.where((c) => isPinned(c.uid)).toList();
 
   bool _isTabLoading = false;
 
@@ -152,6 +163,53 @@ class ContactProvider with ChangeNotifier {
       List<ContactSummary>.unmodifiable(
         originalContactsList.map(ContactSummary.fromEntry),
       );
+
+  List<ContactSummary> get allContactSummaries =>
+      contactSummariesForAssigned(_allAssignedKey);
+
+  List<ContactSummary> contactSummariesForAssigned([String assigned = '']) {
+    final assignedKey = _assignedKey(assigned);
+    final entries = _originalContactsByAssigned[assignedKey] ??
+        (assignedKey == _activeAssignedKey
+            ? originalContactsList
+            : const <MapEntry<String, dynamic>>[]);
+
+    return List<ContactSummary>.unmodifiable(
+      entries.map(ContactSummary.fromEntry),
+    );
+  }
+
+  String _assignedKey(String assigned) => assigned.trim();
+
+  void _setActiveListsFromCache(String assignedKey) {
+    final cachedContacts = _contactsByAssigned[assignedKey];
+    final cachedOriginalContacts = _originalContactsByAssigned[assignedKey];
+    if (cachedContacts == null || cachedOriginalContacts == null) return;
+
+    contactsList = List<MapEntry<String, dynamic>>.from(cachedContacts);
+    originalContactsList =
+        List<MapEntry<String, dynamic>>.from(cachedOriginalContacts);
+  }
+
+  void _cacheContactsForAssigned(
+    String assignedKey,
+    List<MapEntry<String, dynamic>> contacts,
+  ) {
+    final cachedContacts = List<MapEntry<String, dynamic>>.from(contacts);
+    _contactsByAssigned[assignedKey] = cachedContacts;
+    _originalContactsByAssigned[assignedKey] =
+        List<MapEntry<String, dynamic>>.from(cachedContacts);
+
+    if (assignedKey == _activeAssignedKey) {
+      contactsList = List<MapEntry<String, dynamic>>.from(cachedContacts);
+      originalContactsList =
+          List<MapEntry<String, dynamic>>.from(cachedContacts);
+    }
+  }
+
+  void _syncActiveAssignedCache() {
+    _cacheContactsForAssigned(_activeAssignedKey, originalContactsList);
+  }
 
   MapEntry<String, dynamic> normalizeContactEntry(
       MapEntry<String, dynamic> entry) {
@@ -214,13 +272,28 @@ class ContactProvider with ChangeNotifier {
   }
 
   Future<void> getUser({bool isRefresh = true, String assigned = ''}) async {
+    final assignedKey = _assignedKey(assigned);
+
     // Prevent duplicate calls
-    if ((isLoading && isRefresh) || (isLoadingMore && !isRefresh)) return;
-    if (!isRefresh && hasReachedMax) return;
+    if (_refreshingAssigned.contains(assignedKey) ||
+        _loadingMoreAssigned.contains(assignedKey)) {
+      return;
+    }
+    if (!isRefresh && (_hasReachedMaxByAssigned[assignedKey] ?? false)) return;
+
+    _activeAssignedKey = assignedKey;
+    if (isRefresh) {
+      _setActiveListsFromCache(assignedKey);
+    }
 
     // Update state
-    isLoading = isRefresh;
-    isLoadingMore = !isRefresh;
+    if (isRefresh) {
+      _refreshingAssigned.add(assignedKey);
+    } else {
+      _loadingMoreAssigned.add(assignedKey);
+    }
+    isLoading = _refreshingAssigned.isNotEmpty;
+    isLoadingMore = _loadingMoreAssigned.isNotEmpty;
 
     // Use postFrameCallback to safely notify after build completes
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -229,50 +302,60 @@ class ContactProvider with ChangeNotifier {
 
     try {
       // For load-more operations, increment page BEFORE making the API call
+      final previousPage = _currentPageByAssigned[assignedKey] ?? 1;
+      int requestPage;
       if (!isRefresh) {
-        currentPage++;
+        requestPage = previousPage + 1;
       } else {
-        currentPage = 1;
-        // Do not clear lists immediately to avoid blank screen
-        // contactsList.clear();
-        // originalContactsList.clear();
-        hasReachedMax = false;
+        requestPage = 1;
+        _hasReachedMaxByAssigned[assignedKey] = false;
       }
+      currentPage = requestPage;
 
       final response = await _contactRepository.fetchContacts(
-        page: currentPage,
-        assigned: assigned,
+        page: requestPage,
+        assigned: assignedKey,
       );
       final clientContacts = response.contacts;
       unreadMsgCount = response.unreadMessagesCount;
-
-      if (isRefresh) {
-        contactsList.clear();
-        originalContactsList.clear();
-      }
+      final nextContacts = isRefresh
+          ? <MapEntry<String, dynamic>>[]
+          : List<MapEntry<String, dynamic>>.from(
+              _originalContactsByAssigned[assignedKey] ?? originalContactsList,
+            );
 
       if (clientContacts.isEmpty) {
-        hasReachedMax = true;
-        if (!isRefresh) currentPage--;
+        _hasReachedMaxByAssigned[assignedKey] = true;
+        if (!isRefresh) {
+          currentPage = previousPage;
+          _currentPageByAssigned[assignedKey] = previousPage;
+        }
       } else {
         for (var entry in clientContacts) {
           final normalizedEntry = normalizeContactEntry(entry);
-          if (!contactsList.any((e) => e.key == normalizedEntry.key)) {
-            contactsList.add(normalizedEntry);
-            originalContactsList.add(normalizedEntry);
+          if (!nextContacts.any((e) => e.key == normalizedEntry.key)) {
+            nextContacts.add(normalizedEntry);
           }
         }
+        _currentPageByAssigned[assignedKey] = requestPage;
       }
+      _cacheContactsForAssigned(assignedKey, nextContacts);
+      hasReachedMax = _hasReachedMaxByAssigned[assignedKey] ?? false;
       injectDummyContactIfEmpty();
     } catch (e) {
-      if (!isRefresh) currentPage--;
+      if (!isRefresh) {
+        final previousPage = _currentPageByAssigned[assignedKey] ?? 1;
+        currentPage = previousPage;
+      }
       errorMessage = 'Failed to load contacts';
       hasError = true;
       debugPrint('Error loading contacts: $e');
       injectDummyContactIfEmpty();
     } finally {
-      isLoading = false;
-      isLoadingMore = false;
+      _refreshingAssigned.remove(assignedKey);
+      _loadingMoreAssigned.remove(assignedKey);
+      isLoading = _refreshingAssigned.isNotEmpty;
+      isLoadingMore = _loadingMoreAssigned.isNotEmpty;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         notifyListeners();
       });
@@ -344,6 +427,7 @@ class ContactProvider with ChangeNotifier {
         }
       }
 
+      _syncActiveAssignedCache();
       injectDummyContactIfEmpty();
 
       notifyListeners();
@@ -373,6 +457,7 @@ class ContactProvider with ChangeNotifier {
           originalContactsList[originalIndex] =
               MapEntry(contactEntry.key, updatedContact);
         }
+        _syncActiveAssignedCache();
         notifyListeners();
       }
     }
@@ -395,8 +480,10 @@ class ContactProvider with ChangeNotifier {
         'last_message': {
           'formatted_message_time': justNowLabel,
           '_uid': lastMessageUid,
-          'message': lastMessageText ?? contactEntry.value['last_message']?['message'],
-          'is_incoming_message': lastMessageIsIncoming ?? contactEntry.value['last_message']?['is_incoming_message'],
+          'message':
+              lastMessageText ?? contactEntry.value['last_message']?['message'],
+          'is_incoming_message': lastMessageIsIncoming ??
+              contactEntry.value['last_message']?['is_incoming_message'],
         },
         'unread_messages_count':
             (contactEntry.value['unread_messages_count'] ?? 0) + 1,
@@ -427,14 +514,17 @@ class ContactProvider with ChangeNotifier {
         'last_message': {
           'formatted_message_time': justNowLabel,
           '_uid': lastMessageUid,
-          'message': lastMessageText ?? originalEntry.value['last_message']?['message'],
-          'is_incoming_message': lastMessageIsIncoming ?? originalEntry.value['last_message']?['is_incoming_message'],
+          'message': lastMessageText ??
+              originalEntry.value['last_message']?['message'],
+          'is_incoming_message': lastMessageIsIncoming ??
+              originalEntry.value['last_message']?['is_incoming_message'],
         },
         'unread_messages_count':
             (originalEntry.value['unread_messages_count'] ?? 0) + 1,
       };
       originalContactsList.removeAt(originalContactIndex);
-      originalContactsList.insert(0, MapEntry(contactUid, updatedOriginalContact));
+      originalContactsList.insert(
+          0, MapEntry(contactUid, updatedOriginalContact));
     } else {
       final newOriginalContact = MapEntry(contactUid, {
         'last_message': {
@@ -447,6 +537,7 @@ class ContactProvider with ChangeNotifier {
       });
       originalContactsList.insert(0, newOriginalContact);
     }
+    _syncActiveAssignedCache();
     notifyListeners();
   }
 }
