@@ -672,6 +672,7 @@ import 'package:stundaa/services/call_service.dart';
 import 'package:stundaa/services/webrtc_manager.dart';
 import 'package:stundaa/screens/whatsapp/screens/calling_screen.dart';
 import 'package:stundaa/screens/whatsapp/screens/call_history_screen.dart';
+import 'package:stundaa/screens/broadcast/broadcast_list_screen.dart';
 import 'user/login.dart';
 
 class LandingPage extends StatefulWidget {
@@ -925,7 +926,7 @@ class _LandingPageState extends State<LandingPage> with WidgetsBindingObserver {
   final List<Widget> _pages = [
     const WhatsAppChat(),
     const CallHistoryScreen(),
-    const Center(child: Text("Broadcasts coming soon", style: TextStyle(color: Colors.white))),
+    const BroadcastListScreen(),
     const Settings(),
   ];
 
