@@ -17,6 +17,7 @@ import 'package:video_player/video_player.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:get/get.dart';
 import 'package:stundaa/screens/whatsapp/controller/chatbox_controller.dart';
+import 'package:stundaa/screens/whatsapp/controller/audio_controller.dart';
 
 class MessageBubble extends StatefulWidget {
   final String? message;
@@ -86,7 +87,7 @@ class _MessageBubbleState extends State<MessageBubble>
   VideoPlayerController? _videoController;
   ChewieController? _chewieController;
   final ChatboxController controller = Get.put(ChatboxController());
-  AudioPlayer? _audioPlayer;
+  GlobalAudioManager get _audioManager => Get.find<GlobalAudioManager>();
   Map<String, dynamic>? parsedData = {};
 
   @override
@@ -197,22 +198,10 @@ class _MessageBubbleState extends State<MessageBubble>
         }
       }
     } else if (widget.mediaType == 'audio' && widget.mediaLink != null) {
-      _audioPlayer = AudioPlayer();
-      try {
-        await _audioPlayer
-            ?.setAudioSource(AudioSource.uri(Uri.parse(widget.mediaLink!)));
-        if (mounted) {
-          setState(() {
-            _mediaError = false;
-          });
-        }
-      } catch (e) {
-        pr("Failed to initialize audio player: $e");
-        if (mounted) {
-          setState(() {
-            _mediaError = true;
-          });
-        }
+      if (mounted) {
+        setState(() {
+          _mediaError = false;
+        });
       }
     }
   }
@@ -328,85 +317,89 @@ class _MessageBubbleState extends State<MessageBubble>
                           ),
                         ),
                         SizedBox(height: 5),
-                        StreamBuilder<Duration>(
-                          stream: _audioPlayer?.positionStream,
-                          builder: (context, positionSnapshot) {
-                            return StreamBuilder<Duration?>(
-                              stream: _audioPlayer?.durationStream,
-                              builder: (context, durationSnapshot) {
-                                final position =
-                                    positionSnapshot.data ?? Duration.zero;
-                                final duration =
-                                    durationSnapshot.data ?? Duration.zero;
-                                return Column(
-                                  children: [
-                                    Slider(
-                                      inactiveColor: app_theme.secondary
-                                          .withValues(alpha: 0.35),
-                                      activeColor: app_theme.cyanGlow,
-                                      value: position.inSeconds.toDouble(),
-                                      min: 0,
-                                      max: duration.inSeconds.toDouble(),
-                                      onChanged: (value) {
-                                        _audioPlayer?.seek(
-                                            Duration(seconds: value.toInt()));
-                                      },
-                                    ),
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 10),
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(_formatDuration(position)),
-                                          StreamBuilder<PlayerState>(
-                                            stream:
-                                                _audioPlayer?.playerStateStream,
-                                            builder: (context, snapshot) {
-                                              final playerState = snapshot.data;
-                                              final processingState =
-                                                  playerState?.processingState;
-                                              final playing =
-                                                  playerState?.playing ?? false;
-                                              if (processingState ==
-                                                      ProcessingState.loading ||
-                                                  processingState ==
-                                                      ProcessingState
-                                                          .buffering) {
-                                                return SizedBox(
-                                                    height: 20,
-                                                    width: 20,
-                                                    child:
-                                                        const CircularProgressIndicator(
-                                                      color: app_theme.cyanGlow,
-                                                    ));
-                                              }
-
-                                              return IconButton(
-                                                icon: Icon(
-                                                  playing
-                                                      ? CupertinoIcons.pause_circle_fill
-                                                      : CupertinoIcons.play_circle_fill,
-                                                ),
-                                                onPressed: () {
-                                                  playing
-                                                      ? _audioPlayer?.pause()
-                                                      : _audioPlayer?.play();
-                                                },
-                                              );
-                                            },
-                                          ),
-                                          Text(_formatDuration(duration)),
-                                        ],
+                        Obx(() {
+                          final mgr = _audioManager;
+                          final isThisUrl = mgr.currentUrl.value == widget.mediaLink;
+                          return StreamBuilder<Duration>(
+                            stream: mgr.positionStream,
+                            builder: (context, positionSnapshot) {
+                              return StreamBuilder<Duration?>(
+                                stream: mgr.durationStream,
+                                builder: (context, durationSnapshot) {
+                                  final position = isThisUrl
+                                      ? (positionSnapshot.data ?? Duration.zero)
+                                      : Duration.zero;
+                                  final duration = isThisUrl
+                                      ? (durationSnapshot.data ?? Duration.zero)
+                                      : Duration.zero;
+                                  return Column(
+                                    children: [
+                                      Slider(
+                                        inactiveColor: app_theme.secondary
+                                            .withValues(alpha: 0.35),
+                                        activeColor: app_theme.cyanGlow,
+                                        value: position.inSeconds.toDouble(),
+                                        min: 0,
+                                        max: duration.inSeconds > 0
+                                            ? duration.inSeconds.toDouble()
+                                            : 1.0,
+                                        onChanged: (value) {
+                                          if (isThisUrl) {
+                                            mgr.seek(Duration(seconds: value.toInt()));
+                                          }
+                                        },
                                       ),
-                                    ),
-                                  ],
-                                );
-                              },
-                            );
-                          },
-                        ),
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 10),
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(_formatDuration(position)),
+                                            StreamBuilder<PlayerState>(
+                                              stream: mgr.playerStateStream,
+                                              builder: (context, snapshot) {
+                                                final playerState = snapshot.data;
+                                                final processingState =
+                                                    playerState?.processingState;
+                                                final playing = isThisUrl &&
+                                                    (playerState?.playing ?? false);
+                                                if (isThisUrl &&
+                                                    (processingState ==
+                                                            ProcessingState.loading ||
+                                                        processingState ==
+                                                            ProcessingState.buffering)) {
+                                                  return const SizedBox(
+                                                      height: 20,
+                                                      width: 20,
+                                                      child: CircularProgressIndicator(
+                                                        color: app_theme.cyanGlow,
+                                                      ));
+                                                }
+                                                return IconButton(
+                                                  icon: Icon(
+                                                    playing
+                                                        ? CupertinoIcons.pause_circle_fill
+                                                        : CupertinoIcons.play_circle_fill,
+                                                  ),
+                                                  onPressed: () {
+                                                    mgr.playUrl(widget.mediaLink!);
+                                                  },
+                                                );
+                                              },
+                                            ),
+                                            Text(_formatDuration(duration)),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              );
+                            },
+                          );
+                        }),
                       ],
                     ),
                   ),
@@ -702,7 +695,6 @@ class _MessageBubbleState extends State<MessageBubble>
     _videoController?.pause();
     _videoController?.dispose();
     _chewieController?.dispose();
-    _audioPlayer?.dispose();
     super.dispose();
   }
 

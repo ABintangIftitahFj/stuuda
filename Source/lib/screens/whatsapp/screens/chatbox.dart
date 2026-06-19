@@ -49,6 +49,7 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
   final ChatboxController controller = Get.put(ChatboxController());
   final Userinfocontroller controllerUser = Get.put(Userinfocontroller());
   final AudioController audioController = Get.put(AudioController());
+  final GlobalAudioManager _globalAudio = Get.put(GlobalAudioManager());
   List<String> videoExtensions = ['mp4', 'mov', 'webm', 'mkv'];
   List<String> imageExtensions = ['jpg', 'png', 'jpeg', 'gif'];
   List<String> documentExtensions = ['pdf', 'doc', 'docx', 'txt'];
