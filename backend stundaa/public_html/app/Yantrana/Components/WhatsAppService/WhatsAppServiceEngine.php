@@ -2362,6 +2362,7 @@ class WhatsAppServiceEngine extends BaseEngine implements WhatsAppServiceEngineI
                     'join' => true,
                 ])
             ]),
+            'directMessageDeliveryWindowExpiresAt' => $contact->lastIncomingMessage?->messaged_at?->addHours(24)?->toIso8601String(),
             'contact' => $contact,
             // 'contacts' => $contactsData['contacts'],
             'contacts' =>  $contactData,
@@ -3802,6 +3803,7 @@ class WhatsAppServiceEngine extends BaseEngine implements WhatsAppServiceEngineI
         $contactUid = null;
         $campaignUid = null;
         $messageWamid = null;
+        $messageType = null;
         // mainly for incoming message
         $messageBody = null;
         $isNewIncomingMessage = false;

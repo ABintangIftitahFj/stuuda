@@ -32,12 +32,6 @@ use App\Yantrana\Components\Auth\AuthEngine;
 use App\Yantrana\Components\User\UserEngine;
 use App\Yantrana\Support\CommonUnsecuredPostRequest;
 use App\Yantrana\Components\Auth\Requests\LoginRequest;
-use App\Yantrana\Components\User\Requests\UserLoginRequest;
-use App\Yantrana\Components\User\Requests\VerifyOtpRequest;
-use App\Yantrana\Components\User\Requests\UserSignUpRequest;
-use App\Yantrana\Components\User\Requests\UserChangeEmailRequest;
-use App\Yantrana\Components\User\Requests\UserUpdatePasswordRequest;
-use App\Yantrana\Components\User\Requests\ApiUserResetPasswordRequest;
 use App\Yantrana\Components\UserDevice\Requests\StoreDeviceTokenRequest;
 
 class ApiUserController extends BaseController
@@ -127,6 +121,21 @@ class ApiUserController extends BaseController
      * Get current vendor subscription / plan info.
      *
      *-----------------------------------------------------------------------*/
+    /**
+     * Get available subscription plans
+     *
+     * @return json
+     */
+    public function subscriptionPlans()
+    {
+        return response()->json([
+            'reaction_code' => 1,
+            'data' => [
+                'plans' => getPaidPlans(),
+            ],
+        ]);
+    }
+
     public function subscriptionInfo()
     {
         $planDetails = vendorPlanDetails('contacts');
@@ -138,10 +147,13 @@ class ApiUserController extends BaseController
 
         foreach ($featureKeys as $key) {
             $details = vendorPlanDetails($key);
+            $limit = $details['plan_feature_limit'] ?? 0;
+            // description not included in vendorPlanDetails return — read from config directly
+            $description = getFreePlan("features.$key.description") ?: $key;
             $features[] = [
                 'key'         => $key,
-                'description' => $details['feature'] ?? $key,
-                'limit'       => $details['plan_feature_limit'] ?? 0,
+                'description' => $description,
+                'limit'       => $limit,
             ];
         }
 

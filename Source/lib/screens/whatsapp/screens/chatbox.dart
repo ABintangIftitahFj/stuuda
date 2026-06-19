@@ -1,3 +1,6 @@
+import 'package:flutter_sound/flutter_sound.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:universal_io/io.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
@@ -57,6 +60,10 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
   String? _highlightedMessageUid;
   bool _isSelectionMode = false;
   final List<Map<String, dynamic>> _selectedMessages = [];
+  final FlutterSoundRecorder _recorder = FlutterSoundRecorder();
+  bool _isRecorderInitialized = false;
+  bool _isRecording = false;
+  String? _recordedFilePath;
 
   @override
   void initState() {
@@ -66,6 +73,15 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
     controller.currentUser();
     controller.setUserId(userId!);
     controllerUser.setUserId(userId!);
+    _initRecorder();
+
+    controller.addListener(() {
+      if (mounted) setState(() {});
+    });
+
+    controller.messageController.addListener(() {
+      if (mounted) setState(() {});
+    });
 
     setState(() {
       controller.getUserChat();
@@ -93,6 +109,91 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
       }
     });
     super.initState();
+  }
+
+  Future<void> _initRecorder() async {
+    final status = await Permission.microphone.request();
+    if (status != PermissionStatus.granted) {
+      return;
+    }
+    await _recorder.openRecorder();
+    _isRecorderInitialized = true;
+  }
+
+  Future<void> _startRecording() async {
+    if (!_isRecorderInitialized) return;
+    Directory tempDir = await getTemporaryDirectory();
+    _recordedFilePath = '${tempDir.path}/recorded_audio.aac';
+    await _recorder.startRecorder(toFile: _recordedFilePath);
+    setState(() {
+      _isRecording = true;
+    });
+  }
+
+  Future<void> _stopRecording() async {
+    if (!_isRecorderInitialized || !_isRecording) return;
+    await _recorder.stopRecorder();
+    setState(() {
+      _isRecording = false;
+    });
+    if (_recordedFilePath != null) {
+      _sendVoiceNote(_recordedFilePath!);
+    }
+  }
+
+  Future<void> _sendVoiceNote(String filePath) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Center(
+        child: LoadingAnimationWidget.discreteCircle(
+          color: Colors.white,
+          size: 40,
+        ),
+      ),
+    );
+
+    try {
+      final uploadTitle = await controller.prepareSendMedia('audio');
+      if (uploadTitle == null) throw 'Failed to prepare media upload';
+
+      data_transport.uploadFile(
+        filePath,
+        'media/upload-temp-media/whatsapp_audio',
+        context: context,
+        inputData: {},
+        onSuccess: (responseData) async {
+          if (responseData is Map<String, dynamic>) {
+            final d = responseData['data'];
+            if (d is Map<String, dynamic>) {
+              await controller.sendMediaN(
+                uploadingFileNameMedia: d['fileName']?.toString() ?? '',
+                caption: '',
+                data: d,
+                label: 'audio',
+                context: context,
+              );
+              if (mounted) Navigator.of(context).pop();
+            }
+          }
+        },
+        onError: (e) {
+          if (mounted) {
+            Navigator.of(context).pop();
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Upload failed: $e')),
+            );
+          }
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _forwardMessages(
@@ -348,11 +449,11 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
     }
   }
 
-  @override
-  void dispose() {
+  @void dispose() {
     controller.isLoading = false.obs;
     controller.currentPage = 2;
     Get.delete<AudioController>();
+    _recorder.closeRecorder();
     super.dispose();
   }
 
@@ -433,6 +534,54 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
             ),
             Column(
               children: [
+                Obx(() => controller.isWindowOpened.value
+                    ? Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                        color: Colors.green.withValues(alpha: 0.1),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.timer_outlined, color: Colors.green, size: 16),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Obx(() {
+                                final countdown = controller.windowCountdownText.value;
+                                return Text(
+                                  countdown.isNotEmpty
+                                      ? 'Chat window closes in $countdown'
+                                      : controller.windowExpiresText.value,
+                                  style: const TextStyle(
+                                    color: Colors.green,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                );
+                              }),
+                            ),
+                          ],
+                        ),
+                      )
+                    : Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                        color: Colors.orange.withValues(alpha: 0.1),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 16),
+                            const SizedBox(width: 8),
+                            const Expanded(
+                              child: Text(
+                                'The 24-hour window is closed. You can only send template messages.',
+                                style: TextStyle(
+                                  color: Colors.orange,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )),
                 Expanded(
                   child: _buildMessageList(formattedTime),
                 ),
@@ -664,8 +813,26 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                                   fontWeight: FontWeight.w400,
                                 ),
                               ),
-                              const SizedBox(width: 4),
-                              if (widget.contact.isServiceWindowActive)
+                              if (controller.isWindowOpened.value && controller.windowExpiresText.value.isNotEmpty) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+                                  ),
+                                  child: Text(
+                                    controller.windowExpiresText.value,
+                                    style: const TextStyle(
+                                      color: Colors.green,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ] else if (widget.contact.isServiceWindowActive) ...[
+                                const SizedBox(width: 4),
                                 Container(
                                   width: 6,
                                   height: 6,
@@ -674,6 +841,7 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                                     shape: BoxShape.circle,
                                   ),
                                 ),
+                              ],
                             ],
                           ),
                         ],
@@ -1250,6 +1418,24 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
         ),
         child: Column(
           children: [
+            if (_isRecording)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    LoadingAnimationWidget.staggeredDotsWave(
+                      color: Colors.red,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Recording...',
+                      style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -1261,16 +1447,30 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                   width: 56,
                   height: 56,
                   child: Material(
-                    color: app_theme.cyanGlow,
+                    color: _isRecording ? Colors.red : app_theme.cyanGlow,
                     shape: const CircleBorder(),
                     clipBehavior: Clip.antiAlias,
                     child: IconButton(
-                      onPressed: sendMessage,
-                      icon: const Icon(
-                        Icons.send_rounded,
-                        color: app_theme.black,
+                      onPressed: () {
+                        if (controller.messageController.text.trim().isNotEmpty) {
+                          sendMessage();
+                        } else {
+                          if (_isRecording) {
+                            _stopRecording();
+                          } else {
+                            _startRecording();
+                          }
+                        }
+                      },
+                      icon: Icon(
+                        controller.messageController.text.trim().isNotEmpty
+                            ? Icons.send_rounded
+                            : (_isRecording ? Icons.stop : Icons.mic),
+                        color: _isRecording ? Colors.white : app_theme.black,
                       ),
-                      tooltip: context.lwTranslate.send,
+                      tooltip: controller.messageController.text.trim().isNotEmpty
+                          ? context.lwTranslate.send
+                          : (_isRecording ? 'Stop Recording' : 'Record Voice Note'),
                     ),
                   ),
                 ),

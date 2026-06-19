@@ -32,6 +32,11 @@ class ChatboxController extends ChangeNotifier {
 
   var enableAiBot = false.obs;
   var replyAEnableBot = false.obs;
+  var isWindowOpened = false.obs;
+  var windowExpiresText = ''.obs;
+  var windowCountdownText = ''.obs;
+  DateTime? _windowExpiresAt;
+  Timer? _windowCountdownTimer;
   // bool _isDataCached = false;
 
   // Cache variables
@@ -187,6 +192,39 @@ class ChatboxController extends ChangeNotifier {
     _pollingTimer = null;
   }
 
+  void _startWindowCountdown(DateTime expiresAt) {
+    _windowExpiresAt = expiresAt;
+    _windowCountdownTimer?.cancel();
+    _updateWindowCountdown();
+    _windowCountdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      _updateWindowCountdown();
+    });
+  }
+
+  void _updateWindowCountdown() {
+    final expires = _windowExpiresAt;
+    if (expires == null) return;
+    final remaining = expires.difference(DateTime.now());
+    if (remaining.isNegative) {
+      windowCountdownText.value = '';
+      isWindowOpened.value = false;
+      _windowCountdownTimer?.cancel();
+      return;
+    }
+    final h = remaining.inHours;
+    final m = remaining.inMinutes % 60;
+    final s = remaining.inSeconds % 60;
+    windowCountdownText.value =
+        '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+  }
+
+  void _stopWindowCountdown() {
+    _windowCountdownTimer?.cancel();
+    _windowCountdownTimer = null;
+    _windowExpiresAt = null;
+    windowCountdownText.value = '';
+  }
+
   void toggleEmojiShowing() {
     emojiShowing.value = !emojiShowing.value;
   }
@@ -330,6 +368,13 @@ class ChatboxController extends ChangeNotifier {
     try {
       enableAiBot.value = conversation.enableAiBot;
       replyAEnableBot.value = conversation.enableReplyBot;
+      isWindowOpened.value = conversation.isDirectMessageDeliveryWindowOpened;
+      windowExpiresText.value = conversation.directMessageDeliveryWindowOpenedTillMessage;
+      if (conversation.windowExpiresAt != null && conversation.isDirectMessageDeliveryWindowOpened) {
+        _startWindowCountdown(conversation.windowExpiresAt!);
+      } else {
+        _stopWindowCountdown();
+      }
       if (replaceExisting) {
         _replaceMessages(conversation.messages);
       } else {
@@ -342,6 +387,7 @@ class ChatboxController extends ChangeNotifier {
     } finally {
       _resetLoadingStates();
     }
+  }
   }
 
   Future<void> getUserChatSend() async {
@@ -613,6 +659,7 @@ class ChatboxController extends ChangeNotifier {
   @override
   void dispose() {
     _stopPolling();
+    _stopWindowCountdown();
     currentPage = 2;
     super.dispose();
   }

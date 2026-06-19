@@ -343,6 +343,8 @@ class AppUtils {
     switch (localeCode) {
       case 'it':
         return 'Proprio adesso';
+      case 'id':
+        return 'Baru saja';
       default:
         return 'Just Now';
     }
