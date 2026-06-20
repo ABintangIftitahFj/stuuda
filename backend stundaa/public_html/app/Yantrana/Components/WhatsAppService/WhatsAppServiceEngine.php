@@ -2838,88 +2838,53 @@ class WhatsAppServiceEngine extends BaseEngine implements WhatsAppServiceEngineI
 
         $mediaData = [];
         $serviceName = getAppSettings('name');
-        if ($interactionMessageData) {
-            $interactionMessageData['body_text'] = isDemo() ? "{$serviceName} DEMO - " . $interactionMessageData['body_text'] : $interactionMessageData['body_text'];
-            $sendMessageResult = $this->whatsAppApiService->sendInteractiveMessage($contact->wa_id, $interactionMessageData, $contact->vendors__id, [
-                'business_scope_user_id' => $businessScopeUserId
-            ]);
-        } elseif ($isMediaMessage) {
-            /* $fileUrl = $fileName = $fileOriginalName = null;
-            $rawUploadData = [];
-            $caption = $request->caption ?? '';
-            $mediaType = $request->media_type ?? '';
-            $mediaUploadedId = null;
-            $isNewMediaId = false;
-            if ($mediaMessageData) {
-                $fileName = $mediaMessageData['file_name'];
-                $fileUrl = $mediaMessageData['media_link'];
-                $fileOriginalName = $mediaMessageData['file_name'];
-                $caption = $mediaMessageData['caption'];
-                $mediaType = $mediaMessageData['header_type'];
-                // check if media id is available and not expired
-                if (
-                    isset($mediaMessageData['media_id'])
-                    and $mediaMessageData['media_id']
-                    and isset($mediaMessageData['media_id_expiry_at'])
-                    and Carbon::parse($mediaMessageData['media_id_expiry_at'])->isFuture()
-                ) {
-                    $mediaUploadedId = $mediaMessageData['media_id'];
+        $exceptionMessage = null;
+        try {
+            if ($interactionMessageData) {
+                $interactionMessageData['body_text'] = isDemo() ? "{$serviceName} DEMO - " . $interactionMessageData['body_text'] : $interactionMessageData['body_text'];
+                $sendMessageResult = $this->whatsAppApiService->sendInteractiveMessage($contact->wa_id, $interactionMessageData, $contact->vendors__id, [
+                    'business_scope_user_id' => $businessScopeUserId
+                ]);
+            } elseif ($isMediaMessage) {
+                $mediaData = $this->processMediaData($mediaMessageData, $request);
+                // if media data process failed then return with error message
+                if(!isset($mediaData['link']) or !isset($mediaData['type'])) {
+                    return $this->engineFailedResponse([], __tr('Failed to process media data, please try again.'));
                 }
-            } elseif (!isValidUrl($request->media_url)) {
-                $rawUploadData = json_decode($request->raw_upload_data, true);
-
-                if ($request->is_recorded_audio) {
-                    $isProcessed = $this->mediaEngine->whatsappMediaUploadProcess(['filepond' => $request->uploaded_media_file_name], 'whatsapp_' . $mediaType);
-                } else {
-                    $isProcessed = $this->mediaEngine->whatsappMediaUploadProcess(['filepond' => $request->uploaded_media_file_name], 'whatsapp_' . $mediaType);
-                }
-
-                if ($isProcessed->failed()) {
-                    return $isProcessed;
-                }
-                $fileUrl = $isProcessed->data('path');
-                $fileName = $isProcessed->data('fileName');
-                $fileOriginalName = Arr::get($rawUploadData, 'original_filename');
-                $mediaUploadedId = $this->whatsAppApiService->uploadMedia($isProcessed->data('filePath'), $isProcessed->data('fileMimeType'));
-                $isNewMediaId = true;
+                $sendMessageResult = $this->whatsAppApiService->sendMediaMessage($contact->wa_id, $mediaData['type'], $mediaData['link'], (isDemo() ? "{$serviceName} DEMO - " . $mediaData['caption'] : '' . $mediaData['caption']), $mediaData['original_filename'], $vendorId, [
+                    'business_scope_user_id' => $businessScopeUserId
+                ]);
             } else {
-                $fileName = $request->file_name;
-                $fileUrl = $request->media_url;
-                $fileOriginalName = $fileName;
-            } */
-            $mediaData = $this->processMediaData($mediaMessageData, $request);
-            // if media data process failed then return with error message
-            if(!isset($mediaData['link']) or !isset($mediaData['type'])) {
-                return $this->engineFailedResponse([], __tr('Failed to process media data, please try again.'));
+                $sendMessageResult = $this->whatsAppApiService->sendMessage($contact->wa_id, (isDemo() ? "`{$serviceName} DEMO`\n\r\n\r " . $messageBody : '' . $messageBody), $vendorId, [
+                    'repliedToMessageWamid' => $options['messageWamid'],
+                    'business_scope_user_id' => $businessScopeUserId
+                ]);
             }
-            $sendMessageResult = $this->whatsAppApiService->sendMediaMessage($contact->wa_id, $mediaData['type'], $mediaData['link'], (isDemo() ? "{$serviceName} DEMO - " . $mediaData['caption'] : '' . $mediaData['caption']), $mediaData['original_filename'], $vendorId, [
-                'business_scope_user_id' => $businessScopeUserId
-            ]);
-            /*  $mediaData = [
-                'type' => $mediaType,
-                'link' => $fileUrl,
-                'media_id' => $mediaUploadedId ?? null,
-                'media_id_expiry_at' => $isNewMediaId ? now()->addDays(29) : ($mediaMessageData['media_id_expiry_at'] ?? null), // media id expiry time
-                'caption' => $caption,
-                'mime_type' => Arr::get($rawUploadData, 'fileMimeType'),
-                'file_name' => $fileName,
-                'original_filename' => $fileOriginalName,
-            ]; */
-        } else {
-            $sendMessageResult = $this->whatsAppApiService->sendMessage($contact->wa_id, (isDemo() ? "`{$serviceName} DEMO`\n\r\n\r " . $messageBody : '' . $messageBody), $vendorId, [
-                'repliedToMessageWamid' => $options['messageWamid'],
-                'business_scope_user_id' => $businessScopeUserId
-            ]);
+        } catch (\Exception $e) {
+            $sendMessageResult = null;
+            $exceptionMessage = $e->getMessage();
+            if ($e instanceof \Illuminate\Http\Client\RequestException) {
+                $responseBody = $e->response->json();
+                $exceptionMessage = Arr::get($responseBody, 'error.error_user_msg') 
+                    ?: (Arr::get($responseBody, 'error.message') 
+                    ?: $e->getMessage());
+            }
         }
         $messageWamid = Arr::get($sendMessageResult, 'messages.0.id');
         if (! $messageWamid) {
             if ($initializeLogMessage) {
                 $initializeLogMessage->status =  'failed';
+                $__data = $initializeLogMessage->__data ?? [];
+                $__data['error_message'] = $exceptionMessage ?? __tr('Failed to send message');
+                $initializeLogMessage->__data = $__data;
                 $initializeLogMessage->save();
+                updateClientModels([
+                    'whatsappMessageLogs' => $this->contactChatData($contact->_id)->data('whatsappMessageLogs'),
+                ], 'prepend');
             }
             return $this->engineFailedResponse([
                 'contact' => $contact,
-            ], __tr('Failed to send message'));
+            ], $exceptionMessage ?? __tr('Failed to send message'));
         }
         if ($initializeLogMessage) {
             $initializeLogMessage->wamid =  $messageWamid;

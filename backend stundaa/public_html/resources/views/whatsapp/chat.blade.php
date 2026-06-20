@@ -273,11 +273,12 @@
                                                                             </button>
                                                                             <template
                                                                                 x-if="whatsappMessageLogItem.replied_to_whatsapp_message_logs__uid">
-                                                                                <a href="#"
-                                                                                    @click.prevent="lwScrollTo('#'+whatsappMessageLogItem.replied_to_whatsapp_message_logs__uid)"
-                                                                                    class="badge d-flex text-muted justify-content-end"><i
-                                                                                        class="fa fa-link"></i> {{
-                                                                                    __tr('Replied to') }}</a>
+                                                                                <div class="lw-replied-to-quote-container p-2 mb-2 border-left border-success"
+                                                                                    style="background: rgba(0, 0, 0, 0.05); border-left-width: 4px !important; border-radius: 4px; font-size: 12px; cursor: pointer; text-align: left;"
+                                                                                    @click="lwScrollTo('#'+whatsappMessageLogItem.replied_to_whatsapp_message_logs__uid, true)">
+                                                                                    <div class="font-weight-bold text-success" x-text="(whatsappMessageLogItem.replied_to_message || whatsappMessageLogItem.repliedToMessage) ? ((whatsappMessageLogItem.replied_to_message || whatsappMessageLogItem.repliedToMessage).is_incoming_message ? contact.full_name : '{{ __tr('You') }}') : '{{ __tr('Message') }}'"></div>
+                                                                                    <div class="text-truncate text-muted" x-html="(whatsappMessageLogItem.replied_to_message || whatsappMessageLogItem.repliedToMessage) ? ((whatsappMessageLogItem.replied_to_message || whatsappMessageLogItem.repliedToMessage).message || '{{ __tr('Media/Template') }}') : '{{ __tr('Media/Template') }}'"></div>
+                                                                                </div>
                                                                             </template>
                                                                             <template
                                                                                 x-if="whatsappMessageLogItem.template_message">
@@ -311,6 +312,15 @@
                                                                             <button type="button" @click.stop="replyingToMessage = whatsappMessageLogItem; if (window.lwMessengerEmojiArea) { window.lwMessengerEmojiArea[0].emojioneArea.focus(); }" class="lw-reply-hover-btn" title="{{ __tr('Reply') }}">
                                                                                 <i class="fa fa-reply"></i>
                                                                             </button>
+                                                                            <template
+                                                                                x-if="whatsappMessageLogItem.replied_to_whatsapp_message_logs__uid">
+                                                                                <div class="lw-replied-to-quote-container p-2 mb-2 border-left border-success"
+                                                                                    style="background: rgba(0, 0, 0, 0.05); border-left-width: 4px !important; border-radius: 4px; font-size: 12px; cursor: pointer; text-align: left;"
+                                                                                    @click="lwScrollTo('#'+whatsappMessageLogItem.replied_to_whatsapp_message_logs__uid, true)">
+                                                                                    <div class="font-weight-bold text-success" x-text="(whatsappMessageLogItem.replied_to_message || whatsappMessageLogItem.repliedToMessage) ? ((whatsappMessageLogItem.replied_to_message || whatsappMessageLogItem.repliedToMessage).is_incoming_message ? contact.full_name : '{{ __tr('You') }}') : '{{ __tr('You') }}'"></div>
+                                                                                    <div class="text-truncate text-muted" x-html="(whatsappMessageLogItem.replied_to_message || whatsappMessageLogItem.repliedToMessage) ? ((whatsappMessageLogItem.replied_to_message || whatsappMessageLogItem.repliedToMessage).message || '{{ __tr('Media/Template') }}') : '{{ __tr('Media/Template') }}'"></div>
+                                                                                </div>
+                                                                            </template>
                                                                             <template
                                                                                 x-if="whatsappMessageLogItem.__data?.options?.bot_reply">
                                                                                 <span class="badge d-flex text-muted justify-content-end"

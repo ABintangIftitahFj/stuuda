@@ -212,7 +212,7 @@ class WhatsAppMessageLogRepository extends BaseRepository implements WhatsAppMes
      */
     public function allMessagesOfContact(int $contactId)
     {
-        return $this->primaryModel::where([
+        return $this->primaryModel::with('repliedToMessage')->where([
             'contacts__id' => $contactId,
         ])->latest()->orderBy('messaged_at', 'desc')->simplePaginate(16);
     }

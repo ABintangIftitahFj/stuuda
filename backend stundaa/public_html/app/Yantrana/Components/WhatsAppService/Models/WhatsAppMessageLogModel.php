@@ -28,6 +28,7 @@ namespace App\Yantrana\Components\WhatsAppService\Models;
 
 use App\Yantrana\Base\BaseModel;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Arr;
 
 class WhatsAppMessageLogModel extends BaseModel
@@ -121,6 +122,9 @@ class WhatsAppMessageLogModel extends BaseModel
             get: function (mixed $value, array $attributes) {
                 $dataArray = json_decode($attributes['__data'], true);
                 $errorMessage = Arr::get($dataArray, 'webhook_responses.failed.0.changes.0.value.statuses.0.errors.0.error_data.details') ?: Arr::get($dataArray, 'webhook_responses.incoming.0.changes.0.value.messages.0.errors.0.error_data.details');
+                if (!$errorMessage) {
+                    $errorMessage = Arr::get($dataArray, 'error_message') ?: '';
+                }
                 // for incoming message, if message type is not unsupported, then we can ignore delivered, read, played status as they are not error and can be due to delay in webhook or something else. If message type is unsupported, then we will show message type in error for better understanding of issue.
                 if (Arr::get($dataArray, 'webhook_responses.incoming.0.changes.0.value.messages.0.type') != 'unsupported') {
                     if (in_array($attributes['status'], [
@@ -138,5 +142,13 @@ class WhatsAppMessageLogModel extends BaseModel
                 return $errorMessage;
             }
         );
+    }
+
+    /**
+     * Get the replied to message
+     */
+    public function repliedToMessage(): BelongsTo
+    {
+        return $this->belongsTo(WhatsAppMessageLogModel::class, 'replied_to_whatsapp_message_logs__uid', '_uid');
     }
 }
