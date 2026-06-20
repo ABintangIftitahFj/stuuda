@@ -4293,6 +4293,44 @@ class WhatsAppServiceEngine extends BaseEngine implements WhatsAppServiceEngineI
     }
 
     /**
+     * Get Extended Health Data
+     *
+     * @param int|null $vendorId
+     * @return array
+     */
+    public function getExtendedHealthData($vendorId = null)
+    {
+        $vendorId = $vendorId ?: getVendorId();
+        $vendorUid = getPublicVendorUid($vendorId);
+        
+        $failedJobsCount = \DB::table('failed_jobs')->count();
+        $pendingMediaDownloads = \App\Yantrana\Components\WhatsAppService\Models\WhatsAppMessageLogModel::where('__data->media_values->is_download_pending', true)
+            ->where('vendors__id', $vendorId)
+            ->count();
+        
+        $webhookVerifiedAt = getVendorSettings('webhook_verified_at', null, null, $vendorId);
+        $webhookMessagesVerifiedAt = getVendorSettings('webhook_messages_field_verified_at', null, null, $vendorId);
+        
+        $planDetails = vendorPlanDetails('contacts', $this->contactRepository->countIt([
+            'vendors__id' => $vendorId
+        ]), $vendorId);
+
+        $whatsAppBusinessAccountId = getVendorSettings('whatsapp_business_account_id', null, null, $vendorId);
+        
+        return [
+            'whatsapp_business_account_id' => $whatsAppBusinessAccountId,
+            'failed_jobs_count' => $failedJobsCount,
+            'pending_media_downloads' => $pendingMediaDownloads,
+            'webhook_verified_at' => $webhookVerifiedAt ? formatDateTime($webhookVerifiedAt) : null,
+            'webhook_messages_verified_at' => $webhookMessagesVerifiedAt ? formatDateTime($webhookMessagesVerifiedAt) : null,
+            'contact_limit' => $planDetails->plan_feature_limit,
+            'current_contacts' => $planDetails->current_usage,
+            'plan_title' => $planDetails->planTitle(),
+            'is_token_expired' => getVendorSettings('whatsapp_access_token_expired', null, null, $vendorId) ? true : false,
+        ];
+    }
+
+    /**
      * Update the unread count via client model updates
      *
      * @return EngineResponse
@@ -4305,6 +4343,7 @@ class WhatsAppServiceEngine extends BaseEngine implements WhatsAppServiceEngineI
             return $this->engineFailedResponse([], __tr('WhatsApp Business Account ID not found'));
         }
         $now = now();
+        $extendedHealthData = $this->getExtendedHealthData();
         $healthData = [
             'whatsapp_health_status_data' => [
                 $whatsAppBusinessAccountId => [
@@ -4312,6 +4351,7 @@ class WhatsAppServiceEngine extends BaseEngine implements WhatsAppServiceEngineI
                     'health_status_updated_at' => $now,
                     'health_status_updated_at_formatted' => formatDateTime($now),
                     'health_data' => $healthStatus,
+                    'extended_health_data' => $extendedHealthData,
                 ]
             ]
         ];
