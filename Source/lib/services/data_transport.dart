@@ -294,7 +294,9 @@ void _thenProcessing(
       thenCallbackAction(responseData);
     }
 
-    final int reaction = responseData['reaction'] as int? ?? 0;
+    final int reaction =
+        (responseData['reaction'] ?? responseData['reaction_code']) as int? ??
+            0;
 
     if (reaction == 1 || reaction == 21) {
       if (successCallbackAction != null) {

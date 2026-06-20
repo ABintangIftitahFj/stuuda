@@ -1,3 +1,5 @@
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -345,7 +347,8 @@ class AppLocalizationsId extends AppLocalizations {
       'Tambahkan nomor ponsel Anda dengan kode negara (tanpa 0 atau +) sehingga Anda dapat melihat kontak Anda di panel/kotak obrolan dll.';
 
   @override
-  String get youCanAddComma => 'Anda dapat menambahkan beberapa nomor yang dipisahkan koma';
+  String get youCanAddComma =>
+      'Anda dapat menambahkan beberapa nomor yang dipisahkan koma';
 
   @override
   String get addYourMobileNumberTest =>

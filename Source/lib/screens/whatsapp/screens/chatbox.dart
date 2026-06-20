@@ -49,7 +49,6 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
   final ChatboxController controller = Get.put(ChatboxController());
   final Userinfocontroller controllerUser = Get.put(Userinfocontroller());
   final AudioController audioController = Get.put(AudioController());
-  final GlobalAudioManager _globalAudio = Get.put(GlobalAudioManager());
   List<String> videoExtensions = ['mp4', 'mov', 'webm', 'mkv'];
   List<String> imageExtensions = ['jpg', 'png', 'jpeg', 'gif'];
   List<String> documentExtensions = ['pdf', 'doc', 'docx', 'txt'];
@@ -143,8 +142,9 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
   }
 
   Future<void> _sendVoiceNote(String filePath) async {
+    final ctx = context;
     showDialog(
-      context: context,
+      context: ctx,
       barrierDismissible: false,
       builder: (context) => Center(
         child: LoadingAnimationWidget.discreteCircle(
@@ -157,11 +157,12 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
     try {
       final uploadTitle = await controller.prepareSendMedia('audio');
       if (uploadTitle == null) throw 'Failed to prepare media upload';
+      if (!mounted) return;
 
       data_transport.uploadFile(
         filePath,
         'media/upload-temp-media/whatsapp_audio',
-        context: context,
+        context: ctx,
         inputData: {},
         onSuccess: (responseData) async {
           if (responseData is Map<String, dynamic>) {
@@ -172,17 +173,17 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                 caption: '',
                 data: d,
                 label: 'audio',
-                context: context,
+                context: ctx,
                 isRecordedAudio: true,
               );
-              if (mounted) Navigator.of(context).pop();
+              if (mounted) Navigator.of(ctx).pop();
             }
           }
         },
         onError: (e) {
           if (mounted) {
-            Navigator.of(context).pop();
-            ScaffoldMessenger.of(context).showSnackBar(
+            Navigator.of(ctx).pop();
+            ScaffoldMessenger.of(ctx).showSnackBar(
               SnackBar(content: Text('Upload failed: $e')),
             );
           }
@@ -190,8 +191,8 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
       );
     } catch (e) {
       if (mounted) {
-        Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
+        Navigator.of(ctx).pop();
+        ScaffoldMessenger.of(ctx).showSnackBar(
           SnackBar(content: Text('Error: $e')),
         );
       }

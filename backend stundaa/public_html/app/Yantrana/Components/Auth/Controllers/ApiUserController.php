@@ -147,6 +147,7 @@ class ApiUserController extends BaseController
     public function subscriptionPlans()
     {
         return response()->json([
+            'reaction' => 1,
             'reaction_code' => 1,
             'data' => [
                 'plans' => getPaidPlans(),
@@ -176,6 +177,7 @@ class ApiUserController extends BaseController
         }
 
         return response()->json([
+            'reaction' => 1,
             'reaction_code' => 1,
             'data' => [
                 'plan_title'      => $planDetails['plan_title'] ?? 'Free',

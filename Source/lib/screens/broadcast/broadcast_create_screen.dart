@@ -238,7 +238,7 @@ class _BroadcastCreateScreenState extends State<BroadcastCreateScreen> {
           )),
     ];
     return DropdownButtonFormField<String>(
-      value: _selectedGroup,
+      initialValue: _selectedGroup,
       items: items,
       onChanged: (v) => setState(() => _selectedGroup = v),
       dropdownColor: app_theme.surfaceElevated,
