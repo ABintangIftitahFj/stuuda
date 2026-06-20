@@ -262,7 +262,15 @@
                                                                     :id="whatsappMessageLogItem._uid">
                                                                     <template
                                                                         x-if="whatsappMessageLogItem.is_incoming_message && !whatsappMessageLogItem.is_system_message">
-                                                                        <div class="message received">
+                                                                        <div class="message received"
+                                                                            x-data="{ touchStartX: 0, touchDiffX: 0 }"
+                                                                            @touchstart="touchStartX = $event.touches[0].clientX"
+                                                                            @touchmove="touchDiffX = $event.touches[0].clientX - touchStartX; if (touchDiffX > 0 && touchDiffX < 80) { $el.style.transform = 'translateX(' + touchDiffX + 'px)' }"
+                                                                            @touchend="if (touchDiffX > 40) { replyingToMessage = whatsappMessageLogItem; if (window.lwMessengerEmojiArea) { window.lwMessengerEmojiArea[0].emojioneArea.focus(); } } $el.style.transform = ''; touchStartX = 0; touchDiffX = 0;"
+                                                                            @dblclick="replyingToMessage = whatsappMessageLogItem; if (window.lwMessengerEmojiArea) { window.lwMessengerEmojiArea[0].emojioneArea.focus(); }">
+                                                                            <button type="button" @click.stop="replyingToMessage = whatsappMessageLogItem; if (window.lwMessengerEmojiArea) { window.lwMessengerEmojiArea[0].emojioneArea.focus(); }" class="lw-reply-hover-btn" title="{{ __tr('Reply') }}">
+                                                                                <i class="fa fa-reply"></i>
+                                                                            </button>
                                                                             <template
                                                                                 x-if="whatsappMessageLogItem.replied_to_whatsapp_message_logs__uid">
                                                                                 <a href="#"
@@ -294,7 +302,15 @@
                                                                     </template>
                                                                     <template
                                                                         x-if="!whatsappMessageLogItem.is_incoming_message && !whatsappMessageLogItem.is_system_message">
-                                                                        <div class="message sent">
+                                                                        <div class="message sent"
+                                                                            x-data="{ touchStartX: 0, touchDiffX: 0 }"
+                                                                            @touchstart="touchStartX = $event.touches[0].clientX"
+                                                                            @touchmove="touchDiffX = $event.touches[0].clientX - touchStartX; if (touchDiffX < 0 && touchDiffX > -80) { $el.style.transform = 'translateX(' + touchDiffX + 'px)' }"
+                                                                            @touchend="if (touchDiffX < -40) { replyingToMessage = whatsappMessageLogItem; if (window.lwMessengerEmojiArea) { window.lwMessengerEmojiArea[0].emojioneArea.focus(); } } $el.style.transform = ''; touchStartX = 0; touchDiffX = 0;"
+                                                                            @dblclick="replyingToMessage = whatsappMessageLogItem; if (window.lwMessengerEmojiArea) { window.lwMessengerEmojiArea[0].emojioneArea.focus(); }">
+                                                                            <button type="button" @click.stop="replyingToMessage = whatsappMessageLogItem; if (window.lwMessengerEmojiArea) { window.lwMessengerEmojiArea[0].emojioneArea.focus(); }" class="lw-reply-hover-btn" title="{{ __tr('Reply') }}">
+                                                                                <i class="fa fa-reply"></i>
+                                                                            </button>
                                                                             <template
                                                                                 x-if="whatsappMessageLogItem.__data?.options?.bot_reply">
                                                                                 <span class="badge d-flex text-muted justify-content-end"
@@ -390,10 +406,22 @@
                                                         </div>
                                                     </template>
                                                     <span x-show="contact && (_.isEmpty(contact?.wa_blocked_at))">
+                                                    <template x-if="replyingToMessage">
+                                                        <div class="lw-reply-preview-container d-flex justify-content-between align-items-center p-2 mb-2 border-left border-success" style="background: rgba(42, 172, 50, 0.08); border-left-width: 4px !important; border-radius: 4px; z-index: 5; position: relative;">
+                                                            <div class="overflow-hidden mr-2" style="font-size: 13px;">
+                                                                <div class="font-weight-bold text-success" x-text="replyingToMessage.is_incoming_message ? contact.full_name : '{{ __tr('You') }}'"></div>
+                                                                <div class="text-truncate text-muted" x-html="replyingToMessage.message || '{{ __tr('Media/Template') }}'"></div>
+                                                            </div>
+                                                            <button type="button" class="btn btn-link btn-sm text-muted p-0" @click="replyingToMessage = null">
+                                                                <i class="fa fa-times-circle" style="font-size: 16px;"></i>
+                                                            </button>
+                                                        </div>
+                                                    </template>
                                                     <x-lw.form data-event-stream-update="true" data-callback="appFuncs.resetForm" id="whatsAppMessengerForm"
                                                         class="conversation-compose" data-show-processing="false"
                                                         :action="route('vendor.chat_message.send.process')">
                                                         <input type="hidden" name="contact_uid" x-bind:value="contact?._uid">
+                                                        <input type="hidden" name="quoted_message_wamid" x-bind:value="replyingToMessage ? replyingToMessage.wamid : ''">
                                                         {{-- emoji following blank tag as removing it may break input layout
                                                         --}}
                                                         <div class="emoji">
@@ -719,6 +747,7 @@
             currentlyAssignedUserUid:'{{ $currentlyAssignedUserUid }}',
             isAiChatBotEnabled: "{{ $isAiChatBotEnabled }}",
             isReplyBotEnable: "{{ $isReplyBotEnable }}",
+            replyingToMessage: null,
             search: "",
             search_labels: "",
             contacts: {},
@@ -769,6 +798,60 @@
 </script>
 @push('head')
     {!! __yesset('dist/emojionearea/emojionearea.min.css', true) !!}
+    <style>
+        /* Style for message items to allow absolute positioning of reply button */
+        .lw-chat-message-item {
+            position: relative;
+        }
+
+        /* Base style for the hover reply button */
+        .lw-reply-hover-btn {
+            display: none;
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--lw-dark-brown-color, #ffffff);
+            border: 1px solid var(--lw-border-color, #ddd);
+            color: var(--lw-white-color, #333);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+            z-index: 10;
+            outline: none;
+            padding: 0;
+            transition: all 0.2s ease;
+        }
+        .lw-reply-hover-btn:hover {
+            background: var(--lw-white-color, #ffffff);
+            color: var(--lw-primary-color, #008a7c);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        /* Position reply button on the right of received messages */
+        .message.received .lw-reply-hover-btn {
+            right: -40px;
+        }
+
+        /* Position reply button on the left of sent messages */
+        .message.sent .lw-reply-hover-btn {
+            left: -40px;
+        }
+
+        /* Show reply button on hover of the message container */
+        .message:hover .lw-reply-hover-btn {
+            display: flex;
+        }
+
+        /* Slide animation during swipe */
+        .message {
+            transition: transform 0.15s ease-out;
+        }
+    </style>
 @endpush
 @push('appScripts')
 {!! __yesset('dist/emojionearea/emojionearea.min.js', true) !!}
@@ -860,6 +943,18 @@
         }
     }
 }); 
+    // Override resetForm to clear Alpine state
+    var originalResetForm = window.appFuncs.resetForm;
+    window.appFuncs.resetForm = function(responseData, callbackParams) {
+        originalResetForm(responseData, callbackParams);
+        var alpineEl = document.querySelector('[x-data="initialMessageData"]');
+        if (alpineEl && window.Alpine) {
+            var data = window.Alpine.$data(alpineEl);
+            if (data) {
+                data.replyingToMessage = null;
+            }
+        }
+    };
 })(jQuery);
 </script>
 @endpush
