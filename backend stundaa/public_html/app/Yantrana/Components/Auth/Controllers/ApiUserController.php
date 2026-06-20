@@ -30,7 +30,7 @@ use App\Yantrana\Base\BaseController;
 use App\Yantrana\Support\CommonPostRequest;
 use App\Yantrana\Components\Auth\AuthEngine;
 use App\Yantrana\Components\User\UserEngine;
-use App\Yantrana\Support\CommonUnsecuredPostRequest;
+use App\Yantrana\Support\CommonClearPostRequest;
 use App\Yantrana\Components\Auth\Requests\LoginRequest;
 use App\Yantrana\Components\UserDevice\Requests\StoreDeviceTokenRequest;
 
@@ -103,6 +103,24 @@ class ApiUserController extends BaseController
     {
         $processReaction = $this->authEngine->processLogout($request);
 
+        return $this->processResponse($processReaction, [], [], true);
+    }
+
+    /**
+     * Mobile: send OTP email for password reset.
+     */
+    public function requestNewPassword(CommonClearPostRequest $request)
+    {
+        $processReaction = $this->authEngine->processRequestNewPassword($request->all());
+        return $this->processResponse($processReaction, [], [], true);
+    }
+
+    /**
+     * Mobile: verify OTP and reset password.
+     */
+    public function processResetPasswordWithOtp(CommonPostRequest $request)
+    {
+        $processReaction = $this->authEngine->processResetPasswordWithOtp($request->all());
         return $this->processResponse($processReaction, [], [], true);
     }
 

@@ -119,6 +119,7 @@ class ChatRepository {
     Map<String, dynamic>? rawUploadData,
     String? caption,
     String quotedMessageWamid = '',
+    bool isRecordedAudio = false,
   }) async {
     final payload = <String, dynamic>{
       'contact_uid': contactUid,
@@ -128,6 +129,9 @@ class ChatRepository {
       'raw_upload_data': jsonEncode(rawUploadData),
       'caption': caption,
     };
+    if (isRecordedAudio) {
+      payload['is_recorded_audio'] = 'true';
+    }
     if (quotedMessageWamid.isNotEmpty) {
       payload['quoted_message_wamid'] = quotedMessageWamid;
     }

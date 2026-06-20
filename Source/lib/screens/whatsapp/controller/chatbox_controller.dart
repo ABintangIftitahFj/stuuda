@@ -388,7 +388,6 @@ class ChatboxController extends ChangeNotifier {
       _resetLoadingStates();
     }
   }
-  }
 
   Future<void> getUserChatSend() async {
     if (userId == null || userId!.isEmpty) {
@@ -440,6 +439,7 @@ class ChatboxController extends ChangeNotifier {
     Map<String, dynamic>? data,
     required BuildContext context,
     String? label,
+    bool isRecordedAudio = false,
   }) async {
     try {
       await _chatRepository.sendMedia(
@@ -451,6 +451,7 @@ class ChatboxController extends ChangeNotifier {
         caption: caption,
         quotedMessageWamid:
             selectedReplyMessage.value?['wamid']?.toString() ?? '',
+        isRecordedAudio: isRecordedAudio,
       );
       clearReplyMessage();
       _player.play(AssetSource('audio/sendsound.mp3'));

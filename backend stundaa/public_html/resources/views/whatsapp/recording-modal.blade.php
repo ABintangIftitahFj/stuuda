@@ -105,7 +105,6 @@
     const stopCounter = () => {
         clearInterval(timerInterval);
         counterEl.style.display = "none";
-        sendAudioButton.disabled = false;
     };
     
     const record = async () => {
@@ -151,8 +150,6 @@
             
             playbackContainer.style.display = 'block';
             downloadLink.style.display = 'inline-block';
-            statusMessage.textContent = '{{ __tr("Recording finished. Ready for playback or send.") }}';
-            sendAudioButton.disabled = false;
         } catch (e) {
             console.error(e);
             statusMessage.textContent = '{{ __tr("Error encoding audio") }}';
@@ -166,6 +163,8 @@
     }
 
     function uploadAudioFile(audioFile) {
+      statusMessage.textContent = '{{ __tr("Uploading audio... please wait.") }}';
+      sendAudioButton.disabled = true;
       const formData = new FormData();
       const fileName = `recording-${new Date().toISOString()}.mp3`;
       formData.append('filepond', audioFile, fileName);
@@ -176,10 +175,21 @@
       })
       .then(res => res.json())
       .then(responseData => {
-        const uploadedFileName = document.getElementById('lwUploadedFileName');
-        uploadedFileName.value = responseData.data.fileName;
+        if (responseData && responseData.data && responseData.data.fileName) {
+            const uploadedFileName = document.getElementById('lwUploadedFileName');
+            uploadedFileName.value = responseData.data.fileName;
+            statusMessage.textContent = '{{ __tr("Audio uploaded. Ready to send.") }}';
+            sendAudioButton.disabled = false;
+        } else {
+            statusMessage.textContent = '{{ __tr("Upload failed. Please record again.") }}';
+            sendAudioButton.disabled = true;
+        }
       })
-      .catch(err => console.error(err));
+      .catch(err => {
+        console.error(err);
+        statusMessage.textContent = '{{ __tr("Upload error. Please try again.") }}';
+        sendAudioButton.disabled = true;
+      });
     };
 
     $('#lwSendRecording').on('hidden.bs.modal', async function (hiddenEvent) {

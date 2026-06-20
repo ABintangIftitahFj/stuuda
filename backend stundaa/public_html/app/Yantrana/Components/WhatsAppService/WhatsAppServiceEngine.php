@@ -1108,7 +1108,13 @@ class WhatsAppServiceEngine extends BaseEngine implements WhatsAppServiceEngineI
                     if(!isset($mediaData['link']) or !isset($mediaData['type'])) {
                         return $this->engineFailedResponse([], __tr('Failed to process media data, please try again.'));
                     }
-                    return $this->whatsAppApiService->sendMediaMessage($poolRequestItem['phoneNumber'], $mediaData['type'], $mediaData['link'], ($isDemo ? "{$serviceName} DEMO - " . $mediaData['caption'] : '' . $mediaData['caption']), $mediaData['original_filename'], $poolRequestItem['vendorId'], [
+                    $mediaLinkParam = $mediaData['link'];
+                    if (!empty($mediaData['media_id'])) {
+                        $mediaLinkParam = [
+                            'id' => $mediaData['media_id']
+                        ];
+                    }
+                    return $this->whatsAppApiService->sendMediaMessage($poolRequestItem['phoneNumber'], $mediaData['type'], $mediaLinkParam, ($isDemo ? "{$serviceName} DEMO - " . $mediaData['caption'] : '' . $mediaData['caption']), $mediaData['original_filename'], $poolRequestItem['vendorId'], [
                         'pool' => $pool,
                         'queueUid' => $poolRequestItem['queueUid'],
                         'business_scope_user_id' => $businessScopeUserId
@@ -2851,7 +2857,13 @@ class WhatsAppServiceEngine extends BaseEngine implements WhatsAppServiceEngineI
                 if(!isset($mediaData['link']) or !isset($mediaData['type'])) {
                     return $this->engineFailedResponse([], __tr('Failed to process media data, please try again.'));
                 }
-                $sendMessageResult = $this->whatsAppApiService->sendMediaMessage($contact->wa_id, $mediaData['type'], $mediaData['link'], (isDemo() ? "{$serviceName} DEMO - " . $mediaData['caption'] : '' . $mediaData['caption']), $mediaData['original_filename'], $vendorId, [
+                $mediaLinkParam = $mediaData['link'];
+                if (!empty($mediaData['media_id'])) {
+                    $mediaLinkParam = [
+                        'id' => $mediaData['media_id']
+                    ];
+                }
+                $sendMessageResult = $this->whatsAppApiService->sendMediaMessage($contact->wa_id, $mediaData['type'], $mediaLinkParam, (isDemo() ? "{$serviceName} DEMO - " . $mediaData['caption'] : '' . $mediaData['caption']), $mediaData['original_filename'], $vendorId, [
                     'business_scope_user_id' => $businessScopeUserId
                 ]);
             } else {

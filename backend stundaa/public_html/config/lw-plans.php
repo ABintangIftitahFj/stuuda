@@ -48,7 +48,7 @@ return [
     'paid' => [ // do not change this key
         'plan_1' => [
             'id' => 'plan_1',
-            'enabled' => false,
+            'enabled' => true,
             'popular' => true, // set plan as popular
             'title' => 'Standard',
             'trial_days' => 0,
@@ -93,13 +93,13 @@ return [
             'charges' => [
                 'monthly' => [
                     'title' => __tr('monthly'),
-                    'enabled' => false,
+                    'enabled' => true,
                     'price_id' => '',
                     'charge' => 10,
                 ],
                 'yearly' => [
                     'title' => __tr('yearly'),
-                    'enabled' => false,
+                    'enabled' => true,
                     'price_id' => '',
                     'charge' => 100,
                 ],
@@ -107,7 +107,7 @@ return [
         ],
         'plan_2' => [
             'id' => 'plan_2',
-            'enabled' => false,
+            'enabled' => true,
             'popular' => false, // set plan as popular
             'title' => 'Premium',
             'trial_days' => 0,
@@ -152,13 +152,13 @@ return [
             'charges' => [
                 'monthly' => [
                     'title' => __tr('monthly'),
-                    'enabled' => false,
+                    'enabled' => true,
                     'price_id' => '',
                     'charge' => 20,
                 ],
                 'yearly' => [
                     'title' => __tr('yearly'),
-                    'enabled' => false,
+                    'enabled' => true,
                     'price_id' => '',
                     'charge' => 199,
                 ],
@@ -166,7 +166,7 @@ return [
         ],
         'plan_3' => [
             'id' => 'plan_3',
-            'enabled' => false,
+            'enabled' => true,
             'popular' => false, // set plan as popular
             'title' => 'Ultimate',
             'trial_days' => 0,
@@ -211,13 +211,13 @@ return [
             'charges' => [
                 'monthly' => [
                     'title' => __tr('monthly'),
-                    'enabled' => false,
+                    'enabled' => true,
                     'price_id' => '',
                     'charge' => 30,
                 ],
                 'yearly' => [
                     'title' => __tr('yearly'),
-                    'enabled' => false,
+                    'enabled' => true,
                     'price_id' => '',
                     'charge' => 299,
                 ],

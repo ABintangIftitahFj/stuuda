@@ -33,6 +33,8 @@ use App\Yantrana\Base\BaseMailer;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
 use Laravel\Socialite\Facades\Socialite;
 use Illuminate\Auth\Events\PasswordReset;
@@ -256,6 +258,65 @@ class AuthEngine extends BaseEngine implements AuthEngineInterface
             'status' => $status,
             'show_message' => true,
         ], __tr('Failed to reset password'));
+    }
+
+    /**
+     * Mobile: send OTP to email for password reset.
+     */
+    public function processRequestNewPassword(array $inputData)
+    {
+        $email = $inputData['email'] ?? '';
+        $user = \App\Models\User::where('email', $email)->first();
+        if (!$user) {
+            return $this->engineFailedResponse(['show_message' => true], __tr('No account found with this email address'));
+        }
+        $otp = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
+        Cache::put('pwd_reset_otp_' . md5($email), $otp, now()->addMinutes(10));
+        try {
+            Mail::raw(__tr('Your password reset OTP is: :otp (valid 10 minutes)', ['otp' => $otp]), function ($msg) use ($email) {
+                $msg->to($email)->subject(__tr('Password Reset OTP'));
+            });
+        } catch (\Exception $e) {
+            return $this->engineFailedResponse(['show_message' => true], __tr('Failed to send OTP email'));
+        }
+        return $this->engineSuccessResponse([
+            'mail_sent' => true,
+            'message' => __tr('OTP sent to your email address'),
+        ], __tr('OTP sent to your email address'));
+    }
+
+    /**
+     * Mobile: verify OTP and reset password.
+     */
+    public function processResetPasswordWithOtp(array $inputData)
+    {
+        $email = $inputData['email'] ?? '';
+        $otp = $inputData['otp'] ?? '';
+        $password = $inputData['password'] ?? '';
+        $passwordConfirmation = $inputData['password_confirmation'] ?? '';
+        if ($password !== $passwordConfirmation) {
+            return $this->engineFailedResponse(['show_message' => true], __tr('Password confirmation does not match'));
+        }
+        if (strlen($password) < 6) {
+            return $this->engineFailedResponse(['show_message' => true], __tr('Password must be at least 6 characters'));
+        }
+        $cacheKey = 'pwd_reset_otp_' . md5($email);
+        $storedOtp = Cache::get($cacheKey);
+        if (!$storedOtp || $storedOtp !== $otp) {
+            return $this->engineFailedResponse(['show_message' => true], __tr('Invalid or expired OTP'));
+        }
+        $user = \App\Models\User::where('email', $email)->first();
+        if (!$user) {
+            return $this->engineFailedResponse(['show_message' => true], __tr('No account found with this email address'));
+        }
+        $user->forceFill([
+            'password' => Hash::make($password),
+            'remember_token' => Str::random(60),
+        ])->save();
+        Cache::forget($cacheKey);
+        return $this->engineSuccessResponse([
+            'password_changed' => true,
+        ], __tr('Password reset successfully'));
     }
 
     /**

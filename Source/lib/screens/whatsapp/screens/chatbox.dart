@@ -173,6 +173,7 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                 data: d,
                 label: 'audio',
                 context: context,
+                isRecordedAudio: true,
               );
               if (mounted) Navigator.of(context).pop();
             }
@@ -450,7 +451,8 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
     }
   }
 
-  @void dispose() {
+  @override
+  void dispose() {
     controller.isLoading = false.obs;
     controller.currentPage = 2;
     Get.delete<AudioController>();

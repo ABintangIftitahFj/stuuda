@@ -1,5 +1,5 @@
 import 'package:audioplayers/audioplayers.dart';
-import 'package:just_audio/just_audio.dart';
+import 'package:just_audio/just_audio.dart' as ja;
 import 'package:get/get.dart';
 
 /// Single global just_audio player for all network audio bubbles.
@@ -7,9 +7,9 @@ import 'package:get/get.dart';
 class GlobalAudioManager extends GetxController {
   static GlobalAudioManager get to => Get.find<GlobalAudioManager>();
 
-  final AudioPlayer _player = AudioPlayer();
+  final ja.AudioPlayer _player = ja.AudioPlayer();
   final currentUrl = RxnString();
-  late final Stream<PlayerState> playerStateStream;
+  late final Stream<ja.PlayerState> playerStateStream;
   late final Stream<Duration> positionStream;
   late final Stream<Duration?> durationStream;
 
@@ -40,7 +40,7 @@ class GlobalAudioManager extends GetxController {
     }
     await _player.stop();
     currentUrl.value = url;
-    await _player.setAudioSource(AudioSource.uri(Uri.parse(url)));
+    await _player.setAudioSource(ja.AudioSource.uri(Uri.parse(url)));
     await _player.play();
   }
 

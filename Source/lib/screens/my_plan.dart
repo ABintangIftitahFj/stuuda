@@ -17,6 +17,7 @@ class MyPlanScreen extends StatefulWidget {
 class _MyPlanScreenState extends State<MyPlanScreen> {
   final SubscriptionRepository _repo = SubscriptionRepository();
   SubscriptionInfo? _info;
+  Map<String, dynamic> _availablePlans = {};
   bool _loading = true;
 
   @override
@@ -27,7 +28,14 @@ class _MyPlanScreenState extends State<MyPlanScreen> {
 
   Future<void> _load() async {
     final info = await _repo.fetchSubscriptionInfo();
-    if (mounted) setState(() { _info = info; _loading = false; });
+    final plans = await _repo.fetchSubscriptionPlans();
+    if (mounted) {
+      setState(() {
+        _info = info;
+        _availablePlans = plans;
+        _loading = false;
+      });
+    }
   }
 
   Future<void> _openUpgradeEmail() async {
@@ -62,7 +70,9 @@ class _MyPlanScreenState extends State<MyPlanScreen> {
   Widget _buildBody() {
     final info = _info;
     if (info == null) {
-      return const Center(child: Text('Failed to load plan info', style: TextStyle(color: app_theme.secondary)));
+      return const Center(
+          child: Text('Failed to load plan info',
+              style: TextStyle(color: app_theme.secondary)));
     }
 
     return SingleChildScrollView(
@@ -74,7 +84,83 @@ class _MyPlanScreenState extends State<MyPlanScreen> {
           const SizedBox(height: 24),
           _buildFeaturesSection(info),
           const SizedBox(height: 32),
+          if (_availablePlans.isNotEmpty) ...[
+            const Text(
+              'Available Plans',
+              style: TextStyle(
+                color: app_theme.lavenderWhite,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ..._availablePlans.entries.map((entry) => _buildAvailablePlanCard(entry.key, entry.value)),
+            const SizedBox(height: 24),
+          ],
           if (info.isFree) _buildUpgradeButton(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAvailablePlanCard(String id, dynamic plan) {
+    if (plan is! Map) return const SizedBox.shrink();
+    final title = plan['title']?.toString() ?? id;
+    final charges = plan['charges'] as Map? ?? {};
+    String priceText = 'Contact Us';
+    if (charges.isNotEmpty) {
+      final firstCharge = charges.values.first;
+      if (firstCharge is Map) {
+        priceText = '${firstCharge['title'] ?? ''}';
+      }
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: app_theme.surfaceElevated,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: app_theme.lavenderWhite,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  priceText,
+                  style: const TextStyle(
+                    color: app_theme.cyanGlow,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ElevatedButton(
+            onPressed: _openUpgradeEmail,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: app_theme.primary.withValues(alpha: 0.1),
+              foregroundColor: app_theme.primary,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text('Upgrade'),
+          ),
         ],
       ),
     );

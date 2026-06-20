@@ -193,6 +193,18 @@ Route::group(['middleware' => 'guest'], function () {
             AuthController::class,
             'verifyTwoFactorAuthentication'
         ])->name('api.two_factor_authentication.verify');
+
+        // Mobile forgot password - send OTP
+        Route::post('/request-new-password', [
+            ApiUserController::class,
+            'requestNewPassword'
+        ])->name('api.user.request_new_password.process');
+
+        // Mobile forgot password - verify OTP & reset
+        Route::post('/process-reset-password', [
+            ApiUserController::class,
+            'processResetPasswordWithOtp'
+        ])->name('api.user.process_reset_password.process');
     });
 });
 // vendor authenticated routes
@@ -233,6 +245,11 @@ Route::group([
         ApiUserController::class,
         'subscriptionInfo',
     ])->name('api.vendor.subscription.info');
+
+    Route::get('/vendor/subscription-plans', [
+        ApiUserController::class,
+        'subscriptionPlans',
+    ])->name('api.vendor.subscription.plans');
 
     Route::group([
         'prefix' => 'vendor/',
