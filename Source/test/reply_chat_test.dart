@@ -115,6 +115,24 @@ void main() {
     );
   });
 
+  test('active contact helpers track the opened chat only', () {
+    final controller = ChatboxController();
+    addTearDown(controller.dispose);
+
+    controller.setUserId('contact-123');
+
+    expect(controller.isActiveContact('contact-123'), isTrue);
+    expect(controller.isActiveContact('contact-456'), isFalse);
+
+    controller.clearActiveContact('contact-456');
+    expect(controller.userId, 'contact-123');
+    expect(controller.isActiveContact('contact-123'), isTrue);
+
+    controller.clearActiveContact('contact-123');
+    expect(controller.userId, 'contact-123');
+    expect(controller.isActiveContact('contact-123'), isFalse);
+  });
+
   testWidgets('sendTextMessage sends quoted wamid for reply payload',
       (tester) async {
     final controller = ChatboxController();

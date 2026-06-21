@@ -497,6 +497,10 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
 
   @override
   void dispose() {
+    final activeUserId = userId;
+    if (activeUserId != null && activeUserId.isNotEmpty) {
+      controller.clearActiveContact(activeUserId);
+    }
     controller.isLoading = false.obs;
     controller.currentPage = 2;
     Get.delete<AudioController>();
@@ -623,11 +627,29 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                             const SizedBox(width: 8),
                             const Expanded(
                               child: Text(
-                                'The 24-hour window is closed. You can only send template messages.',
+                                'Jendela 24 jam sudah tertutup. Kirim template message untuk mengaktifkan chat kembali.',
                                 style: TextStyle(
                                   color: Colors.orange,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () =>
+                                  _showTemplateSelectorDialog(context),
+                              style: TextButton.styleFrom(
+                                foregroundColor: app_theme.warning,
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 8),
+                                minimumSize: const Size(0, 32),
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              child: const Text(
+                                'Pilih Template',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
                             ),

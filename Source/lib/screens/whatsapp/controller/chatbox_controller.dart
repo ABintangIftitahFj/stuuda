@@ -162,13 +162,55 @@ class ChatboxController extends ChangeNotifier {
   }
 
   Timer? _pollingTimer;
+  String? _activeContactUid;
 
   void setUserId(String id) {
     if (userId != id) {
       userId = id;
+      _activeContactUid = id;
+      holduser.clear();
+      messageModels.clear();
+      currentPage = 2;
+      hasMoreMessages.value = true;
+      selectedReplyMessage.value = null;
       _loadReplyCache(); // load persisted reply cache for this contact
       _startPolling();
+    } else {
+      _activeContactUid = id;
     }
+  }
+
+  bool isActiveContact(dynamic contactUid) {
+    final activeContactUid = _activeContactUid;
+    if (activeContactUid == null || activeContactUid.isEmpty) {
+      return false;
+    }
+    return contactUid?.toString() == activeContactUid;
+  }
+
+  void clearActiveContact(String contactUid) {
+    if (_activeContactUid != contactUid) {
+      return;
+    }
+    _activeContactUid = null;
+    _stopPolling();
+  }
+
+  Future<void> refreshActiveChatForContact(dynamic contactUid) async {
+    if (!isActiveContact(contactUid)) {
+      return;
+    }
+
+    final activeContactUid = _activeContactUid;
+    await getUserChatSend();
+
+    // Webhook broadcasts can arrive before the latest log is available to the
+    // chat endpoint. Retry once shortly after the event while the chat is open.
+    Future.delayed(const Duration(seconds: 2), () {
+      if (activeContactUid != null && isActiveContact(activeContactUid)) {
+        getUserChatSend();
+      }
+    });
   }
 
   bool _pusherConnected = false;
@@ -567,12 +609,11 @@ class ChatboxController extends ChangeNotifier {
     }
 
     final trimmedMessage = messageBody.trim();
-    
+
     final wamid = selectedReplyMessage.value?['wamid']?.toString() ?? '';
     final uid = selectedReplyMessage.value?['uid']?.toString() ?? '';
-    final isValidWamid = wamid.isNotEmpty &&
-        !wamid.startsWith('local-') &&
-        wamid != uid;
+    final isValidWamid =
+        wamid.isNotEmpty && !wamid.startsWith('local-') && wamid != uid;
     final effectiveQuotedId = isValidWamid ? wamid : '';
     final quotedMessageId = wamid.isNotEmpty ? wamid : uid;
     pr('[REPLY] wamid=$wamid uid=$uid isValid=$isValidWamid effectiveId=$effectiveQuotedId');
@@ -698,17 +739,18 @@ class ChatboxController extends ChangeNotifier {
     if (index != -1) {
       final oldMap = holduser[index];
       final newMap = sentMessage.toMap();
-      
+
       // Preserve local reply metadata if server returned it empty
       final oldRepliedId = oldMap['repliedToMessageUid']?.toString() ?? '';
       final newRepliedId = newMap['repliedToMessageUid']?.toString() ?? '';
       if (newRepliedId.isEmpty && oldRepliedId.isNotEmpty) {
         newMap['repliedToMessageUid'] = oldRepliedId;
-        if (newMap['repliedToMessage'] == null && oldMap['repliedToMessage'] != null) {
+        if (newMap['repliedToMessage'] == null &&
+            oldMap['repliedToMessage'] != null) {
           newMap['repliedToMessage'] = oldMap['repliedToMessage'];
         }
       }
-      
+
       holduser[index] = newMap;
       notifyListeners();
     }

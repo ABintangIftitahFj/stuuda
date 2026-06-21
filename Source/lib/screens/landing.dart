@@ -836,13 +836,15 @@ class _LandingPageState extends State<LandingPage> with WidgetsBindingObserver {
               snackPosition: SnackPosition.TOP,
               backgroundColor: app_theme.surface.withValues(alpha: 0.9),
               colorText: Colors.white,
-              icon: const Icon(CupertinoIcons.chat_bubble_2_fill, color: app_theme.primary),
+              icon: const Icon(CupertinoIcons.chat_bubble_2_fill,
+                  color: app_theme.primary),
               duration: const Duration(seconds: 4),
               margin: const EdgeInsets.all(12),
               borderRadius: 12,
               onTap: (_) {
                 // Find the contact in the list and navigate to chatbox
-                final contactEntry = contactProvider.contactsList.firstWhereOrNull((e) => e.value['_uid'] == contactUid);
+                final contactEntry = contactProvider.contactsList
+                    .firstWhereOrNull((e) => e.value['_uid'] == contactUid);
                 if (contactEntry != null) {
                   final contactSummary = ContactSummary.fromEntry(contactEntry);
                   Get.to(() => ChatboxScreen(contact: contactSummary));
@@ -850,13 +852,23 @@ class _LandingPageState extends State<LandingPage> with WidgetsBindingObserver {
               },
             );
           }
-          controller.getUserChatSend();
+          await controller.refreshActiveChatForContact(contactUid);
         } else if (eventName == 'VendorChannelBroadcast' &&
             eventData['message_status'] == "sent") {
-          controller.getUserChatSend();
+          final contactUid = eventData['contactUid'];
+          if (contactUid == null) {
+            await controller.getUserChatSend();
+          } else {
+            await controller.refreshActiveChatForContact(contactUid);
+          }
         } else if (eventName == 'VendorChannelBroadcast' &&
             eventData['message_status'] == "read") {
-          controller.getUserChatSend();
+          final contactUid = eventData['contactUid'];
+          if (contactUid == null) {
+            await controller.getUserChatSend();
+          } else {
+            await controller.refreshActiveChatForContact(contactUid);
+          }
         }
       },
       onSubscriptionError: (error) {},
@@ -1056,5 +1068,4 @@ class _LandingPageState extends State<LandingPage> with WidgetsBindingObserver {
       },
     );
   }
-
 }
