@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:stundaa/services/utils.dart';
 
 class CallHistoryScreen extends StatelessWidget {
   const CallHistoryScreen({super.key});
@@ -12,15 +13,15 @@ class CallHistoryScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
+            const Icon(
               CupertinoIcons.phone_circle,
               size: 80,
               color: Colors.white24,
             ),
             const SizedBox(height: 16),
-            const Text(
-              'No recent calls',
-              style: TextStyle(
+            Text(
+              context.lwTranslate.noRecentCalls,
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -28,8 +29,8 @@ class CallHistoryScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Your call history will appear here',
-              style: TextStyle(
+              context.lwTranslate.callHistoryWillAppear,
+              style: const TextStyle(
                 color: Colors.white54,
                 fontSize: 14,
               ),

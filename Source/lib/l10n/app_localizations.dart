@@ -1137,6 +1137,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Submitted Successfully'**
   String get submittedSuccessfully;
+
+  /// No description provided for @navChat.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat'**
+  String get navChat;
+
+  /// No description provided for @navCall.
+  ///
+  /// In en, this message translates to:
+  /// **'Call'**
+  String get navCall;
+
+  /// No description provided for @navBroadcast.
+  ///
+  /// In en, this message translates to:
+  /// **'Broadcast'**
+  String get navBroadcast;
+
+  /// No description provided for @navSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get navSettings;
+
+  /// No description provided for @callsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Calls'**
+  String get callsTitle;
+
+  /// No description provided for @broadcastsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Broadcasts'**
+  String get broadcastsTitle;
+
+  /// No description provided for @noRecentCalls.
+  ///
+  /// In en, this message translates to:
+  /// **'No recent calls'**
+  String get noRecentCalls;
+
+  /// No description provided for @callHistoryWillAppear.
+  ///
+  /// In en, this message translates to:
+  /// **'Your call history will appear here'**
+  String get callHistoryWillAppear;
 }
 
 class _AppLocalizationsDelegate

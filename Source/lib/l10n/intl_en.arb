@@ -209,5 +209,13 @@
 
   "enableAIbot": "Enable AI Bot",
   "enableReplybot": "Enable Reply Bot",
-  "submittedSuccessfully": "Submitted Successfully"
+  "submittedSuccessfully": "Submitted Successfully",
+  "navChat": "Chat",
+  "navCall": "Call",
+  "navBroadcast": "Broadcast",
+  "navSettings": "Settings",
+  "callsTitle": "Calls",
+  "broadcastsTitle": "Broadcasts",
+  "noRecentCalls": "No recent calls",
+  "callHistoryWillAppear": "Your call history will appear here"
   }

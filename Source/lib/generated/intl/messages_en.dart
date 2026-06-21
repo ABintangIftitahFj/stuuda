@@ -3,13 +3,14 @@
 // messages from the main program should be duplicated here with the same
 // function name.
 
-// ignore_for_file: strict_top_level_inference
 // Ignore issues from commonly used lints in this file.
 // ignore_for_file:unnecessary_brace_in_string_interps, unnecessary_new
 // ignore_for_file:prefer_single_quotes,comment_references, directives_ordering
 // ignore_for_file:annotate_overrides,prefer_generic_function_type_aliases
 // ignore_for_file:unused_import, file_names, avoid_escaping_inner_quotes
 // ignore_for_file:unnecessary_string_interpolations, unnecessary_string_escapes
+// ignore_for_file:strict_top_level_inference
+
 
 import 'package:intl/intl.dart';
 import 'package:intl/message_lookup_by_library.dart';
@@ -69,6 +70,11 @@ class MessageLookup extends MessageLookupByLibrary {
     "backgroundColor": MessageLookupByLibrary.simpleMessage("Background Color"),
     "bgColor": MessageLookupByLibrary.simpleMessage("BG Color"),
     "birthday": MessageLookupByLibrary.simpleMessage("Birthday"),
+    "broadcastsTitle": MessageLookupByLibrary.simpleMessage("Broadcasts"),
+    "callHistoryWillAppear": MessageLookupByLibrary.simpleMessage(
+      "Your call history will appear here",
+    ),
+    "callsTitle": MessageLookupByLibrary.simpleMessage("Calls"),
     "cancel": MessageLookupByLibrary.simpleMessage("Cancel"),
     "captionText": MessageLookupByLibrary.simpleMessage("Caption/Text"),
     "changeEmail": MessageLookupByLibrary.simpleMessage("Change Email"),
@@ -179,11 +185,16 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "myProfile": MessageLookupByLibrary.simpleMessage("My Profile"),
     "name": MessageLookupByLibrary.simpleMessage("Name"),
+    "navBroadcast": MessageLookupByLibrary.simpleMessage("Broadcast"),
+    "navCall": MessageLookupByLibrary.simpleMessage("Call"),
+    "navChat": MessageLookupByLibrary.simpleMessage("Chat"),
+    "navSettings": MessageLookupByLibrary.simpleMessage("Settings"),
     "newEmail": MessageLookupByLibrary.simpleMessage("New Email"),
     "newLabel": MessageLookupByLibrary.simpleMessage("New Label"),
     "newPassword": MessageLookupByLibrary.simpleMessage("New Password"),
     "no": MessageLookupByLibrary.simpleMessage("No"),
     "noRecent": MessageLookupByLibrary.simpleMessage("No Recent"),
+    "noRecentCalls": MessageLookupByLibrary.simpleMessage("No recent calls"),
     "noResultFound": MessageLookupByLibrary.simpleMessage("no result found"),
     "notNow": MessageLookupByLibrary.simpleMessage("Not Now"),
     "notes": MessageLookupByLibrary.simpleMessage("Notes"),
@@ -260,6 +271,9 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "subject": MessageLookupByLibrary.simpleMessage("Subject"),
     "submit": MessageLookupByLibrary.simpleMessage("Submit"),
+    "submittedSuccessfully": MessageLookupByLibrary.simpleMessage(
+      "Submitted Successfully",
+    ),
     "teamMember": MessageLookupByLibrary.simpleMessage("Team Member"),
     "tempVideo": MessageLookupByLibrary.simpleMessage("Temp Video"),
     "termsAndCond": MessageLookupByLibrary.simpleMessage(

@@ -883,18 +883,18 @@ class _LandingPageState extends State<LandingPage> with WidgetsBindingObserver {
             );
             break;
           case 1:
-            tabTitle = const Text(
-              'Calls',
-              style: TextStyle(
+            tabTitle = Text(
+              context.lwTranslate.callsTitle,
+              style: const TextStyle(
                   color: Colors.white,
                   fontSize: 18,
                   fontWeight: FontWeight.bold),
             );
             break;
           case 2:
-            tabTitle = const Text(
-              'Broadcasts',
-              style: TextStyle(
+            tabTitle = Text(
+              context.lwTranslate.broadcastsTitle,
+              style: const TextStyle(
                   color: Colors.white,
                   fontSize: 18,
                   fontWeight: FontWeight.bold),
@@ -1033,22 +1033,22 @@ class _LandingPageState extends State<LandingPage> with WidgetsBindingObserver {
             unselectedItemColor: Colors.white54,
             currentIndex: _currentIndex,
             onTap: onTabTapped,
-            items: const [
+            items: [
               BottomNavigationBarItem(
-                icon: Icon(CupertinoIcons.chat_bubble_2_fill),
-                label: 'Chat',
+                icon: const Icon(CupertinoIcons.chat_bubble_2_fill),
+                label: context.lwTranslate.navChat,
               ),
               BottomNavigationBarItem(
-                icon: Icon(CupertinoIcons.phone_fill),
-                label: 'Call',
+                icon: const Icon(CupertinoIcons.phone_fill),
+                label: context.lwTranslate.navCall,
               ),
               BottomNavigationBarItem(
-                icon: Icon(CupertinoIcons.speaker_2_fill),
-                label: 'Broadcast',
+                icon: const Icon(CupertinoIcons.speaker_2_fill),
+                label: context.lwTranslate.navBroadcast,
               ),
               BottomNavigationBarItem(
-                icon: Icon(CupertinoIcons.settings),
-                label: 'Settings',
+                icon: const Icon(CupertinoIcons.settings),
+                label: context.lwTranslate.navSettings,
               ),
             ],
           ),

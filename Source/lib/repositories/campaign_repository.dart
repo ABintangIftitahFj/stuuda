@@ -128,7 +128,7 @@ class CampaignRepository {
   Future<bool> scheduleCampaign(Map<String, dynamic> data) async {
     final completer = Completer<bool>();
     data_transport.post(
-      'campaign/schedule',
+      'vendor/whatsapp/campaign/schedule',
       inputData: data,
       onSuccess: (_) {
         if (!completer.isCompleted) completer.complete(true);

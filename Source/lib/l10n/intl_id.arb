@@ -187,5 +187,14 @@
 
   "enableAIbot": "Aktifkan AI Bot",
   "enableReplybot": "Aktifkan Reply Bot",
-  "submittedSuccessfully": "Berhasil Dikirim"
+  "submittedSuccessfully": "Berhasil Dikirim",
+  "navChat": "Chat",
+  "navCall": "Panggilan",
+  "navBroadcast": "Siaran",
+  "navSettings": "Pengaturan",
+  "callsTitle": "Panggilan",
+  "broadcastsTitle": "Siaran",
+  "noRecentCalls": "Tidak ada panggilan baru",
+  "callHistoryWillAppear": "Riwayat panggilan Anda akan muncul di sini"
 }
+

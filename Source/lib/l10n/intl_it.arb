@@ -201,5 +201,13 @@
 
   "enableAIbot": "Abilita il bot AI",
   "enableReplybot": "Abilita il bot di risposta",
-  "submittedSuccessfully": "Inviato con successo"
-  }
+  "submittedSuccessfully": "Inviato con successo",
+  "navChat": "Chat",
+  "navCall": "Chiamata",
+  "navBroadcast": "Trasmissione",
+  "navSettings": "Impostazioni",
+  "callsTitle": "Chiamate",
+  "broadcastsTitle": "Trasmissioni",
+  "noRecentCalls": "Nessuna chiamata recente",
+  "callHistoryWillAppear": "La cronologia delle chiamate apparirà qui"
+}

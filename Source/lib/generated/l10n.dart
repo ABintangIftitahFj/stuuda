@@ -28,10 +28,9 @@ class S {
   static const AppLocalizationDelegate delegate = AppLocalizationDelegate();
 
   static Future<S> load(Locale locale) {
-    final name =
-        (locale.countryCode?.isEmpty ?? false)
-            ? locale.languageCode
-            : locale.toString();
+    final name = (locale.countryCode?.isEmpty ?? false)
+        ? locale.languageCode
+        : locale.toString();
     final localeName = Intl.canonicalizedLocale(name);
     return initializeMessages(localeName).then((_) {
       Intl.defaultLocale = localeName;
@@ -1429,6 +1428,71 @@ class S {
       args: [],
     );
   }
+
+  /// `Submitted Successfully`
+  String get submittedSuccessfully {
+    return Intl.message(
+      'Submitted Successfully',
+      name: 'submittedSuccessfully',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Chat`
+  String get navChat {
+    return Intl.message('Chat', name: 'navChat', desc: '', args: []);
+  }
+
+  /// `Call`
+  String get navCall {
+    return Intl.message('Call', name: 'navCall', desc: '', args: []);
+  }
+
+  /// `Broadcast`
+  String get navBroadcast {
+    return Intl.message('Broadcast', name: 'navBroadcast', desc: '', args: []);
+  }
+
+  /// `Settings`
+  String get navSettings {
+    return Intl.message('Settings', name: 'navSettings', desc: '', args: []);
+  }
+
+  /// `Calls`
+  String get callsTitle {
+    return Intl.message('Calls', name: 'callsTitle', desc: '', args: []);
+  }
+
+  /// `Broadcasts`
+  String get broadcastsTitle {
+    return Intl.message(
+      'Broadcasts',
+      name: 'broadcastsTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `No recent calls`
+  String get noRecentCalls {
+    return Intl.message(
+      'No recent calls',
+      name: 'noRecentCalls',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Your call history will appear here`
+  String get callHistoryWillAppear {
+    return Intl.message(
+      'Your call history will appear here',
+      name: 'callHistoryWillAppear',
+      desc: '',
+      args: [],
+    );
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<S> {
@@ -1437,6 +1501,7 @@ class AppLocalizationDelegate extends LocalizationsDelegate<S> {
   List<Locale> get supportedLocales {
     return const <Locale>[
       Locale.fromSubtags(languageCode: 'en'),
+      Locale.fromSubtags(languageCode: 'id'),
       Locale.fromSubtags(languageCode: 'it'),
     ];
   }

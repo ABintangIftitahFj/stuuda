@@ -536,4 +536,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get submittedSuccessfully => 'Submitted Successfully';
+
+  @override
+  String get navChat => 'Chat';
+
+  @override
+  String get navCall => 'Call';
+
+  @override
+  String get navBroadcast => 'Broadcast';
+
+  @override
+  String get navSettings => 'Settings';
+
+  @override
+  String get callsTitle => 'Calls';
+
+  @override
+  String get broadcastsTitle => 'Broadcasts';
+
+  @override
+  String get noRecentCalls => 'No recent calls';
+
+  @override
+  String get callHistoryWillAppear => 'Your call history will appear here';
 }

@@ -537,4 +537,29 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get submittedSuccessfully => 'Berhasil Dikirim';
+
+  @override
+  String get navChat => 'Chat';
+
+  @override
+  String get navCall => 'Panggilan';
+
+  @override
+  String get navBroadcast => 'Siaran';
+
+  @override
+  String get navSettings => 'Pengaturan';
+
+  @override
+  String get callsTitle => 'Panggilan';
+
+  @override
+  String get broadcastsTitle => 'Siaran';
+
+  @override
+  String get noRecentCalls => 'Tidak ada panggilan baru';
+
+  @override
+  String get callHistoryWillAppear =>
+      'Riwayat panggilan Anda akan muncul di sini';
 }

@@ -3,13 +3,14 @@
 // messages from the main program should be duplicated here with the same
 // function name.
 
-// ignore_for_file: strict_top_level_inference
 // Ignore issues from commonly used lints in this file.
 // ignore_for_file:unnecessary_brace_in_string_interps, unnecessary_new
 // ignore_for_file:prefer_single_quotes,comment_references, directives_ordering
 // ignore_for_file:annotate_overrides,prefer_generic_function_type_aliases
 // ignore_for_file:unused_import, file_names, avoid_escaping_inner_quotes
 // ignore_for_file:unnecessary_string_interpolations, unnecessary_string_escapes
+// ignore_for_file:strict_top_level_inference
+
 
 import 'package:intl/intl.dart';
 import 'package:intl/message_lookup_by_library.dart';
@@ -75,6 +76,11 @@ class MessageLookup extends MessageLookupByLibrary {
     "backgroundColor": MessageLookupByLibrary.simpleMessage("Colore di sfondo"),
     "bgColor": MessageLookupByLibrary.simpleMessage("Colore BG"),
     "birthday": MessageLookupByLibrary.simpleMessage("Compleanno"),
+    "broadcastsTitle": MessageLookupByLibrary.simpleMessage("Trasmissioni"),
+    "callHistoryWillAppear": MessageLookupByLibrary.simpleMessage(
+      "La cronologia delle chiamate apparirà qui",
+    ),
+    "callsTitle": MessageLookupByLibrary.simpleMessage("Chiamate"),
     "cancel": MessageLookupByLibrary.simpleMessage("Cancella"),
     "captionText": MessageLookupByLibrary.simpleMessage("Didascalia/Testo"),
     "changeEmail": MessageLookupByLibrary.simpleMessage("Cambia email"),
@@ -199,11 +205,18 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "myProfile": MessageLookupByLibrary.simpleMessage("Il mio profilo"),
     "name": MessageLookupByLibrary.simpleMessage("Nome"),
+    "navBroadcast": MessageLookupByLibrary.simpleMessage("Trasmissione"),
+    "navCall": MessageLookupByLibrary.simpleMessage("Chiamata"),
+    "navChat": MessageLookupByLibrary.simpleMessage("Chat"),
+    "navSettings": MessageLookupByLibrary.simpleMessage("Impostazioni"),
     "newEmail": MessageLookupByLibrary.simpleMessage("Nuova email"),
     "newLabel": MessageLookupByLibrary.simpleMessage("Nuova etichetta"),
     "newPassword": MessageLookupByLibrary.simpleMessage("Nuova password"),
     "no": MessageLookupByLibrary.simpleMessage("No"),
     "noRecent": MessageLookupByLibrary.simpleMessage("Nessun recente"),
+    "noRecentCalls": MessageLookupByLibrary.simpleMessage(
+      "Nessuna chiamata recente",
+    ),
     "noResultFound": MessageLookupByLibrary.simpleMessage(
       "nessun risultato trovato",
     ),
@@ -292,6 +305,9 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "subject": MessageLookupByLibrary.simpleMessage("Soggetto"),
     "submit": MessageLookupByLibrary.simpleMessage("Invia"),
+    "submittedSuccessfully": MessageLookupByLibrary.simpleMessage(
+      "Inviato con successo",
+    ),
     "teamMember": MessageLookupByLibrary.simpleMessage("Membro del team"),
     "tempVideo": MessageLookupByLibrary.simpleMessage("Video temporaneo"),
     "termsAndCond": MessageLookupByLibrary.simpleMessage(

@@ -545,4 +545,29 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get submittedSuccessfully => 'Inviato con successo';
+
+  @override
+  String get navChat => 'Chat';
+
+  @override
+  String get navCall => 'Chiamata';
+
+  @override
+  String get navBroadcast => 'Trasmissione';
+
+  @override
+  String get navSettings => 'Impostazioni';
+
+  @override
+  String get callsTitle => 'Chiamate';
+
+  @override
+  String get broadcastsTitle => 'Trasmissioni';
+
+  @override
+  String get noRecentCalls => 'Nessuna chiamata recente';
+
+  @override
+  String get callHistoryWillAppear =>
+      'La cronologia delle chiamate apparirà qui';
 }
