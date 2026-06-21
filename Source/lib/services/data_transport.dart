@@ -2,6 +2,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http_parser/http_parser.dart';
 import 'package:stundaa/services/input_security.dart';
 import 'package:fbroadcast/fbroadcast.dart';
@@ -142,6 +143,12 @@ void uploadFile(String filename, String url,
     OnCallbackType? onFailed}) async {
   String fileName = p.basename(filename);
   String fileExtension = p.extension(fileName).toLowerCase();
+
+  if (filename.startsWith('blob:') || filename.startsWith('http')) {
+    fileExtension = '.aac';
+    fileName = 'recorded_audio.aac';
+  }
+
   Map<String, String> mimeTypes = {
     '.jpg': 'image/jpeg',
     '.jpeg': 'image/jpeg',
@@ -169,8 +176,27 @@ void uploadFile(String filename, String url,
       request.fields.addAll(inputData);
     }
 
-    request.files.add(await http.MultipartFile.fromPath('filepond', filename,
-        contentType: MediaType.parse(mimeType)));
+    if (kIsWeb || filename.startsWith('blob:') || filename.startsWith('http')) {
+      try {
+        final response = await http.get(Uri.parse(filename));
+        final bytes = response.bodyBytes;
+        request.files.add(http.MultipartFile.fromBytes(
+          'filepond',
+          bytes,
+          filename: fileName,
+          contentType: MediaType.parse(mimeType),
+        ));
+      } catch (e) {
+        pr("Failed to fetch file bytes from web URL: $e");
+        if (onError != null) {
+          onError("Failed to read file bytes: $e");
+        }
+        return;
+      }
+    } else {
+      request.files.add(await http.MultipartFile.fromPath('filepond', filename,
+          contentType: MediaType.parse(mimeType)));
+    }
 
     try {
       var response = await request.send().timeout(requestTimeout);

@@ -44,7 +44,7 @@ class _HomePageState extends State<HomePage> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const AppLogo(height: 100),
+                      const AppLogo(height: 100, useLoadingLogo: true),
                       const SizedBox(height: 40),
                       SizedBox(
                         width: 180,

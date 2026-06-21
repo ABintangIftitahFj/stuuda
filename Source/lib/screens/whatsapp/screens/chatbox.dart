@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_sound/flutter_sound.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -112,32 +113,65 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
   }
 
   Future<void> _initRecorder() async {
-    final status = await Permission.microphone.request();
-    if (status != PermissionStatus.granted) {
-      return;
+    if (!kIsWeb) {
+      final status = await Permission.microphone.request();
+      if (status != PermissionStatus.granted) {
+        if (mounted) {
+          showToastMessage(context, "Izin mikrofon diperlukan untuk merekam pesan suara.", type: 'error');
+        }
+        return;
+      }
     }
     await _recorder.openRecorder();
     _isRecorderInitialized = true;
   }
 
   Future<void> _startRecording() async {
-    if (!_isRecorderInitialized) return;
-    Directory tempDir = await getTemporaryDirectory();
-    _recordedFilePath = '${tempDir.path}/recorded_audio.aac';
-    await _recorder.startRecorder(toFile: _recordedFilePath);
-    setState(() {
-      _isRecording = true;
-    });
+    if (!_isRecorderInitialized) {
+      await _initRecorder();
+      if (!_isRecorderInitialized) {
+        if (mounted) {
+          showToastMessage(context, "Gagal merekam. Silakan aktifkan izin mikrofon.", type: 'error');
+        }
+        return;
+      }
+    }
+    try {
+      if (kIsWeb) {
+        _recordedFilePath = 'recorded_audio.aac';
+      } else {
+        Directory tempDir = await getTemporaryDirectory();
+        _recordedFilePath = '${tempDir.path}/recorded_audio.aac';
+      }
+      await _recorder.startRecorder(toFile: _recordedFilePath);
+      setState(() {
+        _isRecording = true;
+      });
+    } catch (e) {
+      if (mounted) {
+        showToastMessage(context, "Gagal merekam suara: ${e.toString()}", type: 'error');
+      }
+    }
   }
 
   Future<void> _stopRecording() async {
     if (!_isRecorderInitialized || !_isRecording) return;
-    await _recorder.stopRecorder();
-    setState(() {
-      _isRecording = false;
-    });
-    if (_recordedFilePath != null) {
-      _sendVoiceNote(_recordedFilePath!);
+    try {
+      String? path = await _recorder.stopRecorder();
+      setState(() {
+        _isRecording = false;
+      });
+      String? finalPath = kIsWeb ? path : _recordedFilePath;
+      if (finalPath != null) {
+        _sendVoiceNote(finalPath);
+      }
+    } catch (e) {
+      setState(() {
+        _isRecording = false;
+      });
+      if (mounted) {
+        showToastMessage(context, "Gagal menghentikan rekaman: ${e.toString()}", type: 'error');
+      }
     }
   }
 

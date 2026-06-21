@@ -9,11 +9,15 @@ import 'package:stundaa/support/app_theme.dart' as app_theme;
 /// App Logo Widget
 class AppLogo extends StatelessWidget {
   final double height;
-  const AppLogo({super.key, this.height = 250});
+  final bool useLoadingLogo;
+  const AppLogo({super.key, this.height = 250, this.useLoadingLogo = false});
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(height: height, child: app_theme.logoImage);
+    return SizedBox(
+      height: height,
+      child: useLoadingLogo ? app_theme.logoLoadingImage : app_theme.logoImage,
+    );
   }
 }
 
