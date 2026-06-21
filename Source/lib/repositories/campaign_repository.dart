@@ -103,9 +103,14 @@ class CampaignRepository {
         if (raw is List) {
           templates = raw.whereType<Map<String, dynamic>>().toList();
         } else if (raw is Map) {
-          final nested = raw['whatsAppMessageTemplateList'] ?? raw['templates'];
+          final nested = raw['whatsAppMessageTemplateList'] ?? raw['templates'] ?? raw['templateList'];
           if (nested is List) {
             templates = nested.whereType<Map<String, dynamic>>().toList();
+          } else if (nested is Map) {
+            final dataList = nested['data'];
+            if (dataList is List) {
+              templates = dataList.whereType<Map<String, dynamic>>().toList();
+            }
           }
         }
         if (!completer.isCompleted) completer.complete(templates);

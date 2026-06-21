@@ -87,7 +87,12 @@ class _MessageBubbleState extends State<MessageBubble>
   VideoPlayerController? _videoController;
   ChewieController? _chewieController;
   final ChatboxController controller = Get.put(ChatboxController());
-  GlobalAudioManager get _audioManager => Get.find<GlobalAudioManager>();
+  GlobalAudioManager get _audioManager {
+    if (!Get.isRegistered<GlobalAudioManager>()) {
+      Get.put(GlobalAudioManager());
+    }
+    return Get.find<GlobalAudioManager>();
+  }
   Map<String, dynamic>? parsedData = {};
 
   @override

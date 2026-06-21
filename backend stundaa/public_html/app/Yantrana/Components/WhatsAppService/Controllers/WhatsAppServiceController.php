@@ -120,6 +120,35 @@ class WhatsAppServiceController extends BaseController
     }
 
     /**
+     * Send Template Message via Mobile App API
+     *
+     * @param BaseRequestTwo $request
+     * @return json
+     */
+    public function appApiSendTemplateChatMessage(BaseRequestTwo $request)
+    {
+        validateVendorAccess('messaging');
+
+        // check if account failed
+        if(!isWhatsAppBusinessAccountReady()) {
+            return $this->processApiResponse([
+                'result' => 'failed',
+                'message' => 'Please complete your WhatsApp Cloud API Setup first',
+            ]);
+        }
+
+        $request->validate([
+            'template_uid' => 'required',
+            'contact_uid' => 'required',
+        ]);
+
+        $processReaction = $this->whatsAppServiceEngine->processSendMessageForContact($request);
+
+        return $this->processApiResponse($processReaction, $processReaction->data());
+    }
+
+
+    /**
      * Schedule Campaign
      *
      * @param BaseRequestTwo $request

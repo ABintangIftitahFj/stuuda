@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 final Widget logoImage = Image.asset(
-  'assets/images/logo_stundaa.jpeg',
+  'assets/images/logo_stundaa.png',
   fit: BoxFit.contain,
 );
 

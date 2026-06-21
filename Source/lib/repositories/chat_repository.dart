@@ -82,6 +82,42 @@ class ChatRepository {
     return completer.future;
   }
 
+  Future<void> sendTemplateMessage({
+    required BuildContext context,
+    required String contactUid,
+    required String templateUid,
+  }) async {
+    final payload = <String, dynamic>{
+      'contact_uid': contactUid,
+      'template_uid': templateUid,
+    };
+
+    final completer = Completer<void>();
+    await data_transport.post(
+      'vendor/whatsapp/contact/chat/send-template',
+      inputData: payload,
+      context: context,
+      onSuccess: (_) {
+        if (!completer.isCompleted) {
+          completer.complete();
+        }
+      },
+      onFailed: (responseData) {
+        if (!completer.isCompleted) {
+          completer.completeError(responseData ?? 'Failed to send template message');
+        }
+      },
+      onError: (error) {
+        if (!completer.isCompleted) {
+          completer.completeError(error ?? 'Failed to send template message');
+        }
+      },
+    );
+
+    return completer.future;
+  }
+
+
   Future<void> clearHistory({
     BuildContext? context,
     required String contactUid,

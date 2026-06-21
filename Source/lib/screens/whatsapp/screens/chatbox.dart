@@ -138,12 +138,15 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
     }
     try {
       if (kIsWeb) {
-        _recordedFilePath = 'recorded_audio.aac';
+        _recordedFilePath = 'recorded_audio.webm';
       } else {
         Directory tempDir = await getTemporaryDirectory();
         _recordedFilePath = '${tempDir.path}/recorded_audio.aac';
       }
-      await _recorder.startRecorder(toFile: _recordedFilePath);
+      await _recorder.startRecorder(
+        toFile: _recordedFilePath,
+        codec: kIsWeb ? Codec.opusWebM : Codec.aacADTS,
+      );
       setState(() {
         _isRecording = true;
       });
@@ -715,6 +718,10 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                   _isSelectionMode = false;
                   _selectedMessages.clear();
                 });
+                if (!controller.isWindowOpened.value) {
+                  _showTemplateSelectorDialog(context);
+                  return;
+                }
                 if (controller.canReplyToMessage(msg)) {
                   controller.setReplyMessage(msg);
                 }
@@ -1277,6 +1284,10 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                                             ))
                                       : SwipeToReply(
                                           onReply: () {
+                                            if (!controller.isWindowOpened.value) {
+                                              _showTemplateSelectorDialog(context);
+                                              return;
+                                            }
                                             if (controller
                                                 .canReplyToMessage(
                                                     messageData)) {
@@ -1490,6 +1501,10 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                     clipBehavior: Clip.antiAlias,
                     child: IconButton(
                       onPressed: () {
+                        if (!controller.isWindowOpened.value) {
+                          _showTemplateSelectorDialog(context);
+                          return;
+                        }
                         if (controller.messageController.text.trim().isNotEmpty) {
                           sendMessage();
                         } else {
@@ -1537,36 +1552,51 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
           ),
         ],
       ),
-      child: TextField(
+      child: Obx(() => TextField(
         controller: controller.messageController,
+        readOnly: !controller.isWindowOpened.value,
         onTap: () {
-          FocusScope.of(context).unfocus();
-          controller.emojiShowing.value = false;
+          if (!controller.isWindowOpened.value) {
+            _showTemplateSelectorDialog(context);
+          } else {
+            FocusScope.of(context).unfocus();
+            controller.emojiShowing.value = false;
+          }
         },
         decoration: InputDecoration(
           prefixIcon: IconButton(
             onPressed: () {
-              controller.emojiShowing.value = !controller.emojiShowing.value;
-              if (controller.emojiShowing.value) {
-                FocusScope.of(context).unfocus();
+              if (!controller.isWindowOpened.value) {
+                _showTemplateSelectorDialog(context);
               } else {
-                FocusScope.of(context).requestFocus(FocusNode());
+                controller.emojiShowing.value = !controller.emojiShowing.value;
+                if (controller.emojiShowing.value) {
+                  FocusScope.of(context).unfocus();
+                } else {
+                  FocusScope.of(context).requestFocus(FocusNode());
+                }
               }
             },
             icon: const Icon(Icons.face_6, color: app_theme.iceBlue),
           ),
-          suffixIcon: Obx(() {
-            return controller.documentsOption.value
-                ? IconButton(
-                    onPressed: () => _showAttachmentOptions(context),
-                    icon: const Icon(
-                      Icons.attachment_sharp,
-                      color: app_theme.iceBlue,
-                    ),
-                  )
-                : const SizedBox.shrink();
-          }),
-          hintText: context.lwTranslate.typeAMessage,
+          suffixIcon: controller.documentsOption.value
+              ? IconButton(
+                  onPressed: () {
+                    if (!controller.isWindowOpened.value) {
+                      _showTemplateSelectorDialog(context);
+                    } else {
+                      _showAttachmentOptions(context);
+                    }
+                  },
+                  icon: const Icon(
+                    Icons.attachment_sharp,
+                    color: app_theme.iceBlue,
+                  ),
+                )
+              : const SizedBox.shrink(),
+          hintText: controller.isWindowOpened.value
+              ? context.lwTranslate.typeAMessage
+              : 'Obrolan terkunci. Ketuk untuk mengaktifkan.',
           hintStyle: const TextStyle(
             fontSize: 14,
             color: app_theme.secondary,
@@ -1578,7 +1608,7 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
         style: const TextStyle(
           color: app_theme.lavenderWhite,
         ),
-      ),
+      )),
     );
   }
 
@@ -2548,6 +2578,253 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
               : const SizedBox.shrink();
         }),
       ),
+    );
+  }
+
+  void _showTemplateSelectorDialog(BuildContext context) {
+    controller.loadTemplates();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        String? selectedTemplateUid;
+
+        return Dialog(
+          elevation: 24,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          backgroundColor: app_theme.surface,
+          child: StatefulBuilder(
+            builder: (context, setDialogState) {
+              return Container(
+                width: MediaQuery.of(context).size.width * 0.85,
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.7,
+                ),
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header with Icon
+                    Row(
+                      children: [
+                        const Icon(
+                          CupertinoIcons.info_circle_fill,
+                          color: app_theme.cyanGlow,
+                          size: 28,
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            'Mengaktifkan Obrolan',
+                            style: TextStyle(
+                              color: app_theme.lavenderWhite,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Explanation Text
+                    const Text(
+                      'Skema 24 Jam WhatsApp:\nUntuk menjaga kualitas layanan pelanggan, WhatsApp membatasi jendela percakapan selama 24 jam sejak pesan terakhir dari pelanggan.\n\nKarena jendela telah tertutup, Anda harus mengirimkan Pesan Template WhatsApp resmi untuk mengaktifkan obrolan kembali. Obrolan biasa akan terbuka kembali setelah pelanggan membalas pesan Anda.',
+                      style: TextStyle(
+                        color: app_theme.secondary,
+                        fontSize: 12,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    const Text(
+                      'Pilih Template Message',
+                      style: TextStyle(
+                        color: app_theme.lavenderWhite,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Selector/Dropdown
+                    Obx(() {
+                      if (controller.isLoadingTemplates.value) {
+                        return const Center(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 20),
+                            child: CircularProgressIndicator(
+                              color: app_theme.cyanGlow,
+                            ),
+                          ),
+                        );
+                      }
+
+                      if (controller.templatesList.isEmpty) {
+                        return Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.error_outline, color: Colors.red),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Tidak ada template yang disetujui WhatsApp. Silakan buat atau sinkronkan template di web panel.',
+                                  style: TextStyle(color: Colors.red, fontSize: 12),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: app_theme.surfaceElevated,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: app_theme.cyanGlow.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButtonFormField<String>(
+                            dropdownColor: app_theme.surface,
+                            initialValue: selectedTemplateUid,
+                            hint: const Text(
+                              'Pilih salah satu template...',
+                              style: TextStyle(color: app_theme.secondary, fontSize: 13),
+                            ),
+                            icon: const Icon(CupertinoIcons.chevron_down, color: app_theme.iceBlue, size: 18),
+                            items: controller.templatesList.map((template) {
+                              final name = template['template_name']?.toString() ?? 'Unnamed';
+                              final lang = template['language']?.toString() ?? '';
+                              final category = template['category']?.toString() ?? '';
+                              return DropdownMenuItem<String>(
+                                value: template['_uid']?.toString(),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      name,
+                                      style: const TextStyle(
+                                        color: app_theme.lavenderWhite,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(
+                                      '$category • $lang',
+                                      style: const TextStyle(
+                                        color: app_theme.secondary,
+                                        fontSize: 10,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              setDialogState(() {
+                                selectedTemplateUid = val;
+                              });
+                            },
+                          ),
+                        ),
+                      );
+                    }),
+
+                    const SizedBox(height: 24),
+
+                    // Buttons
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(dialogContext),
+                          child: const Text(
+                            'Batal',
+                            style: TextStyle(
+                              color: app_theme.secondary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: selectedTemplateUid != null
+                                ? app_theme.cyanGlow
+                                : app_theme.surfaceElevated,
+                            foregroundColor: selectedTemplateUid != null
+                                ? Colors.black
+                                : app_theme.secondary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 12,
+                            ),
+                          ),
+                          onPressed: selectedTemplateUid == null
+                              ? null
+                              : () async {
+                                  Navigator.pop(dialogContext);
+
+                                  showDialog(
+                                    context: context,
+                                    barrierDismissible: false,
+                                    builder: (context) => Center(
+                                      child: LoadingAnimationWidget.discreteCircle(
+                                        color: Colors.white,
+                                        size: 40,
+                                      ),
+                                    ),
+                                  );
+
+                                  final success = await controller.sendTemplateMessage(
+                                    context,
+                                    selectedTemplateUid!,
+                                  );
+
+                                  if (context.mounted) {
+                                    Navigator.pop(context); // Pop loader
+                                    if (success) {
+                                      showToastMessage(
+                                        context,
+                                        'Pesan template berhasil dikirim!',
+                                        type: 'success',
+                                      );
+                                    }
+                                  }
+                                },
+                          child: const Text(
+                            'Kirim Template',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }

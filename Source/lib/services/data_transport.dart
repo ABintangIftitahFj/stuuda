@@ -145,8 +145,13 @@ void uploadFile(String filename, String url,
   String fileExtension = p.extension(fileName).toLowerCase();
 
   if (filename.startsWith('blob:') || filename.startsWith('http')) {
-    fileExtension = '.aac';
-    fileName = 'recorded_audio.aac';
+    if (kIsWeb) {
+      fileExtension = '.webm';
+      fileName = 'recorded_audio.webm';
+    } else {
+      fileExtension = '.aac';
+      fileName = 'recorded_audio.aac';
+    }
   }
 
   Map<String, String> mimeTypes = {
@@ -159,6 +164,7 @@ void uploadFile(String filename, String url,
     '.mp3': 'audio/mpeg',
     '.wav': 'audio/wav',
     '.aac': 'audio/aac',
+    '.webm': 'audio/webm',
     '.pdf': 'application/pdf',
     '.doc': 'application/msword',
     '.docx':

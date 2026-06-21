@@ -19,6 +19,7 @@ class _MyPlanScreenState extends State<MyPlanScreen> {
   SubscriptionInfo? _info;
   Map<String, dynamic> _availablePlans = {};
   bool _loading = true;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -27,14 +28,32 @@ class _MyPlanScreenState extends State<MyPlanScreen> {
   }
 
   Future<void> _load() async {
-    final info = await _repo.fetchSubscriptionInfo();
-    final plans = await _repo.fetchSubscriptionPlans();
     if (mounted) {
       setState(() {
-        _info = info;
-        _availablePlans = plans;
-        _loading = false;
+        _loading = true;
+        _errorMessage = null;
       });
+    }
+    try {
+      final info = await _repo.fetchSubscriptionInfo();
+      final plans = await _repo.fetchSubscriptionPlans();
+      if (info == null || plans == null) {
+        throw Exception('Failed to load plan details from server. Please check your network connection.');
+      }
+      if (mounted) {
+        setState(() {
+          _info = info;
+          _availablePlans = plans;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString().replaceAll('Exception: ', '');
+          _loading = false;
+        });
+      }
     }
   }
 
@@ -63,7 +82,9 @@ class _MyPlanScreenState extends State<MyPlanScreen> {
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: app_theme.primary))
-          : _buildBody(),
+          : _errorMessage != null
+              ? _buildErrorState()
+              : _buildBody(),
     );
   }
 
@@ -316,6 +337,62 @@ class _MyPlanScreenState extends State<MyPlanScreen> {
           style: const TextStyle(color: app_theme.secondary, fontSize: 13),
         ),
       ],
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: app_theme.insetPanelDecoration(radius: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.error_outline_rounded,
+                color: app_theme.error,
+                size: 60,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Connection Error',
+                style: TextStyle(
+                  color: app_theme.lavenderWhite,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                _errorMessage ?? 'An error occurred while loading your plan.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: app_theme.secondary,
+                  fontSize: 14,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: _load,
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Try Again'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: app_theme.primary,
+                  foregroundColor: app_theme.black,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  elevation: 4,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

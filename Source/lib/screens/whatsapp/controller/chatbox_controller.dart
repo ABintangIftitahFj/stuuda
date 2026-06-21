@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:stundaa/model/chat_conversation.dart';
 import 'package:stundaa/model/chat_message.dart';
 import 'package:stundaa/repositories/chat_repository.dart';
+import 'package:stundaa/repositories/campaign_repository.dart';
 import 'package:stundaa/services/utils.dart';
 import 'package:stundaa/services/auth.dart';
 import 'package:audioplayers/audioplayers.dart';
@@ -12,6 +13,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 // class ChatboxController extends GetxController {
 class ChatboxController extends ChangeNotifier {
+  var templatesList = <Map<String, dynamic>>[].obs;
+  var isLoadingTemplates = false.obs;
   // Existing variables
   var holduser = <Map<String, dynamic>>[].obs;
   var messageModels = <ChatMessage>[].obs;
@@ -466,9 +469,9 @@ class ChatboxController extends ChangeNotifier {
   }
 
   void _replaceMessages(List<ChatMessage> messages) {
-    // Keep local pending/sending messages so they don't disappear while refreshing
+    // Keep local pending/sending/failed messages so they don't disappear while refreshing
     final pendingMessages = holduser
-        .where((m) => m['status'] == 'pending' || m['status'] == 'sending')
+        .where((m) => m['status'] == 'pending' || m['status'] == 'sending' || m['status'] == 'failed')
         .toList();
 
     // Build lookup: content → repliedToMessageUid from current local messages.
@@ -599,7 +602,6 @@ class ChatboxController extends ChangeNotifier {
       });
     } catch (e) {
       pr("Error sending message: $e");
-      _updateMessageStatus(localId, 'failed');
       
       String errorMsg = "Failed to send message. Tap to retry.";
       if (e is Map && e['message'] != null) {
@@ -608,17 +610,67 @@ class ChatboxController extends ChangeNotifier {
         errorMsg = e.toString();
       }
 
+      _updateMessageStatus(localId, 'failed', errorMessage: errorMsg);
+
       if (context.mounted) {
         showToastMessage(context, errorMsg, type: "error");
       }
     }
   }
 
-  void _updateMessageStatus(String localId, String newStatus) {
+  Future<void> loadTemplates() async {
+    isLoadingTemplates.value = true;
+    try {
+      final CampaignRepository campaignRepo = CampaignRepository();
+      final list = await campaignRepo.fetchTemplates();
+      templatesList.assignAll(list);
+    } catch (e) {
+      pr("Error loading templates: $e");
+    } finally {
+      isLoadingTemplates.value = false;
+    }
+  }
+
+  Future<bool> sendTemplateMessage(BuildContext context, String templateUid) async {
+    if (userId == null || userId!.isEmpty) {
+      return false;
+    }
+    isLoading.value = true;
+    try {
+      await _chatRepository.sendTemplateMessage(
+        context: context,
+        contactUid: userId!,
+        templateUid: templateUid,
+      );
+      // Wait for a second and refresh
+      await Future.delayed(const Duration(seconds: 1));
+      await getUserChatSend();
+      return true;
+    } catch (e) {
+      pr("Error sending template message: $e");
+      String errorMsg = "Failed to send template message.";
+      if (e is Map && e['message'] != null) {
+        errorMsg = e['message'].toString();
+      } else if (e.toString().isNotEmpty) {
+        errorMsg = e.toString();
+      }
+      if (context.mounted) {
+        showToastMessage(context, errorMsg, type: "error");
+      }
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  void _updateMessageStatus(String localId, String newStatus, {String? errorMessage}) {
     final index = holduser.indexWhere((m) => m['uid'] == localId);
     if (index != -1) {
       final updated = Map<String, dynamic>.from(holduser[index]);
       updated['status'] = newStatus;
+      if (errorMessage != null) {
+        updated['whatsAppError'] = errorMessage;
+      }
       holduser[index] = updated;
     }
   }

@@ -85,7 +85,7 @@ class _LoginPageState extends State<LoginPage> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const AppLogo(height: 92),
+                          const AppLogo(height: 92, useLoadingLogo: false),
                           const SizedBox(height: 18),
                           Container(
                             padding: const EdgeInsets.symmetric(

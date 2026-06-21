@@ -278,6 +278,11 @@ Route::group([
             WhatsAppServiceController::class,
             'sendChatMessage',
         ])->name('app_api.vendor.chat_message.send.process');
+        Route::post('/whatsapp/contact/chat/send-template', [
+            WhatsAppServiceController::class,
+            'appApiSendTemplateChatMessage',
+        ])->name('app_api.vendor.chat_message.send_template.process');
+
 
         // Contact get labels and team members data
         Route::get('/whatsapp/contact/chat-box-data/{contactUid}', [

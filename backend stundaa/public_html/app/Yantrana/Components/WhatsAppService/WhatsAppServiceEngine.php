@@ -2713,6 +2713,10 @@ class WhatsAppServiceEngine extends BaseEngine implements WhatsAppServiceEngineI
             'mime_type' => Arr::get($rawUploadData, 'fileMimeType'),
             'file_name' => $fileName,
             'original_filename' => $fileOriginalName,
+            'is_recorded_audio' => (
+                (is_array($request) && (Arr::get($request, 'is_recorded_audio') == 'true' || Arr::get($request, 'is_recorded_audio') === true)) ||
+                (!is_array($request) && (($request->is_recorded_audio ?? null) == 'true' || ($request->is_recorded_audio ?? null) === true))
+            ),
         ];
     }
 
@@ -2864,7 +2868,8 @@ class WhatsAppServiceEngine extends BaseEngine implements WhatsAppServiceEngineI
                     ];
                 }
                 $sendMessageResult = $this->whatsAppApiService->sendMediaMessage($contact->wa_id, $mediaData['type'], $mediaLinkParam, (isDemo() ? "{$serviceName} DEMO - " . $mediaData['caption'] : '' . $mediaData['caption']), $mediaData['original_filename'], $vendorId, [
-                    'business_scope_user_id' => $businessScopeUserId
+                    'business_scope_user_id' => $businessScopeUserId,
+                    'is_recorded_audio' => $mediaData['is_recorded_audio'] ?? false
                 ]);
             } else {
                 $sendMessageResult = $this->whatsAppApiService->sendMessage($contact->wa_id, (isDemo() ? "`{$serviceName} DEMO`\n\r\n\r " . $messageBody : '' . $messageBody), $vendorId, [

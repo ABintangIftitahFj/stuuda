@@ -469,7 +469,8 @@ class WhatsAppApiService extends BaseEngine implements WhatsAppServiceEngineInte
         $options = array_merge([
             'pool' => null,
             'queueUid' => null,
-            'business_scope_user_id' => ''
+            'business_scope_user_id' => '',
+            'is_recorded_audio' => false
         ], $options);
 
         if ($vendorId) {
@@ -497,6 +498,10 @@ class WhatsAppApiService extends BaseEngine implements WhatsAppServiceEngineInte
             'document',
         ])) {
             $typeDetails['filename'] = $filename;
+        }
+        
+        if ($type === 'audio' && ($options['is_recorded_audio'] ?? false)) {
+            $typeDetails['voice'] = true;
         }
 
         $dataToProcess = [
