@@ -2869,7 +2869,8 @@ class WhatsAppServiceEngine extends BaseEngine implements WhatsAppServiceEngineI
                 }
                 $sendMessageResult = $this->whatsAppApiService->sendMediaMessage($contact->wa_id, $mediaData['type'], $mediaLinkParam, (isDemo() ? "{$serviceName} DEMO - " . $mediaData['caption'] : '' . $mediaData['caption']), $mediaData['original_filename'], $vendorId, [
                     'business_scope_user_id' => $businessScopeUserId,
-                    'is_recorded_audio' => $mediaData['is_recorded_audio'] ?? false
+                    'is_recorded_audio' => $mediaData['is_recorded_audio'] ?? false,
+                    'repliedToMessageWamid' => $options['messageWamid'] ?? null,
                 ]);
             } else {
                 $sendMessageResult = $this->whatsAppApiService->sendMessage($contact->wa_id, (isDemo() ? "`{$serviceName} DEMO`\n\r\n\r " . $messageBody : '' . $messageBody), $vendorId, [

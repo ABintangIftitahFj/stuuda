@@ -88,7 +88,7 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
       controller.getUserChat();
       controllerUser.getUserInfo();
       _fetchAssignedLabels();
-      
+
       // Update unread message count to zero when chat is opened
       final provider = Provider.of<ContactProvider>(context, listen: false);
       provider.updateMessageCountToZero(userId!);
@@ -117,7 +117,9 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
       final status = await Permission.microphone.request();
       if (status != PermissionStatus.granted) {
         if (mounted) {
-          showToastMessage(context, "Izin mikrofon diperlukan untuk merekam pesan suara.", type: 'error');
+          showToastMessage(
+              context, "Izin mikrofon diperlukan untuk merekam pesan suara.",
+              type: 'error');
         }
         return;
       }
@@ -131,7 +133,9 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
       await _initRecorder();
       if (!_isRecorderInitialized) {
         if (mounted) {
-          showToastMessage(context, "Gagal merekam. Silakan aktifkan izin mikrofon.", type: 'error');
+          showToastMessage(
+              context, "Gagal merekam. Silakan aktifkan izin mikrofon.",
+              type: 'error');
         }
         return;
       }
@@ -152,7 +156,8 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
       });
     } catch (e) {
       if (mounted) {
-        showToastMessage(context, "Gagal merekam suara: ${e.toString()}", type: 'error');
+        showToastMessage(context, "Gagal merekam suara: ${e.toString()}",
+            type: 'error');
       }
     }
   }
@@ -173,7 +178,8 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
         _isRecording = false;
       });
       if (mounted) {
-        showToastMessage(context, "Gagal menghentikan rekaman: ${e.toString()}", type: 'error');
+        showToastMessage(context, "Gagal menghentikan rekaman: ${e.toString()}",
+            type: 'error');
       }
     }
   }
@@ -578,15 +584,18 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                 Obx(() => controller.isWindowOpened.value
                     ? Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 8, horizontal: 16),
                         color: Colors.green.withValues(alpha: 0.1),
                         child: Row(
                           children: [
-                            const Icon(Icons.timer_outlined, color: Colors.green, size: 16),
+                            const Icon(Icons.timer_outlined,
+                                color: Colors.green, size: 16),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Obx(() {
-                                final countdown = controller.windowCountdownText.value;
+                                final countdown =
+                                    controller.windowCountdownText.value;
                                 return Text(
                                   countdown.isNotEmpty
                                       ? 'Chat window closes in $countdown'
@@ -604,11 +613,13 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                       )
                     : Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 8, horizontal: 16),
                         color: Colors.orange.withValues(alpha: 0.1),
                         child: Row(
                           children: [
-                            const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 16),
+                            const Icon(Icons.warning_amber_rounded,
+                                color: Colors.orange, size: 16),
                             const SizedBox(width: 8),
                             const Expanded(
                               child: Text(
@@ -858,14 +869,19 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                                   fontWeight: FontWeight.w400,
                                 ),
                               ),
-                              if (controller.isWindowOpened.value && controller.windowExpiresText.value.isNotEmpty) ...[
+                              if (controller.isWindowOpened.value &&
+                                  controller
+                                      .windowExpiresText.value.isNotEmpty) ...[
                                 const SizedBox(width: 8),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 1),
                                   decoration: BoxDecoration(
                                     color: Colors.green.withValues(alpha: 0.15),
                                     borderRadius: BorderRadius.circular(4),
-                                    border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+                                    border: Border.all(
+                                        color: Colors.green
+                                            .withValues(alpha: 0.3)),
                                   ),
                                   child: Text(
                                     controller.windowExpiresText.value,
@@ -876,7 +892,8 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                                     ),
                                   ),
                                 ),
-                              ] else if (widget.contact.isServiceWindowActive) ...[
+                              ] else if (widget
+                                  .contact.isServiceWindowActive) ...[
                                 const SizedBox(width: 4),
                                 Container(
                                   width: 6,
@@ -964,13 +981,13 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                               .toString()
                               .isNotEmpty)
                       .map((m) => {
-                            'link': (m['media']
-                                    as Map<String, dynamic>)['link'] as String,
+                            'link': (m['media'] as Map<String, dynamic>)['link']
+                                as String,
                             'type': 'image',
-                            'caption': (m['media']
-                                        as Map<String, dynamic>)['caption']
-                                    as String? ??
-                                '',
+                            'caption':
+                                (m['media'] as Map<String, dynamic>)['caption']
+                                        as String? ??
+                                    '',
                           })
                       .toList();
                   navigatePage(
@@ -1171,7 +1188,8 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                       final data = messageData['__data'] ?? {};
                       final repliedToMessageUid =
                           messageData['repliedToMessageUid'] as String? ?? '';
-                      final quotedMessage =
+                      final quotedMessage = messageData['repliedToMessage']
+                              as Map<String, dynamic>? ??
                           controller.findMessageByUid(repliedToMessageUid);
                       final quotedSenderName = quotedMessage == null
                           ? null
@@ -1209,9 +1227,7 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                             children: [
                               Flexible(
                                 flex: isSystem ? 1 : 6,
-                                fit: isSystem
-                                    ? FlexFit.loose
-                                    : FlexFit.tight,
+                                fit: isSystem ? FlexFit.loose : FlexFit.tight,
                                 child: GestureDetector(
                                   onTap: _isSelectionMode
                                       ? () {
@@ -1284,15 +1300,16 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                                             ))
                                       : SwipeToReply(
                                           onReply: () {
-                                            if (!controller.isWindowOpened.value) {
-                                              _showTemplateSelectorDialog(context);
+                                            if (!controller
+                                                .isWindowOpened.value) {
+                                              _showTemplateSelectorDialog(
+                                                  context);
                                               return;
                                             }
-                                            if (controller
-                                                .canReplyToMessage(
-                                                    messageData)) {
-                                              controller.setReplyMessage(
-                                                  messageData);
+                                            if (controller.canReplyToMessage(
+                                                messageData)) {
+                                              controller
+                                                  .setReplyMessage(messageData);
                                             }
                                           },
                                           child: isFile
@@ -1327,7 +1344,8 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                                                   mediaoOriginalFileName:
                                                       originalFileName,
                                                   media: media,
-                                                  data: data.isEmpty ? {} : data,
+                                                  data:
+                                                      data.isEmpty ? {} : data,
                                                   quotedMessage: quotedMessage,
                                                   quotedSenderName:
                                                       quotedSenderName,
@@ -1335,11 +1353,11 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                                                       repliedToMessageUid
                                                           .isNotEmpty,
                                                   onQuotedMessageTap:
-                                                      repliedToMessageUid.isEmpty
+                                                      repliedToMessageUid
+                                                              .isEmpty
                                                           ? null
-                                                          : () =>
-                                                              _scrollToMessage(
-                                                                  repliedToMessageUid),
+                                                          : () => _scrollToMessage(
+                                                              repliedToMessageUid),
                                                 ),
                                         ),
                                 ),
@@ -1480,7 +1498,8 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                     const SizedBox(width: 8),
                     const Text(
                       'Recording...',
-                      style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                          color: Colors.red, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -1505,7 +1524,9 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                           _showTemplateSelectorDialog(context);
                           return;
                         }
-                        if (controller.messageController.text.trim().isNotEmpty) {
+                        if (controller.messageController.text
+                            .trim()
+                            .isNotEmpty) {
                           sendMessage();
                         } else {
                           if (_isRecording) {
@@ -1521,9 +1542,12 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                             : (_isRecording ? Icons.stop : Icons.mic),
                         color: _isRecording ? Colors.white : app_theme.black,
                       ),
-                      tooltip: controller.messageController.text.trim().isNotEmpty
-                          ? context.lwTranslate.send
-                          : (_isRecording ? 'Stop Recording' : 'Record Voice Note'),
+                      tooltip:
+                          controller.messageController.text.trim().isNotEmpty
+                              ? context.lwTranslate.send
+                              : (_isRecording
+                                  ? 'Stop Recording'
+                                  : 'Record Voice Note'),
                     ),
                   ),
                 ),
@@ -1553,62 +1577,63 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
         ],
       ),
       child: Obx(() => TextField(
-        controller: controller.messageController,
-        readOnly: !controller.isWindowOpened.value,
-        onTap: () {
-          if (!controller.isWindowOpened.value) {
-            _showTemplateSelectorDialog(context);
-          } else {
-            FocusScope.of(context).unfocus();
-            controller.emojiShowing.value = false;
-          }
-        },
-        decoration: InputDecoration(
-          prefixIcon: IconButton(
-            onPressed: () {
+            controller: controller.messageController,
+            readOnly: !controller.isWindowOpened.value,
+            onTap: () {
               if (!controller.isWindowOpened.value) {
                 _showTemplateSelectorDialog(context);
               } else {
-                controller.emojiShowing.value = !controller.emojiShowing.value;
-                if (controller.emojiShowing.value) {
-                  FocusScope.of(context).unfocus();
-                } else {
-                  FocusScope.of(context).requestFocus(FocusNode());
-                }
+                FocusScope.of(context).unfocus();
+                controller.emojiShowing.value = false;
               }
             },
-            icon: const Icon(Icons.face_6, color: app_theme.iceBlue),
-          ),
-          suffixIcon: controller.documentsOption.value
-              ? IconButton(
-                  onPressed: () {
-                    if (!controller.isWindowOpened.value) {
-                      _showTemplateSelectorDialog(context);
+            decoration: InputDecoration(
+              prefixIcon: IconButton(
+                onPressed: () {
+                  if (!controller.isWindowOpened.value) {
+                    _showTemplateSelectorDialog(context);
+                  } else {
+                    controller.emojiShowing.value =
+                        !controller.emojiShowing.value;
+                    if (controller.emojiShowing.value) {
+                      FocusScope.of(context).unfocus();
                     } else {
-                      _showAttachmentOptions(context);
+                      FocusScope.of(context).requestFocus(FocusNode());
                     }
-                  },
-                  icon: const Icon(
-                    Icons.attachment_sharp,
-                    color: app_theme.iceBlue,
-                  ),
-                )
-              : const SizedBox.shrink(),
-          hintText: controller.isWindowOpened.value
-              ? context.lwTranslate.typeAMessage
-              : 'Obrolan terkunci. Ketuk untuk mengaktifkan.',
-          hintStyle: const TextStyle(
-            fontSize: 14,
-            color: app_theme.secondary,
-          ),
-          border: const OutlineInputBorder(borderSide: BorderSide.none),
-          contentPadding:
-              const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        ),
-        style: const TextStyle(
-          color: app_theme.lavenderWhite,
-        ),
-      )),
+                  }
+                },
+                icon: const Icon(Icons.face_6, color: app_theme.iceBlue),
+              ),
+              suffixIcon: controller.documentsOption.value
+                  ? IconButton(
+                      onPressed: () {
+                        if (!controller.isWindowOpened.value) {
+                          _showTemplateSelectorDialog(context);
+                        } else {
+                          _showAttachmentOptions(context);
+                        }
+                      },
+                      icon: const Icon(
+                        Icons.attachment_sharp,
+                        color: app_theme.iceBlue,
+                      ),
+                    )
+                  : const SizedBox.shrink(),
+              hintText: controller.isWindowOpened.value
+                  ? context.lwTranslate.typeAMessage
+                  : 'Obrolan terkunci. Ketuk untuk mengaktifkan.',
+              hintStyle: const TextStyle(
+                fontSize: 14,
+                color: app_theme.secondary,
+              ),
+              border: const OutlineInputBorder(borderSide: BorderSide.none),
+              contentPadding:
+                  const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            ),
+            style: const TextStyle(
+              color: app_theme.lavenderWhite,
+            ),
+          )),
     );
   }
 
@@ -1865,7 +1890,18 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
 
   Widget buildShimmerLoader() {
     // Alternating bubble sizes for realism
-    final bubbleSizes = [56.0, 72.0, 44.0, 88.0, 52.0, 68.0, 48.0, 76.0, 60.0, 40.0];
+    final bubbleSizes = [
+      56.0,
+      72.0,
+      44.0,
+      88.0,
+      52.0,
+      68.0,
+      48.0,
+      76.0,
+      60.0,
+      40.0
+    ];
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       itemCount: bubbleSizes.length,
@@ -1896,17 +1932,15 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                   ),
                 ),
               Column(
-                crossAxisAlignment: isRight
-                    ? CrossAxisAlignment.end
-                    : CrossAxisAlignment.start,
+                crossAxisAlignment:
+                    isRight ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                 children: [
                   Shimmer.fromColors(
                     baseColor: isRight
                         ? const Color(0xFF0F2E4A)
                         : app_theme.surfaceElevated,
-                    highlightColor: isRight
-                        ? const Color(0xFF163C5E)
-                        : app_theme.surface,
+                    highlightColor:
+                        isRight ? const Color(0xFF163C5E) : app_theme.surface,
                     child: Container(
                       width: width,
                       height: height,
@@ -1942,7 +1976,8 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
         )
             .animate(delay: Duration(milliseconds: index * 60))
             .fadeIn(duration: 350.ms, curve: Curves.easeOut)
-            .slideY(begin: 0.08, end: 0, duration: 350.ms, curve: Curves.easeOut);
+            .slideY(
+                begin: 0.08, end: 0, duration: 350.ms, curve: Curves.easeOut);
       },
     );
   }
@@ -2055,8 +2090,7 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
               }
             }
 
-            final bool allDone =
-                photoQueue.isNotEmpty &&
+            final bool allDone = photoQueue.isNotEmpty &&
                 photoQueue.every((e) => e['status'] == 'done');
 
             // ── single-file pick (non-image) ──────────────────────────
@@ -2203,9 +2237,7 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                               color: app_theme.cyanGlow, size: 20),
                           const SizedBox(width: 8),
                           Text(
-                            photoQueue.isEmpty
-                                ? 'Pilih Foto'
-                                : 'Tambah Foto',
+                            photoQueue.isEmpty ? 'Pilih Foto' : 'Tambah Foto',
                             style: const TextStyle(
                                 color: app_theme.cyanGlow,
                                 fontWeight: FontWeight.w600,
@@ -2248,8 +2280,7 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                       )
                     : selectImageTap == false
                         ? Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 7),
+                            padding: const EdgeInsets.symmetric(horizontal: 7),
                             child: Row(
                               children: [
                                 Expanded(
@@ -2280,8 +2311,7 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                             ),
                           )
                         : Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 7),
+                            padding: const EdgeInsets.symmetric(horizontal: 7),
                             child: Row(
                               children: [
                                 Expanded(
@@ -2339,9 +2369,7 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                     ),
                     const SizedBox(height: 8),
                     // File picker area
-                    isImage
-                        ? buildPhotoGrid()
-                        : buildSingleFileStatus(),
+                    isImage ? buildPhotoGrid() : buildSingleFileStatus(),
                     const SizedBox(height: 16.0),
                     Text(
                       context.lwTranslate.captionText,
@@ -2403,8 +2431,8 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                       ),
                       child: Text(
                         context.lwTranslate.cancel,
-                        style: const TextStyle(
-                            color: Colors.white, fontSize: 13),
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 13),
                       ),
                     ),
                     // Send
@@ -2412,7 +2440,8 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                       defaultWidget: Text(
                         context.lwTranslate.send,
                         style: TextStyle(
-                          color: canSend ? app_theme.black : app_theme.secondary,
+                          color:
+                              canSend ? app_theme.black : app_theme.secondary,
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
                         ),
@@ -2670,7 +2699,8 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                           decoration: BoxDecoration(
                             color: Colors.red.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
+                            border: Border.all(
+                                color: Colors.red.withValues(alpha: 0.2)),
                           ),
                           child: const Row(
                             children: [
@@ -2679,7 +2709,8 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                               Expanded(
                                 child: Text(
                                   'Tidak ada template yang disetujui WhatsApp. Silakan buat atau sinkronkan template di web panel.',
-                                  style: TextStyle(color: Colors.red, fontSize: 12),
+                                  style: TextStyle(
+                                      color: Colors.red, fontSize: 12),
                                 ),
                               ),
                             ],
@@ -2702,13 +2733,19 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                             initialValue: selectedTemplateUid,
                             hint: const Text(
                               'Pilih salah satu template...',
-                              style: TextStyle(color: app_theme.secondary, fontSize: 13),
+                              style: TextStyle(
+                                  color: app_theme.secondary, fontSize: 13),
                             ),
-                            icon: const Icon(CupertinoIcons.chevron_down, color: app_theme.iceBlue, size: 18),
+                            icon: const Icon(CupertinoIcons.chevron_down,
+                                color: app_theme.iceBlue, size: 18),
                             items: controller.templatesList.map((template) {
-                              final name = template['template_name']?.toString() ?? 'Unnamed';
-                              final lang = template['language']?.toString() ?? '';
-                              final category = template['category']?.toString() ?? '';
+                              final name =
+                                  template['template_name']?.toString() ??
+                                      'Unnamed';
+                              final lang =
+                                  template['language']?.toString() ?? '';
+                              final category =
+                                  template['category']?.toString() ?? '';
                               return DropdownMenuItem<String>(
                                 value: template['_uid']?.toString(),
                                 child: Column(
@@ -2786,14 +2823,16 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                                     context: context,
                                     barrierDismissible: false,
                                     builder: (context) => Center(
-                                      child: LoadingAnimationWidget.discreteCircle(
+                                      child:
+                                          LoadingAnimationWidget.discreteCircle(
                                         color: Colors.white,
                                         size: 40,
                                       ),
                                     ),
                                   );
 
-                                  final success = await controller.sendTemplateMessage(
+                                  final success =
+                                      await controller.sendTemplateMessage(
                                     context,
                                     selectedTemplateUid!,
                                   );

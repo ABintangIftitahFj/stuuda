@@ -80,12 +80,14 @@ class ChatboxController extends ChangeNotifier {
   }
 
   /// Persist cache entry: message content → replied-to wamid/uid.
-  Future<void> _persistReplyCacheEntry(String content, String repliedToId) async {
+  Future<void> _persistReplyCacheEntry(
+      String content, String repliedToId) async {
     if (userId == null || userId!.isEmpty) return;
     _localReplyCache[content] = repliedToId;
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('reply_cache_$userId', jsonEncode(_localReplyCache));
+      await prefs.setString(
+          'reply_cache_$userId', jsonEncode(_localReplyCache));
     } catch (e) {
       pr('_persistReplyCacheEntry error: $e');
     }
@@ -267,9 +269,10 @@ class ChatboxController extends ChangeNotifier {
     if (message.isNotEmpty) {
       final draftMessage = ChatMessage.localOutgoing(
         message.toString(),
-        repliedToMessageUid: selectedReplyMessage.value?['wamid']?.toString().isNotEmpty == true
-            ? selectedReplyMessage.value!['wamid'].toString()
-            : selectedReplyMessage.value?['uid']?.toString() ?? '',
+        repliedToMessageUid:
+            selectedReplyMessage.value?['wamid']?.toString().isNotEmpty == true
+                ? selectedReplyMessage.value!['wamid'].toString()
+                : selectedReplyMessage.value?['uid']?.toString() ?? '',
         isFile: isFile,
         filename: filename,
         filetype: filetype,
@@ -372,8 +375,10 @@ class ChatboxController extends ChangeNotifier {
       enableAiBot.value = conversation.enableAiBot;
       replyAEnableBot.value = conversation.enableReplyBot;
       isWindowOpened.value = conversation.isDirectMessageDeliveryWindowOpened;
-      windowExpiresText.value = conversation.directMessageDeliveryWindowOpenedTillMessage;
-      if (conversation.windowExpiresAt != null && conversation.isDirectMessageDeliveryWindowOpened) {
+      windowExpiresText.value =
+          conversation.directMessageDeliveryWindowOpenedTillMessage;
+      if (conversation.windowExpiresAt != null &&
+          conversation.isDirectMessageDeliveryWindowOpened) {
         _startWindowCountdown(conversation.windowExpiresAt!);
       } else {
         _stopWindowCountdown();
@@ -445,6 +450,13 @@ class ChatboxController extends ChangeNotifier {
     bool isRecordedAudio = false,
   }) async {
     try {
+      final mediaWamid = selectedReplyMessage.value?['wamid']?.toString() ?? '';
+      final mediaUid = selectedReplyMessage.value?['uid']?.toString() ?? '';
+      final isMediaValidWamid = mediaWamid.isNotEmpty &&
+          !mediaWamid.startsWith('local-') &&
+          mediaWamid != mediaUid;
+      final effectiveMediaQuotedId = isMediaValidWamid ? mediaWamid : '';
+
       await _chatRepository.sendMedia(
         context: context,
         contactUid: userId ?? '',
@@ -452,8 +464,7 @@ class ChatboxController extends ChangeNotifier {
         mediaType: label ?? '',
         rawUploadData: data,
         caption: caption,
-        quotedMessageWamid:
-            selectedReplyMessage.value?['wamid']?.toString() ?? '',
+        quotedMessageWamid: effectiveMediaQuotedId,
         isRecordedAudio: isRecordedAudio,
       );
       clearReplyMessage();
@@ -469,9 +480,15 @@ class ChatboxController extends ChangeNotifier {
   }
 
   void _replaceMessages(List<ChatMessage> messages) {
-    // Keep local pending/sending/failed messages so they don't disappear while refreshing
+    // Keep local pending/sending/failed messages so they don't disappear while refreshing.
+    // Also keep recently accepted/sent messages if they aren't in the API response yet.
     final pendingMessages = holduser
-        .where((m) => m['status'] == 'pending' || m['status'] == 'sending' || m['status'] == 'failed')
+        .where((m) =>
+            m['status'] == 'pending' ||
+            m['status'] == 'sending' ||
+            m['status'] == 'failed' ||
+            ((m['status'] == 'accepted' || m['status'] == 'sent') &&
+                !messages.any((apiMsg) => apiMsg.uid == m['uid'])))
         .toList();
 
     // Build lookup: content → repliedToMessageUid from current local messages.
@@ -541,8 +558,8 @@ class ChatboxController extends ChangeNotifier {
     final now = DateTime.now();
     if (_lastSentTime != null &&
         now.difference(_lastSentTime!) < _cooldownDuration) {
-      final remaining =
-          _cooldownDuration.inSeconds - now.difference(_lastSentTime!).inSeconds;
+      final remaining = _cooldownDuration.inSeconds -
+          now.difference(_lastSentTime!).inSeconds;
       showToastMessage(
           context, "Please wait $remaining seconds before sending again",
           type: "warning");
@@ -550,17 +567,15 @@ class ChatboxController extends ChangeNotifier {
     }
 
     final trimmedMessage = messageBody.trim();
-    // Only use wamid — local UIDs are not valid WhatsApp message IDs and
-    // cannot be forwarded to WhatsApp Cloud API as context.message_id.
-    final quotedMessageId =
-        selectedReplyMessage.value?['wamid']?.toString().isNotEmpty == true
-            ? selectedReplyMessage.value!['wamid'].toString()
-            : selectedReplyMessage.value?['uid']?.toString() ?? '';
-    // wamid must look like a real WA ID (not a local optimistic ID)
-    final isValidWamid = quotedMessageId.isNotEmpty &&
-        !quotedMessageId.startsWith('local-');
-    final effectiveQuotedId = isValidWamid ? quotedMessageId : '';
-    pr('[REPLY] quotedMessageId=$quotedMessageId isValid=$isValidWamid effectiveId=$effectiveQuotedId');
+    
+    final wamid = selectedReplyMessage.value?['wamid']?.toString() ?? '';
+    final uid = selectedReplyMessage.value?['uid']?.toString() ?? '';
+    final isValidWamid = wamid.isNotEmpty &&
+        !wamid.startsWith('local-') &&
+        wamid != uid;
+    final effectiveQuotedId = isValidWamid ? wamid : '';
+    final quotedMessageId = wamid.isNotEmpty ? wamid : uid;
+    pr('[REPLY] wamid=$wamid uid=$uid isValid=$isValidWamid effectiveId=$effectiveQuotedId');
 
     _lastSentTime = now;
 
@@ -583,26 +598,27 @@ class ChatboxController extends ChangeNotifier {
     messageController.clear();
 
     try {
-      await _chatRepository.sendTextMessage(
+      final sentMessage = await _chatRepository.sendTextMessage(
         context: context,
         contactUid: userId!,
         messageBody: trimmedMessage,
-        quotedMessageWamid: effectiveQuotedId, // only valid wamid sent to backend
+        quotedMessageWamid:
+            effectiveQuotedId, // only valid wamid sent to backend
       );
 
-      // Status update to 'sent' (or just let the refresh handle it)
-      _updateMessageStatus(localId, 'sent');
+      // Replace the local optimistic message with the real server message
+      _replaceLocalOptimisticMessage(localId, sentMessage);
       clearReplyMessage();
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (userId != null && userId!.isNotEmpty) {
-          // Removed delay entirely for instant refresh
+          // Refresh conversation list to get latest messages and updates
           getUserChatSend();
         }
       });
     } catch (e) {
       pr("Error sending message: $e");
-      
+
       String errorMsg = "Failed to send message. Tap to retry.";
       if (e is Map && e['message'] != null) {
         errorMsg = e['message'].toString();
@@ -631,7 +647,8 @@ class ChatboxController extends ChangeNotifier {
     }
   }
 
-  Future<bool> sendTemplateMessage(BuildContext context, String templateUid) async {
+  Future<bool> sendTemplateMessage(
+      BuildContext context, String templateUid) async {
     if (userId == null || userId!.isEmpty) {
       return false;
     }
@@ -663,7 +680,8 @@ class ChatboxController extends ChangeNotifier {
     }
   }
 
-  void _updateMessageStatus(String localId, String newStatus, {String? errorMessage}) {
+  void _updateMessageStatus(String localId, String newStatus,
+      {String? errorMessage}) {
     final index = holduser.indexWhere((m) => m['uid'] == localId);
     if (index != -1) {
       final updated = Map<String, dynamic>.from(holduser[index]);
@@ -672,6 +690,27 @@ class ChatboxController extends ChangeNotifier {
         updated['whatsAppError'] = errorMessage;
       }
       holduser[index] = updated;
+    }
+  }
+
+  void _replaceLocalOptimisticMessage(String localId, ChatMessage sentMessage) {
+    final index = holduser.indexWhere((m) => m['uid'] == localId);
+    if (index != -1) {
+      final oldMap = holduser[index];
+      final newMap = sentMessage.toMap();
+      
+      // Preserve local reply metadata if server returned it empty
+      final oldRepliedId = oldMap['repliedToMessageUid']?.toString() ?? '';
+      final newRepliedId = newMap['repliedToMessageUid']?.toString() ?? '';
+      if (newRepliedId.isEmpty && oldRepliedId.isNotEmpty) {
+        newMap['repliedToMessageUid'] = oldRepliedId;
+        if (newMap['repliedToMessage'] == null && oldMap['repliedToMessage'] != null) {
+          newMap['repliedToMessage'] = oldMap['repliedToMessage'];
+        }
+      }
+      
+      holduser[index] = newMap;
+      notifyListeners();
     }
   }
 

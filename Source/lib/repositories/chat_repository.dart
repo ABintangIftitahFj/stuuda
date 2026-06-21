@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:stundaa/model/chat_conversation.dart';
+import 'package:stundaa/model/chat_message.dart';
 import 'package:stundaa/services/data_transport.dart' as data_transport;
 
 class ChatRepository {
@@ -43,7 +44,7 @@ class ChatRepository {
     return completer.future;
   }
 
-  Future<void> sendTextMessage({
+  Future<ChatMessage> sendTextMessage({
     required BuildContext context,
     required String contactUid,
     required String messageBody,
@@ -57,14 +58,25 @@ class ChatRepository {
       payload['quoted_message_wamid'] = quotedMessageWamid;
     }
 
-    final completer = Completer<void>();
+    final completer = Completer<ChatMessage>();
     await data_transport.post(
       'vendor/whatsapp/contact/chat/send',
       inputData: payload,
       context: context,
-      onSuccess: (_) {
+      onSuccess: (responseData) {
         if (!completer.isCompleted) {
-          completer.complete();
+          final data = responseData?['data'] ?? {};
+          final logMessage = data['log_message'];
+          if (logMessage is Map) {
+            completer.complete(
+              ChatMessage.fromApiEntry(
+                MapEntry(logMessage['_uid'] ?? '',
+                    Map<String, dynamic>.from(logMessage)),
+              ),
+            );
+          } else {
+            completer.completeError('Invalid response format');
+          }
         }
       },
       onFailed: (responseData) {
@@ -104,7 +116,8 @@ class ChatRepository {
       },
       onFailed: (responseData) {
         if (!completer.isCompleted) {
-          completer.completeError(responseData ?? 'Failed to send template message');
+          completer
+              .completeError(responseData ?? 'Failed to send template message');
         }
       },
       onError: (error) {
@@ -116,7 +129,6 @@ class ChatRepository {
 
     return completer.future;
   }
-
 
   Future<void> clearHistory({
     BuildContext? context,

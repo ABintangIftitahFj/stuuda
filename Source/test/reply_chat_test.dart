@@ -130,7 +130,23 @@ void main() {
     data_transport.httpClient = MockClient((request) async {
       if (request.url.path.endsWith('/api/vendor/whatsapp/contact/chat/send')) {
         sentPayload = jsonDecode(request.body) as Map<String, dynamic>;
-        return http.Response(jsonEncode({'reaction': 1}), 200);
+        return http.Response(
+          jsonEncode({
+            'reaction': 1,
+            'data': {
+              'log_message': {
+                '_uid': 'message-uid',
+                'wamid': 'wamid-123',
+                'message': 'Reply message',
+                'is_incoming_message': 0,
+                'is_system_message': 0,
+                'status': 'accepted',
+                'messaged_at': '2026-06-21T14:55:00Z',
+              }
+            }
+          }),
+          200,
+        );
       }
       return http.Response(
         jsonEncode({'reaction': 1, 'client_models': {}}),
@@ -178,7 +194,23 @@ void main() {
       if (request.url.path.endsWith('/api/vendor/whatsapp/contact/chat/send')) {
         sentPayload = jsonDecode(request.body) as Map<String, dynamic>;
         await sendCompleter.future;
-        return http.Response(jsonEncode({'reaction': 1}), 200);
+        return http.Response(
+          jsonEncode({
+            'reaction': 1,
+            'data': {
+              'log_message': {
+                '_uid': 'local-original',
+                'wamid': '',
+                'message': 'Reply local',
+                'is_incoming_message': 0,
+                'is_system_message': 0,
+                'status': 'accepted',
+                'messaged_at': '2026-06-21T14:55:00Z',
+              }
+            }
+          }),
+          200,
+        );
       }
       return http.Response(
         jsonEncode({'reaction': 1, 'client_models': {}}),

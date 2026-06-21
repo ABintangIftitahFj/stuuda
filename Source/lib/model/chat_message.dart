@@ -12,13 +12,14 @@ class ChatMessage {
       // Server sends UTC; if no timezone info in string, treat as UTC
       final utcDt = dt.isUtc
           ? dt
-          : DateTime.utc(dt.year, dt.month, dt.day, dt.hour, dt.minute,
-              dt.second);
+          : DateTime.utc(
+              dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second);
       return DateFormat("h:mm a").format(utcDt.toLocal());
     } catch (_) {
       return fallback;
     }
   }
+
   const ChatMessage({
     required this.uid,
     required this.wamid,
@@ -36,6 +37,7 @@ class ChatMessage {
     this.isFile = false,
     this.filename,
     this.filetype,
+    this.repliedToMessage,
   });
 
   final String uid;
@@ -54,6 +56,7 @@ class ChatMessage {
   final bool isFile;
   final dynamic filename;
   final dynamic filetype;
+  final ChatMessage? repliedToMessage;
 
   factory ChatMessage.fromApiEntry(MapEntry<dynamic, dynamic> entry) {
     final value = entry.value is Map
@@ -67,6 +70,17 @@ class ChatMessage {
     final mediaMap = rawMedia is Map
         ? Map<String, dynamic>.from(rawMedia)
         : <String, dynamic>{};
+
+    final rawReplied = value['replied_to_message'];
+    ChatMessage? repliedToMessage;
+    if (rawReplied is Map) {
+      repliedToMessage = ChatMessage.fromApiEntry(
+        MapEntry(
+          rawReplied['_uid'] ?? rawReplied['uid'] ?? '',
+          Map<String, dynamic>.from(rawReplied),
+        ),
+      );
+    }
 
     return ChatMessage(
       uid: (value['_uid'] ?? entry.key).toString(),
@@ -89,6 +103,7 @@ class ChatMessage {
       whatsAppError: value['whatsapp_message_error']?.toString() ?? '',
       data: data,
       media: ChatMedia.fromMap(mediaMap),
+      repliedToMessage: repliedToMessage,
     );
   }
 
@@ -165,6 +180,7 @@ class ChatMessage {
       'isFile': isFile,
       'filename': filename,
       'filetype': filetype,
+      'repliedToMessage': repliedToMessage?.toMap(),
     };
   }
 }

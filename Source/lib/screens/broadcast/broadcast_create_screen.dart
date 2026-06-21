@@ -66,8 +66,8 @@ class _BroadcastCreateScreenState extends State<BroadcastCreateScreen>
     ]);
     if (mounted) {
       setState(() {
-        _groups = results[0] as List<Map<String, dynamic>>;
-        _templates = results[1] as List<Map<String, dynamic>>;
+        _groups = results[0];
+        _templates = results[1];
         _loadingGroups = false;
         _loadingTemplates = false;
       });
@@ -434,7 +434,7 @@ class _BroadcastCreateScreenState extends State<BroadcastCreateScreen>
       }),
     ];
     return DropdownButtonFormField<String>(
-      value: _selectedGroup,
+      initialValue: _selectedGroup,
       items: items,
       onChanged: (v) => setState(() => _selectedGroup = v),
       dropdownColor: app_theme.surfaceElevated,

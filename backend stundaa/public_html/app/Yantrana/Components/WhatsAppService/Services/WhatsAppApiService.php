@@ -470,7 +470,8 @@ class WhatsAppApiService extends BaseEngine implements WhatsAppServiceEngineInte
             'pool' => null,
             'queueUid' => null,
             'business_scope_user_id' => '',
-            'is_recorded_audio' => false
+            'is_recorded_audio' => false,
+            'repliedToMessageWamid' => null,
         ], $options);
 
         if ($vendorId) {
@@ -508,6 +509,12 @@ class WhatsAppApiService extends BaseEngine implements WhatsAppServiceEngineInte
             'type' => $type,
             $type => $typeDetails,
         ];
+
+        if ($options['repliedToMessageWamid'] ?? null) {
+            $dataToProcess['context'] = [
+                'message_id' => $options['repliedToMessageWamid']
+            ];
+        }
 
         if( $options['pool'] and $options['queueUid']) {
             $dataToProcess['messaging_product'] = 'whatsapp';
