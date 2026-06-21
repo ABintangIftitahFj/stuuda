@@ -8,42 +8,67 @@ import 'package:url_launcher/url_launcher.dart';
 const String _upgradeEmail = 'support@stundaa.com';
 
 class MyPlanScreen extends StatefulWidget {
-  const MyPlanScreen({super.key});
+  final SubscriptionRepository? repository;
+  const MyPlanScreen({super.key, this.repository});
 
   @override
   State<MyPlanScreen> createState() => _MyPlanScreenState();
 }
 
 class _MyPlanScreenState extends State<MyPlanScreen> {
-  final SubscriptionRepository _repo = SubscriptionRepository();
+  late final SubscriptionRepository _repo;
   SubscriptionInfo? _info;
   Map<String, dynamic> _availablePlans = {};
   bool _loading = true;
   String? _errorMessage;
+  String _loadingStatus = 'Initializing...';
+  final List<String> _logs = [];
+
+  void _addLog(String msg) {
+    debugPrint(msg);
+    _logs.add(msg);
+  }
 
   @override
   void initState() {
     super.initState();
+    _repo = widget.repository ?? SubscriptionRepository();
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
   Future<void> _load() async {
-    debugPrint('[MyPlan] _load start, mounted=$mounted');
+    _addLog('[MyPlan] _load start, mounted=$mounted');
     if (mounted) {
       setState(() {
         _loading = true;
         _errorMessage = null;
+        _loadingStatus = 'Connecting to server...';
       });
     }
     try {
-      debugPrint('[MyPlan] fetching subscription info...');
+      _addLog('[MyPlan] fetching subscription info...');
+      if (mounted) {
+        setState(() {
+          _loadingStatus = 'Fetching subscription info...';
+        });
+      }
       final info = await _repo.fetchSubscriptionInfo();
-      debugPrint('[MyPlan] info=$info');
+      _addLog('[MyPlan] info fetched: $info');
+
+      if (mounted) {
+        setState(() {
+          _loadingStatus = 'Fetching available plans...';
+        });
+      }
+      _addLog('[MyPlan] fetching subscription plans...');
       final plans = await _repo.fetchSubscriptionPlans();
-      debugPrint('[MyPlan] plans=$plans');
+      _addLog('[MyPlan] plans fetched: $plans');
+
       if (info == null || plans == null) {
+        _addLog('[MyPlan] info or plans was null');
         throw Exception('Failed to load plan details from server. Please check your network connection.');
       }
+
       if (mounted) {
         setState(() {
           _info = info;
@@ -51,8 +76,10 @@ class _MyPlanScreenState extends State<MyPlanScreen> {
           _loading = false;
         });
       }
-    } catch (e) {
-      debugPrint('[MyPlan] error: $e');
+      _addLog('[MyPlan] load successful');
+    } catch (e, stack) {
+      _addLog('[MyPlan] error: $e');
+      _addLog('[MyPlan] stack: $stack');
       if (mounted) {
         setState(() {
           _errorMessage = e.toString().replaceAll('Exception: ', '');
@@ -60,7 +87,7 @@ class _MyPlanScreenState extends State<MyPlanScreen> {
         });
       }
     }
-    debugPrint('[MyPlan] _load done, _loading=$_loading, _errorMessage=$_errorMessage');
+    _addLog('[MyPlan] _load done, _loading=$_loading, _errorMessage=$_errorMessage');
   }
 
   Future<void> _openUpgradeEmail() async {
@@ -79,19 +106,66 @@ class _MyPlanScreenState extends State<MyPlanScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: app_theme.backgroundColor,
-      appBar: AppBar(
-        title: const Text('My Plan'),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator(color: app_theme.primary))
-          : _errorMessage != null
-              ? _buildErrorState()
-              : _buildBody(),
-    );
+    try {
+      return Scaffold(
+        backgroundColor: app_theme.backgroundColor,
+        appBar: AppBar(
+          title: const Text('My Plan'),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+        ),
+        body: _loading
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const CircularProgressIndicator(color: app_theme.primary),
+                    const SizedBox(height: 16),
+                    Text(
+                      _loadingStatus,
+                      style: const TextStyle(color: app_theme.secondary, fontSize: 14),
+                    ),
+                  ],
+                ),
+              )
+            : _errorMessage != null
+                ? _buildErrorState()
+                : _buildBody(),
+      );
+    } catch (e, stack) {
+      return Scaffold(
+        backgroundColor: app_theme.backgroundColor,
+        appBar: AppBar(
+          title: const Text('My Plan Error'),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+        ),
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Render Error',
+                  style: TextStyle(color: Colors.red, fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  e.toString(),
+                  style: const TextStyle(color: Colors.white, fontSize: 16),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  stack.toString(),
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
   }
 
   Widget _buildBody() {
@@ -410,6 +484,29 @@ class _MyPlanScreenState extends State<MyPlanScreen> {
                           elevation: 4,
                         ),
                       ),
+                      if (_logs.isNotEmpty) ...[
+                        const SizedBox(height: 20),
+                        ExpansionTile(
+                          title: const Text(
+                            'Debug Details / Logs',
+                            style: TextStyle(color: app_theme.lavenderWhite, fontSize: 13),
+                          ),
+                          children: [
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.4),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                _logs.join('\n'),
+                                style: const TextStyle(color: Colors.grey, fontSize: 11, fontFamily: 'monospace'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),
