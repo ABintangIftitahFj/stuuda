@@ -341,58 +341,68 @@ class _MyPlanScreenState extends State<MyPlanScreen> {
   }
 
   Widget _buildErrorState() {
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Container(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
           padding: const EdgeInsets.all(24),
-          decoration: app_theme.insetPanelDecoration(radius: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.error_outline_rounded,
-                color: app_theme.error,
-                size: 60,
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Connection Error',
-                style: TextStyle(
-                  color: app_theme.lavenderWhite,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                _errorMessage ?? 'An error occurred while loading your plan.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: app_theme.secondary,
-                  fontSize: 14,
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: _load,
-                icon: const Icon(Icons.refresh_rounded),
-                label: const Text('Try Again'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: app_theme.primary,
-                  foregroundColor: app_theme.black,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: app_theme.insetPanelDecoration(radius: 20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.error_outline_rounded,
+                        color: app_theme.error,
+                        size: 60,
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Connection Error',
+                        style: TextStyle(
+                          color: app_theme.lavenderWhite,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        _errorMessage ?? 'An error occurred while loading your plan.',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: app_theme.secondary,
+                          fontSize: 14,
+                          height: 1.4,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton.icon(
+                        onPressed: _load,
+                        icon: const Icon(Icons.refresh_rounded),
+                        label: const Text('Try Again'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: app_theme.primary,
+                          foregroundColor: app_theme.black,
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          elevation: 4,
+                        ),
+                      ),
+                    ],
                   ),
-                  elevation: 4,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
