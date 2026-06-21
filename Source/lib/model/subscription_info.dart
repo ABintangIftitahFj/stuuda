@@ -10,10 +10,17 @@ class PlanFeature {
   });
 
   factory PlanFeature.fromMap(Map<String, dynamic> map) {
+    final rawLimit = map['limit'];
+    int parsedLimit = 0;
+    if (rawLimit is num) {
+      parsedLimit = rawLimit.toInt();
+    } else if (rawLimit != null) {
+      parsedLimit = int.tryParse(rawLimit.toString()) ?? 0;
+    }
     return PlanFeature(
       key: map['key']?.toString() ?? '',
       description: map['description']?.toString() ?? '',
-      limit: (map['limit'] as num?)?.toInt() ?? 0,
+      limit: parsedLimit,
     );
   }
 

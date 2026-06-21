@@ -101,11 +101,7 @@ class _MyPlanScreenState extends State<MyPlanScreen> {
           child: Text('Failed to load plan info',
               style: TextStyle(color: app_theme.secondary)));
     }
-
-    return LayoutBuilder(builder: (context, constraints) {
-      debugPrint('[MyPlan] body constraints: $constraints');
-      return _buildBodyContent(info);
-    });
+    return _buildBodyContent(info);
   }
 
   Widget _buildBodyContent(SubscriptionInfo info) {
@@ -140,7 +136,7 @@ class _MyPlanScreenState extends State<MyPlanScreen> {
   Widget _buildAvailablePlanCard(String id, dynamic plan) {
     if (plan is! Map) return const SizedBox.shrink();
     final title = plan['title']?.toString() ?? id;
-    final charges = plan['charges'] as Map? ?? {};
+    final charges = plan['charges'] is Map ? plan['charges'] as Map : const {};
     String priceText = 'Contact Us';
     if (charges.isNotEmpty) {
       final firstCharge = charges.values.first;
