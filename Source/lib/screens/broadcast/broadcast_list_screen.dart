@@ -193,41 +193,25 @@ class _BroadcastListScreenState extends State<BroadcastListScreen> {
                 ],
               ),
             ],
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             Row(
               children: [
-                _buildMiniStat('Sent', campaign.totalSent, app_theme.primary),
-                const SizedBox(width: 16),
-                _buildMiniStat('Delivered', campaign.totalDelivered, app_theme.success),
-                const SizedBox(width: 16),
-                _buildMiniStat('Read', campaign.totalRead, app_theme.cyanGlow),
-                const SizedBox(width: 16),
-                _buildMiniStat('Failed', campaign.totalFailed, app_theme.error),
+                const Icon(Icons.people_outline,
+                    color: app_theme.secondary, size: 14),
+                const SizedBox(width: 6),
+                Text(
+                  '${campaign.totalContacts} contacts',
+                  style: const TextStyle(
+                      color: app_theme.secondary, fontSize: 12),
+                ),
+                const Spacer(),
+                const Icon(Icons.chevron_right_rounded,
+                    color: app_theme.secondary, size: 18),
               ],
             ),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildMiniStat(String label, int count, Color color) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          count.toString(),
-          style: TextStyle(
-            color: color,
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        Text(
-          label,
-          style: const TextStyle(color: app_theme.secondary, fontSize: 11),
-        ),
-      ],
     );
   }
 

@@ -40,12 +40,16 @@ class CampaignRepository {
     final completer = Completer<CampaignStats?>();
     data_transport.get(
       'campaign-status/$campaignUid',
+      isExternalApi: true,
       onSuccess: (responseData) {
         final raw = responseData?['data'];
         if (raw is Map<String, dynamic>) {
-          if (!completer.isCompleted) {
-            completer.complete(CampaignStats.fromMap(raw));
-          }
+          final uid = raw['_uid']?.toString() ?? raw['uid']?.toString() ?? '';
+          final title = raw['title']?.toString()
+              ?? raw['campaign']?['title']?.toString()
+              ?? '';
+          final stats = CampaignStats.fromMap(raw, uid: uid, title: title);
+          if (!completer.isCompleted) completer.complete(stats);
         } else {
           if (!completer.isCompleted) completer.complete(null);
         }
@@ -70,7 +74,9 @@ class CampaignRepository {
         if (raw is List) {
           groups = raw.whereType<Map<String, dynamic>>().toList();
         } else if (raw is Map) {
-          final nested = raw['groups'] ?? raw['contactGroupList'];
+          final nested = raw['contactList']?['data']
+              ?? raw['groups']
+              ?? raw['contactGroupList'];
           if (nested is List) {
             groups = nested.whereType<Map<String, dynamic>>().toList();
           }

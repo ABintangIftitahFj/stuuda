@@ -18,7 +18,7 @@ const Duration requestTimeout = Duration(seconds: 30);
 
 http.Client httpClient = http.Client();
 
-Map<String, String> _setHeaders() {
+Map<String, String> _setHeaders({bool isExternalApi = false}) {
   token = auth.getAuthToken();
   if (token.isEmpty) {
     pr("WARNING: Token is empty in _setHeaders");
@@ -26,6 +26,7 @@ Map<String, String> _setHeaders() {
     pr("Token prefix: ${token.substring(0, 10)}...");
   }
   return {
+    if (isExternalApi) 'x-external-api-request': 'true',
     'Content-type': 'application/json; charset=UTF-8',
     'Accept': 'application/json',
     // mark as ajax request
@@ -50,6 +51,7 @@ Future<String> post(
   OnCallbackType? thenCallback,
   void Function(dynamic error)? onError,
   OnCallbackType? onFailed,
+  bool isExternalApi = false,
 }) async {
   Map<String, dynamic> newInputData = {};
   if (secured && inputData != null) {
@@ -73,7 +75,7 @@ Future<String> post(
     final httpResponse = await httpClient
         .post(
           urlToProcess,
-          headers: _setHeaders(),
+          headers: _setHeaders(isExternalApi: isExternalApi),
           body: jsonEncode(newInputData.isEmpty ? inputData : newInputData),
         )
         .timeout(requestTimeout);
@@ -97,6 +99,7 @@ Future<String> get(
   Function? onError,
   Map<String, dynamic>? queryParameters,
   OnCallbackType? onFailed,
+  bool isExternalApi = false,
 }) async {
   // Capture context reference before any await — checked for mounted after await
   final capturedContext = context;
@@ -108,7 +111,7 @@ Future<String> get(
     final httpResponse = await httpClient
         .get(
           urlToProcess,
-          headers: _setHeaders(),
+          headers: _setHeaders(isExternalApi: isExternalApi),
         )
         .timeout(requestTimeout);
 

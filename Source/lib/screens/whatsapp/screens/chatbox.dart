@@ -157,7 +157,7 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
     try {
       final uploadTitle = await controller.prepareSendMedia('audio');
       if (uploadTitle == null) throw 'Failed to prepare media upload';
-      if (!mounted) return;
+      if (!ctx.mounted) return;
 
       data_transport.uploadFile(
         filePath,
@@ -176,12 +176,12 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                 context: ctx,
                 isRecordedAudio: true,
               );
-              if (mounted) Navigator.of(ctx).pop();
+              if (ctx.mounted) Navigator.of(ctx).pop();
             }
           }
         },
         onError: (e) {
-          if (mounted) {
+          if (ctx.mounted) {
             Navigator.of(ctx).pop();
             ScaffoldMessenger.of(ctx).showSnackBar(
               SnackBar(content: Text('Upload failed: $e')),
@@ -190,7 +190,7 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
         },
       );
     } catch (e) {
-      if (mounted) {
+      if (ctx.mounted) {
         Navigator.of(ctx).pop();
         ScaffoldMessenger.of(ctx).showSnackBar(
           SnackBar(content: Text('Error: $e')),

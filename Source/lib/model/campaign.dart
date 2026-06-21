@@ -29,8 +29,10 @@ class Campaign {
       title: map['title']?.toString() ?? '',
       status: map['status']?.toString() ?? '',
       scheduledAt: map['scheduled_at']?.toString(),
-      expireAt: map['expire_at']?.toString(),
-      totalContacts: (map['totalContacts'] as num?)?.toInt() ?? 0,
+      expireAt: map['expire_at']?.toString() ?? map['expireAt']?.toString(),
+      totalContacts: (map['total_contacts'] as num?)?.toInt()
+          ?? (map['totalContacts'] as num?)?.toInt()
+          ?? 0,
       totalSent: (map['totalSent'] as num?)?.toInt() ?? 0,
       totalDelivered: (map['totalDelivered'] as num?)?.toInt() ?? 0,
       totalRead: (map['totalRead'] as num?)?.toInt() ?? 0,
@@ -77,17 +79,26 @@ class CampaignStats {
     this.timeTook,
   });
 
-  factory CampaignStats.fromMap(Map<String, dynamic> map) {
+  factory CampaignStats.fromMap(Map<String, dynamic> map, {String? uid, String? title}) {
+    final campaignMap = map['campaign'] as Map<String, dynamic>?;
     return CampaignStats(
-      uid: map['_uid']?.toString() ?? map['uid']?.toString() ?? '',
-      title: map['title']?.toString() ?? '',
+      uid: uid
+          ?? map['_uid']?.toString()
+          ?? campaignMap?['_uid']?.toString()
+          ?? '',
+      title: title
+          ?? map['title']?.toString()
+          ?? campaignMap?['title']?.toString()
+          ?? '',
       statusText: map['statusText']?.toString() ?? '',
       campaignStatus: map['campaignStatus']?.toString() ?? '',
       totalSent: (map['totalSent'] as num?)?.toInt() ?? 0,
       totalDelivered: (map['totalDelivered'] as num?)?.toInt() ?? 0,
       totalRead: (map['totalRead'] as num?)?.toInt() ?? 0,
       totalFailed: (map['totalFailed'] as num?)?.toInt() ?? 0,
-      inQueueCount: (map['inQueuedCount'] as num?)?.toInt() ?? 0,
+      inQueueCount: (map['inQueueCount'] as num?)?.toInt()
+          ?? (map['inQueuedCount'] as num?)?.toInt()
+          ?? 0,
       totalSentInPercent: map['totalSentInPercent']?.toString(),
       totalDeliveredInPercent: map['totalDeliveredInPercent']?.toString(),
       totalReadInPercent: map['totalReadInPercent']?.toString(),
