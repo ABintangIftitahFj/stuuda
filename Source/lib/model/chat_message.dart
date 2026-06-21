@@ -20,6 +20,13 @@ class ChatMessage {
     }
   }
 
+  static bool _parseBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    final text = value?.toString().trim().toLowerCase();
+    return text == 'true' || text == '1' || text == 'yes';
+  }
+
   const ChatMessage({
     required this.uid,
     required this.wamid,
@@ -91,8 +98,8 @@ class ChatMessage {
               '')
           .toString(),
       content: value['message']?.toString() ?? '',
-      isIncoming: value['is_incoming_message'] == 1,
-      isSystem: value['is_system_message'] == 1,
+      isIncoming: _parseBool(value['is_incoming_message']),
+      isSystem: _parseBool(value['is_system_message']),
       status: value['status']?.toString() ?? 'unknown',
       messagedAt: value['messaged_at']?.toString() ?? '',
       formattedMessagedAt: _formatLocalTime(

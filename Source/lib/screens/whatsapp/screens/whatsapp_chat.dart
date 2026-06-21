@@ -585,6 +585,48 @@ class _WhatsAppChatState extends State<WhatsAppChat>
                                           size: 14, color: app_theme.primary),
                                     ),
                                   ],
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 5, vertical: 1.5),
+                                    decoration: BoxDecoration(
+                                      color: contact.isServiceWindowActive
+                                          ? Colors.green.withValues(alpha: 0.15)
+                                          : Colors.orange.withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(4),
+                                      border: Border.all(
+                                        color: contact.isServiceWindowActive
+                                            ? Colors.green.withValues(alpha: 0.3)
+                                            : Colors.orange.withValues(alpha: 0.3),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          CupertinoIcons.time,
+                                          size: 9,
+                                          color: contact.isServiceWindowActive
+                                              ? Colors.green
+                                              : Colors.orange,
+                                        ),
+                                        const SizedBox(width: 2.5),
+                                        Text(
+                                          contact.isServiceWindowActive
+                                              ? "24h"
+                                              : "Expired",
+                                          style: TextStyle(
+                                            color: contact.isServiceWindowActive
+                                                ? Colors.green
+                                                : Colors.orange,
+                                            fontSize: 8.5,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),

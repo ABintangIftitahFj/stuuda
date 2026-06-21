@@ -8,6 +8,8 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:stundaa/model/chat_conversation.dart';
+import 'package:stundaa/model/contact_summary.dart';
 import 'package:stundaa/screens/whatsapp/componets/message_bubble.dart';
 import 'package:stundaa/screens/whatsapp/controller/chatbox_controller.dart';
 import 'package:stundaa/services/data_transport.dart' as data_transport;
@@ -131,6 +133,113 @@ void main() {
     controller.clearActiveContact('contact-123');
     expect(controller.userId, 'contact-123');
     expect(controller.isActiveContact('contact-123'), isFalse);
+  });
+
+  test('seedLatestMessageFromContact keeps list preview visible in chatbox',
+      () {
+    final controller = ChatboxController();
+    addTearDown(controller.dispose);
+    controller.setUserId('contact-123');
+    controller.holduser.clear();
+
+    final contact = ContactSummary.fromMap({
+      '_uid': 'contact-123',
+      'full_name': 'Studn2h',
+      'wa_id': '992000000484',
+      'last_message': {
+        '_uid': 'message-latest',
+        'wamid': 'wamid-latest',
+        'message': 'ga ke reply',
+        'is_incoming_message': true,
+        'is_system_message': false,
+        'status': 'received',
+        'messaged_at': '2026-06-21T16:36:38Z',
+        'formatted_message_time': '2:36 PM',
+      },
+    });
+
+    controller.seedLatestMessageFromContact(contact);
+
+    expect(controller.holduser, hasLength(1));
+    expect(controller.holduser.first['uid'], 'message-latest');
+    expect(controller.holduser.first['content'], 'ga ke reply');
+    expect(controller.holduser.first['isIncoming'], isTrue);
+
+    controller.seedLatestMessageFromContact(contact);
+    expect(controller.holduser, hasLength(1));
+  });
+
+  test('chat conversation parser accepts numeric window flags', () {
+    final conversation = ChatConversation.fromChatResponse({
+      'data': {
+        'isDirectMessageDeliveryWindowOpened': 1,
+        'directMessageDeliveryWindowOpenedTillMessage': 'Window active',
+        'client_models': {
+          'whatsappMessageLogs': {},
+        },
+      },
+    });
+
+    expect(conversation.isDirectMessageDeliveryWindowOpened, isTrue);
+  });
+
+  testWidgets('sendTemplateMessage adds waiting-for-customer notice',
+      (tester) async {
+    final controller = ChatboxController();
+    addTearDown(controller.dispose);
+    controller.userId = 'contact-123';
+
+    data_transport.httpClient = MockClient((request) async {
+      if (request.url.path
+          .endsWith('/api/vendor/whatsapp/contact/chat/send-template')) {
+        return http.Response(jsonEncode({'reaction': 1, 'data': {}}), 200);
+      }
+
+      if (request.url.path
+          .endsWith('/api/vendor/whatsapp/contact/chat/contact-123')) {
+        return http.Response(
+          jsonEncode({
+            'reaction': 1,
+            'data': {
+              'isDirectMessageDeliveryWindowOpened': false,
+              'client_models': {
+                'whatsappMessageLogs': {},
+              },
+            },
+          }),
+          200,
+        );
+      }
+
+      return http.Response(jsonEncode({'reaction': 1}), 200);
+    });
+
+    late BuildContext buildContext;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) {
+              buildContext = context;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      ),
+    );
+
+    final successFuture =
+        controller.sendTemplateMessage(buildContext, 'template-123');
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(
+      controller.holduser.first['content'],
+      ChatboxController.templateWaitingNoticeText,
+    );
+    expect(controller.holduser.first['isSystem'], isTrue);
+    expect(controller.holduser.first['status'], 'sent');
+    await tester.pump(const Duration(seconds: 1));
+    expect(await successFuture, isTrue);
   });
 
   testWidgets('sendTextMessage sends quoted wamid for reply payload',

@@ -263,7 +263,7 @@ class WhatsAppServiceController extends BaseController
         if ($processReaction->failed()) {
             return $this->processResponse($processReaction);
         }
-        return $this->processResponse($processReaction);
+        return $this->processResponse($processReaction, [], [], true);
     }
     /**
      * Send Chat Message
@@ -550,7 +550,7 @@ class WhatsAppServiceController extends BaseController
             return $this->processResponse($processReaction);
         }
 
-        return $this->processResponse($processReaction);
+        return $this->processResponse($processReaction, [], [], true);
     }
 
     /**

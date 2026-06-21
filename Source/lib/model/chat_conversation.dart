@@ -43,12 +43,16 @@ class ChatConversation {
 
     return ChatConversation(
       messages: rawLogs.entries.map(ChatMessage.fromApiEntry).toList(),
-      enableAiBot: clientModels['isAiChatBotEnabled'] == true,
-      enableReplyBot: clientModels['isReplyBotEnable'] == true,
-      isDirectMessageDeliveryWindowOpened: data?['isDirectMessageDeliveryWindowOpened'] == true,
-      directMessageDeliveryWindowOpenedTillMessage: data?['directMessageDeliveryWindowOpenedTillMessage']?.toString() ?? '',
+      enableAiBot: _parseBool(clientModels['isAiChatBotEnabled']),
+      enableReplyBot: _parseBool(clientModels['isReplyBotEnable']),
+      isDirectMessageDeliveryWindowOpened:
+          _parseBool(data?['isDirectMessageDeliveryWindowOpened']),
+      directMessageDeliveryWindowOpenedTillMessage:
+          data?['directMessageDeliveryWindowOpenedTillMessage']?.toString() ??
+              '',
       windowExpiresAt: data?['directMessageDeliveryWindowExpiresAt'] != null
-          ? DateTime.tryParse(data!['directMessageDeliveryWindowExpiresAt'].toString())
+          ? DateTime.tryParse(
+              data!['directMessageDeliveryWindowExpiresAt'].toString())
           : null,
       assignedLabelIds: rawAssignedLabels is List
           ? rawAssignedLabels
@@ -57,5 +61,12 @@ class ChatConversation {
               .toList()
           : const <int>[],
     );
+  }
+
+  static bool _parseBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    final text = value?.toString().trim().toLowerCase();
+    return text == 'true' || text == '1' || text == 'yes';
   }
 }

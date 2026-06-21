@@ -39,32 +39,35 @@ class _SettingsState extends State<Settings> {
               ),
               child: Column(
                 children: [
-                  ListTile(
-                    leading: const CircleAvatar(
-                      backgroundColor: app_theme.surfaceMuted,
-                      radius: 25,
-                      child: Icon(CupertinoIcons.person, color: app_theme.iceBlue),
-                    ),
-                    title: Text(
-                      '${auth.getAuthInfo('username') ?? ""}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: app_theme.lavenderWhite,
+                  Material(
+                    color: Colors.transparent,
+                    child: ListTile(
+                      leading: const CircleAvatar(
+                        backgroundColor: app_theme.surfaceMuted,
+                        radius: 25,
+                        child: Icon(CupertinoIcons.person, color: app_theme.iceBlue),
                       ),
-                    ),
-                    subtitle: Text(auth.getAuthInfo('email') ?? "",
+                      title: Text(
+                        '${auth.getAuthInfo('username') ?? ""}',
                         style: const TextStyle(
-                          fontSize: 10,
-                          color: app_theme.secondary,
-                        )),
-                    trailing: const Icon(
-                      CupertinoIcons.pencil,
-                      color: app_theme.iceBlue,
+                          fontWeight: FontWeight.bold,
+                          color: app_theme.lavenderWhite,
+                        ),
+                      ),
+                      subtitle: Text(auth.getAuthInfo('email') ?? "",
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: app_theme.secondary,
+                          )),
+                      trailing: const Icon(
+                        CupertinoIcons.pencil,
+                        color: app_theme.iceBlue,
+                      ),
+                      onTap: () {
+                        Navigator.pop(context);
+                        navigatePage(context, const MyProfile());
+                      },
                     ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      navigatePage(context, const MyProfile());
-                    },
                   ),
                 ],
               ),

@@ -527,7 +527,7 @@ class ContactRepository extends BaseRepository implements ContactRepositoryInter
         // -----------------------------------------
         // FINAL RETURN
         // -----------------------------------------
-        return $query->with(['lastMessage', 'labels'])
+        return $query->with(['lastMessage', 'labels', 'lastIncomingMessage'])
             ->has('lastIncomingMessage')
             ->simplePaginate(12);
     }

@@ -5,7 +5,7 @@ import 'package:stundaa/services/data_transport.dart' as data_transport;
 class SubscriptionRepository {
   Future<SubscriptionInfo?> fetchSubscriptionInfo() async {
     final completer = Completer<SubscriptionInfo?>();
-    data_transport.get(
+    await data_transport.get(
       'vendor/subscription-info',
       onSuccess: (responseData) {
         if (!completer.isCompleted) {
@@ -26,13 +26,14 @@ class SubscriptionRepository {
           completer.complete(null);
         }
       },
-    );
+    ).catchError((_) => '');
+    if (!completer.isCompleted) completer.complete(null);
     return completer.future;
   }
 
   Future<Map<String, dynamic>?> fetchSubscriptionPlans() async {
     final completer = Completer<Map<String, dynamic>?>();
-    data_transport.get(
+    await data_transport.get(
       'vendor/subscription-plans',
       onSuccess: (responseData) {
         if (!completer.isCompleted) {
@@ -58,7 +59,8 @@ class SubscriptionRepository {
           completer.complete(null);
         }
       },
-    );
+    ).catchError((_) => '');
+    if (!completer.isCompleted) completer.complete(null);
     return completer.future;
   }
 }

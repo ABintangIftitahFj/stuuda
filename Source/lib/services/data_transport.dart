@@ -282,6 +282,7 @@ void _thenProcessing(
     // Parse the response body as JSON
     responseData = jsonDecode(value.body) as Map<String, dynamic>;
   } catch (e) {
+    debugPrint('[DataTransport] _thenProcessing parse error: $e\nbody=${value?.body}');
     pr("Error parsing response: $e");
 
     // Show error message in the UI
@@ -323,15 +324,20 @@ void _thenProcessing(
     if (context != null && context.mounted) {
       navigatePage(context, const LoginPage());
     }
+    if (failedCallbackAction != null) {
+      failedCallbackAction(responseData);
+    }
+    return;
   } else if (value.statusCode == 200) {
     // Handle success case
     if (thenCallbackAction != null) {
       thenCallbackAction(responseData);
     }
 
-    final int reaction =
-        (responseData['reaction'] ?? responseData['reaction_code']) as int? ??
-            0;
+    final dynamic _rawReaction = responseData['reaction'] ?? responseData['reaction_code'];
+    final int reaction = _rawReaction is int
+        ? _rawReaction
+        : int.tryParse(_rawReaction?.toString() ?? '') ?? 0;
 
     if (reaction == 1 || reaction == 21) {
       if (successCallbackAction != null) {

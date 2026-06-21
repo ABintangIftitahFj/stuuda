@@ -149,12 +149,26 @@ class ContactSummary {
   String get displayName => fullName.isEmpty ? waId : fullName;
 
   bool get isServiceWindowActive {
-    if (lastMessageTime.isEmpty) return false;
-    // This is a rough approximation as lastMessageTime is formatted by backend (e.g. "2:30 PM" or "Yesterday")
-    // For a real check, we'd need the raw timestamp.
-    // Assuming if it has "Just now" or today's time format, it's active.
-    final time = lastMessageTime.toLowerCase();
-    return time.contains('am') || time.contains('pm') || time.contains('just now') || time.contains('minute');
+    final lastIncoming = raw['last_incoming_message'];
+    if (lastIncoming == null || lastIncoming is! Map) {
+      if (lastMessageTime.isEmpty) return false;
+      final time = lastMessageTime.toLowerCase();
+      return time.contains('am') || time.contains('pm') || time.contains('just now') || time.contains('minute');
+    }
+    final messagedAtRaw = lastIncoming['messaged_at']?.toString();
+    if (messagedAtRaw == null || messagedAtRaw.isEmpty) return false;
+    try {
+      final normalized = messagedAtRaw.trim().replaceFirst(' ', 'T');
+      final dt = DateTime.parse(normalized);
+      final utcDt = dt.isUtc
+          ? dt
+          : DateTime.utc(
+              dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second);
+      final difference = DateTime.now().toUtc().difference(utcDt);
+      return difference.inHours < 24 && !difference.isNegative;
+    } catch (_) {
+      return false;
+    }
   }
 
   Map<String, dynamic> toChatboxPayload() {

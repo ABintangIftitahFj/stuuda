@@ -96,15 +96,18 @@ class _BroadcastCreateScreenState extends State<BroadcastCreateScreen>
     }
     setState(() => _submitting = true);
 
-    final tz = DateTime.now().timeZoneName;
+    String _fmtDt(DateTime dt) {
+      final utc = dt.toUtc();
+      return '${utc.year}-${utc.month.toString().padLeft(2,'0')}-${utc.day.toString().padLeft(2,'0')}T${utc.hour.toString().padLeft(2,'0')}:${utc.minute.toString().padLeft(2,'0')}:${utc.second.toString().padLeft(2,'0')}';
+    }
     final data = <String, dynamic>{
       'title': _titleCtrl.text.trim(),
       'contact_group': _selectedGroup,
-      'timezone': tz,
+      'timezone': 'UTC',
       'template_name': _templateNameCtrl.text.trim(),
       'template_language': _templateLangCtrl.text.trim(),
-      if (_scheduleAt != null) 'schedule_at': _scheduleAt!.toIso8601String(),
-      if (_expireAt != null) 'expire_at': _expireAt!.toIso8601String(),
+      if (_scheduleAt != null) 'schedule_at': _fmtDt(_scheduleAt!),
+      if (_expireAt != null) 'expire_at': _fmtDt(_expireAt!),
     };
 
     final ok = await _repo.scheduleCampaign(data);

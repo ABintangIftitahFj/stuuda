@@ -24,10 +24,11 @@ class _MyPlanScreenState extends State<MyPlanScreen> {
   @override
   void initState() {
     super.initState();
-    _load();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
   Future<void> _load() async {
+    debugPrint('[MyPlan] _load start, mounted=$mounted');
     if (mounted) {
       setState(() {
         _loading = true;
@@ -35,8 +36,11 @@ class _MyPlanScreenState extends State<MyPlanScreen> {
       });
     }
     try {
+      debugPrint('[MyPlan] fetching subscription info...');
       final info = await _repo.fetchSubscriptionInfo();
+      debugPrint('[MyPlan] info=$info');
       final plans = await _repo.fetchSubscriptionPlans();
+      debugPrint('[MyPlan] plans=$plans');
       if (info == null || plans == null) {
         throw Exception('Failed to load plan details from server. Please check your network connection.');
       }
@@ -48,6 +52,7 @@ class _MyPlanScreenState extends State<MyPlanScreen> {
         });
       }
     } catch (e) {
+      debugPrint('[MyPlan] error: $e');
       if (mounted) {
         setState(() {
           _errorMessage = e.toString().replaceAll('Exception: ', '');
@@ -55,6 +60,7 @@ class _MyPlanScreenState extends State<MyPlanScreen> {
         });
       }
     }
+    debugPrint('[MyPlan] _load done, _loading=$_loading, _errorMessage=$_errorMessage');
   }
 
   Future<void> _openUpgradeEmail() async {
@@ -96,6 +102,13 @@ class _MyPlanScreenState extends State<MyPlanScreen> {
               style: TextStyle(color: app_theme.secondary)));
     }
 
+    return LayoutBuilder(builder: (context, constraints) {
+      debugPrint('[MyPlan] body constraints: $constraints');
+      return _buildBodyContent(info);
+    });
+  }
+
+  Widget _buildBodyContent(SubscriptionInfo info) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -317,18 +330,24 @@ class _MyPlanScreenState extends State<MyPlanScreen> {
 
   Widget _buildUpgradeButton() {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        ElevatedButton.icon(
-          onPressed: _openUpgradeEmail,
-          icon: const Icon(Icons.upgrade_rounded),
-          label: const Text('Upgrade Plan'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: app_theme.primary,
-            foregroundColor: app_theme.black,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: _openUpgradeEmail,
+                icon: const Icon(Icons.upgrade_rounded),
+                label: const Text('Upgrade Plan'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: app_theme.primary,
+                  foregroundColor: app_theme.black,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 12),
         Text(

@@ -30,26 +30,29 @@ class AppDrawer extends StatelessWidget {
               children: [
                 const AppLogo(height: 68),
                 const SizedBox(height: 16),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(
-                    '${auth.getAuthInfo('full_name')} (${auth.getAuthInfo('username')})',
-                    style: const TextStyle(
-                      color: app_theme.lavenderWhite,
-                      fontWeight: FontWeight.w600,
+                Material(
+                  color: Colors.transparent,
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      '${auth.getAuthInfo('full_name')} (${auth.getAuthInfo('username')})',
+                      style: const TextStyle(
+                        color: app_theme.lavenderWhite,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
+                    subtitle: Text(
+                      auth.getAuthInfo('email'),
+                      style: const TextStyle(color: app_theme.secondary),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      navigatePage(
+                        context,
+                        const MyProfile(),
+                      );
+                    },
                   ),
-                  subtitle: Text(
-                    auth.getAuthInfo('email'),
-                    style: const TextStyle(color: app_theme.secondary),
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    navigatePage(
-                      context,
-                      const MyProfile(),
-                    );
-                  },
                 ),
               ],
             ),

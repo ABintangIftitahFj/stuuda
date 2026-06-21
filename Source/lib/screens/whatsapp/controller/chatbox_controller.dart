@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:stundaa/model/chat_conversation.dart';
 import 'package:stundaa/model/chat_message.dart';
+import 'package:stundaa/model/contact_summary.dart';
 import 'package:stundaa/repositories/chat_repository.dart';
 import 'package:stundaa/repositories/campaign_repository.dart';
 import 'package:stundaa/services/utils.dart';
@@ -9,10 +10,14 @@ import 'package:stundaa/services/auth.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // class ChatboxController extends GetxController {
 class ChatboxController extends ChangeNotifier {
+  static const templateWaitingNoticeText =
+      'Template terkirim. Menunggu balasan customer untuk membuka chat kembali.';
+
   var templatesList = <Map<String, dynamic>>[].obs;
   var isLoadingTemplates = false.obs;
   // Existing variables
@@ -196,6 +201,40 @@ class ChatboxController extends ChangeNotifier {
     _stopPolling();
   }
 
+  void seedLatestMessageFromContact(ContactSummary contact) {
+    if (contact.uid != userId) {
+      return;
+    }
+
+    final lastMessage = contact.raw['last_message'];
+    if (lastMessage is! Map) {
+      return;
+    }
+
+    final message = ChatMessage.fromApiEntry(
+      MapEntry(
+        lastMessage['_uid'] ?? lastMessage['uid'] ?? 'latest-${contact.uid}',
+        Map<String, dynamic>.from(lastMessage),
+      ),
+    );
+
+    if (message.content.trim().isEmpty &&
+        message.templateMessage.trim().isEmpty &&
+        message.media.link.trim().isEmpty) {
+      return;
+    }
+
+    final messageMap = message.toMap();
+    final messageUid = messageMap['uid']?.toString() ?? '';
+    if (messageUid.isNotEmpty &&
+        holduser.any((entry) => entry['uid']?.toString() == messageUid)) {
+      return;
+    }
+
+    holduser.insert(0, messageMap);
+    messageModels.insert(0, message);
+  }
+
   Future<void> refreshActiveChatForContact(dynamic contactUid) async {
     if (!isActiveContact(contactUid)) {
       return;
@@ -376,6 +415,8 @@ class ChatboxController extends ChangeNotifier {
         context: context,
         contactUid: userId!,
       );
+      holduser.clear();
+      messageModels.clear();
       await getUserChatSend();
     } catch (e) {
       pr("Error in ClearHistory: $e");
@@ -463,7 +504,6 @@ class ChatboxController extends ChangeNotifier {
     if (!hasMoreMessages.value || isLoading.value) return;
 
     isLoading.value = true;
-    await Future.delayed(const Duration(seconds: 3));
     try {
       final conversation = await _chatRepository.fetchConversation(
         userId!,
@@ -522,6 +562,10 @@ class ChatboxController extends ChangeNotifier {
   }
 
   void _replaceMessages(List<ChatMessage> messages) {
+    if (messages.isEmpty && holduser.isNotEmpty) {
+      return;
+    }
+
     // Keep local pending/sending/failed messages so they don't disappear while refreshing.
     // Also keep recently accepted/sent messages if they aren't in the API response yet.
     final pendingMessages = holduser
@@ -660,12 +704,7 @@ class ChatboxController extends ChangeNotifier {
     } catch (e) {
       pr("Error sending message: $e");
 
-      String errorMsg = "Failed to send message. Tap to retry.";
-      if (e is Map && e['message'] != null) {
-        errorMsg = e['message'].toString();
-      } else if (e.toString().isNotEmpty) {
-        errorMsg = e.toString();
-      }
+      final errorMsg = _parseErrorMessage(e, fallback: "Failed to send message. Tap to retry.");
 
       _updateMessageStatus(localId, 'failed', errorMessage: errorMsg);
 
@@ -700,18 +739,14 @@ class ChatboxController extends ChangeNotifier {
         contactUid: userId!,
         templateUid: templateUid,
       );
+      _insertTemplateWaitingNotice();
       // Wait for a second and refresh
       await Future.delayed(const Duration(seconds: 1));
       await getUserChatSend();
       return true;
     } catch (e) {
       pr("Error sending template message: $e");
-      String errorMsg = "Failed to send template message.";
-      if (e is Map && e['message'] != null) {
-        errorMsg = e['message'].toString();
-      } else if (e.toString().isNotEmpty) {
-        errorMsg = e.toString();
-      }
+      final errorMsg = _parseErrorMessage(e, fallback: "Failed to send template message.");
       if (context.mounted) {
         showToastMessage(context, errorMsg, type: "error");
       }
@@ -719,6 +754,28 @@ class ChatboxController extends ChangeNotifier {
     } finally {
       isLoading.value = false;
     }
+  }
+
+  void _insertTemplateWaitingNotice() {
+    final now = DateTime.now();
+    final notice = ChatMessage(
+      uid: 'local-template-waiting-${now.microsecondsSinceEpoch}',
+      wamid: '',
+      repliedToMessageUid: '',
+      content: templateWaitingNoticeText,
+      isIncoming: false,
+      isSystem: true,
+      status: 'sent',
+      messagedAt: now.toIso8601String(),
+      formattedMessagedAt: DateFormat('h:mm a').format(now),
+      templateMessage: '',
+      whatsAppError: '',
+      data: const <String, dynamic>{},
+      media: const ChatMedia(),
+    );
+
+    holduser.insert(0, notice.toMap());
+    messageModels.insert(0, notice);
   }
 
   void _updateMessageStatus(String localId, String newStatus,
@@ -788,6 +845,32 @@ class ChatboxController extends ChangeNotifier {
   Future<void> refreshChat() async {
     clearCache();
     await getUserChat();
+  }
+
+  String _parseErrorMessage(dynamic e, {String fallback = "An error occurred"}) {
+    if (e == null) return fallback;
+    if (e is Map) {
+      if (e['message'] != null && e['message'].toString().trim().isNotEmpty) {
+        return e['message'].toString();
+      }
+      final data = e['data'];
+      if (data is Map && data['message'] != null && data['message'].toString().trim().isNotEmpty) {
+        return data['message'].toString();
+      }
+      final errors = e['errors'];
+      if (errors is Map && errors.isNotEmpty) {
+        final firstError = errors.values.first;
+        if (firstError is List && firstError.isNotEmpty) {
+          return firstError.first.toString();
+        }
+        return firstError.toString();
+      }
+    }
+    final errorStr = e.toString();
+    if (errorStr.trim().isNotEmpty && errorStr != "null") {
+      return errorStr;
+    }
+    return fallback;
   }
 
   @override
