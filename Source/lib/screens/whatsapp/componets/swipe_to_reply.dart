@@ -22,22 +22,21 @@ class _SwipeToReplyState extends State<SwipeToReply> {
   bool _triggered = false;
 
   void _onHorizontalDragUpdate(DragUpdateDetails details) {
-    // Only allow swiping left (negative delta)
-    if (details.primaryDelta! < 0 || _dragExtent < 0) {
-      setState(() {
-        _dragExtent += details.primaryDelta!;
-        if (_dragExtent.abs() > _maxDrag) {
-          _dragExtent = -_maxDrag;
-        }
-        
-        if (_dragExtent.abs() >= _threshold && !_triggered) {
-          _triggered = true;
-          // You could provide haptic feedback here
-        } else if (_dragExtent.abs() < _threshold) {
-          _triggered = false;
-        }
-      });
-    }
+    final delta = details.primaryDelta ?? 0;
+    setState(() {
+      _dragExtent += delta;
+      if (_dragExtent > _maxDrag) {
+        _dragExtent = _maxDrag;
+      } else if (_dragExtent < -_maxDrag) {
+        _dragExtent = -_maxDrag;
+      }
+
+      if (_dragExtent.abs() >= _threshold && !_triggered) {
+        _triggered = true;
+      } else if (_dragExtent.abs() < _threshold) {
+        _triggered = false;
+      }
+    });
   }
 
   void _onHorizontalDragEnd(DragEndDetails details) {
@@ -52,36 +51,47 @@ class _SwipeToReplyState extends State<SwipeToReply> {
 
   @override
   Widget build(BuildContext context) {
+    final isDraggingRight = _dragExtent > 0;
+    final isDraggingLeft = _dragExtent < 0;
     return GestureDetector(
       onHorizontalDragUpdate: _onHorizontalDragUpdate,
       onHorizontalDragEnd: _onHorizontalDragEnd,
       child: Stack(
-        alignment: Alignment.centerRight,
+        alignment: Alignment.center,
         children: [
-          if (_dragExtent < 0)
+          if (isDraggingLeft)
             Positioned(
               right: 10 + (_dragExtent.abs() * 0.5),
-              child: Opacity(
-                opacity: (_dragExtent.abs() / _maxDrag).clamp(0.0, 1.0),
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: const BoxDecoration(
-                    color: app_theme.primary,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.reply,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ),
-              ),
+              child: _replyHint(),
+            ),
+          if (isDraggingRight)
+            Positioned(
+              left: 10 + (_dragExtent.abs() * 0.5),
+              child: _replyHint(),
             ),
           Transform.translate(
             offset: Offset(_dragExtent, 0),
             child: widget.child,
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _replyHint() {
+    return Opacity(
+      opacity: (_dragExtent.abs() / _maxDrag).clamp(0.0, 1.0),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: const BoxDecoration(
+          color: app_theme.primary,
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(
+          Icons.reply,
+          color: Colors.white,
+          size: 20,
+        ),
       ),
     );
   }

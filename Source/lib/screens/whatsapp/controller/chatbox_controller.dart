@@ -533,12 +533,17 @@ class ChatboxController extends ChangeNotifier {
       final apiOpen = conversation.isDirectMessageDeliveryWindowOpened;
       final apiExpires = conversation.windowExpiresAt;
       final localExpiresLocal = _windowExpiryFromLocal();
+      final seededExpires = _windowExpiresAt;
+      final seededStillValid =
+          seededExpires != null && seededExpires.isAfter(DateTime.now());
       if (apiOpen && apiExpires != null) {
         isWindowOpened.value = true;
         _startWindowCountdown(apiExpires);
       } else if (localExpiresLocal != null) {
         isWindowOpened.value = true;
         _startWindowCountdown(localExpiresLocal);
+      } else if (seededStillValid) {
+        isWindowOpened.value = true;
       } else {
         isWindowOpened.value = false;
         _stopWindowCountdown();

@@ -264,9 +264,11 @@
                                                                         x-if="whatsappMessageLogItem.is_incoming_message && !whatsappMessageLogItem.is_system_message">
                                                                         <div class="message received"
                                                                             x-data="{ touchStartX: 0, touchDiffX: 0 }"
+                                                                            :style="touchDiffX > 0 ? 'transform: translateX(' + (touchDiffX > 80 ? 80 : touchDiffX) + 'px)' : ''"
                                                                             @touchstart="touchStartX = $event.touches[0].clientX"
-                                                                            @touchmove="touchDiffX = $event.touches[0].clientX - touchStartX; if (touchDiffX > 0 && touchDiffX < 80) { $el.style.transform = 'translateX(' + touchDiffX + 'px)' }"
-                                                                            @touchend="if (touchDiffX > 40) { replyingToMessage = whatsappMessageLogItem; if (window.lwMessengerEmojiArea) { window.lwMessengerEmojiArea[0].emojioneArea.focus(); } } $el.style.transform = ''; touchStartX = 0; touchDiffX = 0;"
+                                                                            @touchmove="touchDiffX = $event.touches[0].clientX - touchStartX;"
+                                                                            @touchend="if (touchDiffX > 40) { replyingToMessage = whatsappMessageLogItem; if (window.lwMessengerEmojiArea) { window.lwMessengerEmojiArea[0].emojioneArea.focus(); } } touchStartX = 0; touchDiffX = 0;"
+                                                                            @touchcancel="touchStartX = 0; touchDiffX = 0;"
                                                                             @dblclick="replyingToMessage = whatsappMessageLogItem; if (window.lwMessengerEmojiArea) { window.lwMessengerEmojiArea[0].emojioneArea.focus(); }">
                                                                             <button type="button" @click.stop="replyingToMessage = whatsappMessageLogItem; if (window.lwMessengerEmojiArea) { window.lwMessengerEmojiArea[0].emojioneArea.focus(); }" class="lw-reply-hover-btn" title="{{ __tr('Reply') }}">
                                                                                 <i class="fa fa-reply"></i>
@@ -305,9 +307,11 @@
                                                                         x-if="!whatsappMessageLogItem.is_incoming_message && !whatsappMessageLogItem.is_system_message">
                                                                         <div class="message sent"
                                                                             x-data="{ touchStartX: 0, touchDiffX: 0 }"
+                                                                            :style="touchDiffX < 0 ? 'transform: translateX(' + (touchDiffX < -80 ? -80 : touchDiffX) + 'px)' : ''"
                                                                             @touchstart="touchStartX = $event.touches[0].clientX"
-                                                                            @touchmove="touchDiffX = $event.touches[0].clientX - touchStartX; if (touchDiffX < 0 && touchDiffX > -80) { $el.style.transform = 'translateX(' + touchDiffX + 'px)' }"
-                                                                            @touchend="if (touchDiffX < -40) { replyingToMessage = whatsappMessageLogItem; if (window.lwMessengerEmojiArea) { window.lwMessengerEmojiArea[0].emojioneArea.focus(); } } $el.style.transform = ''; touchStartX = 0; touchDiffX = 0;"
+                                                                            @touchmove="touchDiffX = $event.touches[0].clientX - touchStartX;"
+                                                                            @touchend="if (touchDiffX < -40) { replyingToMessage = whatsappMessageLogItem; if (window.lwMessengerEmojiArea) { window.lwMessengerEmojiArea[0].emojioneArea.focus(); } } touchStartX = 0; touchDiffX = 0;"
+                                                                            @touchcancel="touchStartX = 0; touchDiffX = 0;"
                                                                             @dblclick="replyingToMessage = whatsappMessageLogItem; if (window.lwMessengerEmojiArea) { window.lwMessengerEmojiArea[0].emojioneArea.focus(); }">
                                                                             <button type="button" @click.stop="replyingToMessage = whatsappMessageLogItem; if (window.lwMessengerEmojiArea) { window.lwMessengerEmojiArea[0].emojioneArea.focus(); }" class="lw-reply-hover-btn" title="{{ __tr('Reply') }}">
                                                                                 <i class="fa fa-reply"></i>
