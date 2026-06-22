@@ -49,6 +49,24 @@ class SubscriptionInfo {
     required this.features,
   });
 
+  static SubscriptionInfo get defaultFree {
+    return const SubscriptionInfo(
+      planTitle: 'Free Plan',
+      planType: 'free',
+      hasActivePlan: false,
+      features: [
+        PlanFeature(key: 'contacts', description: 'Contacts', limit: 5),
+        PlanFeature(key: 'campaigns', description: 'Campaigns (Per Month)', limit: 10),
+        PlanFeature(key: 'bot_replies', description: 'Bot Replies', limit: 10),
+        PlanFeature(key: 'bot_flows', description: 'Bot Flows', limit: 5),
+        PlanFeature(key: 'contact_custom_fields', description: 'Contact Custom Fields', limit: 2),
+        PlanFeature(key: 'system_users', description: 'Team Members/Agents', limit: 0),
+        PlanFeature(key: 'ai_chat_bot', description: 'AI Chat Bot', limit: 1),
+        PlanFeature(key: 'api_access', description: 'API and Webhook Access', limit: 1),
+      ],
+    );
+  }
+
   bool get isFree => planType == 'free';
 
   factory SubscriptionInfo.fromResponse(Map<String, dynamic>? response) {

@@ -21,8 +21,54 @@ class _MyPlanScreenState extends State<MyPlanScreen> {
   Map<String, dynamic> _availablePlans = {};
   bool _loading = true;
   String? _errorMessage;
+  bool _isUsingFallback = false;
   String _loadingStatus = 'Initializing...';
   final List<String> _logs = [];
+
+  static const Map<String, dynamic> defaultAvailablePlans = {
+    'plan_1': {
+      'id': 'plan_1',
+      'title': 'Standard',
+      'charges': {
+        'monthly': {
+          'title': '\$10 / Month',
+          'charge': 10,
+        },
+        'yearly': {
+          'title': '\$100 / Year',
+          'charge': 100,
+        },
+      },
+    },
+    'plan_2': {
+      'id': 'plan_2',
+      'title': 'Premium',
+      'charges': {
+        'monthly': {
+          'title': '\$20 / Month',
+          'charge': 20,
+        },
+        'yearly': {
+          'title': '\$199 / Year',
+          'charge': 199,
+        },
+      },
+    },
+    'plan_3': {
+      'id': 'plan_3',
+      'title': 'Ultimate',
+      'charges': {
+        'monthly': {
+          'title': '\$30 / Month',
+          'charge': 30,
+        },
+        'yearly': {
+          'title': '\$299 / Year',
+          'charge': 299,
+        },
+      },
+    },
+  };
 
   void _addLog(String msg) {
     debugPrint(msg);
@@ -42,9 +88,12 @@ class _MyPlanScreenState extends State<MyPlanScreen> {
       setState(() {
         _loading = true;
         _errorMessage = null;
+        _isUsingFallback = false;
         _loadingStatus = 'Connecting to server...';
       });
     }
+    SubscriptionInfo? info;
+    Map<String, dynamic>? plans;
     try {
       _addLog('[MyPlan] fetching subscription info...');
       if (mounted) {
@@ -52,7 +101,7 @@ class _MyPlanScreenState extends State<MyPlanScreen> {
           _loadingStatus = 'Fetching subscription info...';
         });
       }
-      final info = await _repo.fetchSubscriptionInfo();
+      info = await _repo.fetchSubscriptionInfo();
       _addLog('[MyPlan] info fetched: $info');
 
       if (mounted) {
@@ -61,33 +110,30 @@ class _MyPlanScreenState extends State<MyPlanScreen> {
         });
       }
       _addLog('[MyPlan] fetching subscription plans...');
-      final plans = await _repo.fetchSubscriptionPlans();
+      plans = await _repo.fetchSubscriptionPlans();
       _addLog('[MyPlan] plans fetched: $plans');
+    } catch (e, stack) {
+      _addLog('[MyPlan] error while fetching: $e');
+      _addLog('[MyPlan] stack: $stack');
+    }
 
-      if (info == null || plans == null) {
-        _addLog('[MyPlan] info or plans was null');
-        throw Exception('Failed to load plan details from server. Please check your network connection.');
-      }
-
-      if (mounted) {
-        setState(() {
+    if (mounted) {
+      setState(() {
+        if (info != null && plans != null) {
           _info = info;
           _availablePlans = plans;
-          _loading = false;
-        });
-      }
-      _addLog('[MyPlan] load successful');
-    } catch (e, stack) {
-      _addLog('[MyPlan] error: $e');
-      _addLog('[MyPlan] stack: $stack');
-      if (mounted) {
-        setState(() {
-          _errorMessage = e.toString().replaceAll('Exception: ', '');
-          _loading = false;
-        });
-      }
+          _isUsingFallback = false;
+          _errorMessage = null;
+        } else {
+          _info = info ?? SubscriptionInfo.defaultFree;
+          _availablePlans = plans ?? defaultAvailablePlans;
+          _isUsingFallback = true;
+          _errorMessage = null;
+        }
+        _loading = false;
+      });
     }
-    _addLog('[MyPlan] _load done, _loading=$_loading, _errorMessage=$_errorMessage');
+    _addLog('[MyPlan] _load done, _loading=$_loading, _isUsingFallback=$_isUsingFallback');
   }
 
   Future<void> _openUpgradeEmail() async {
@@ -168,12 +214,64 @@ class _MyPlanScreenState extends State<MyPlanScreen> {
     }
   }
 
+  Widget _buildOfflineBanner() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      color: app_theme.warning.withValues(alpha: 0.15),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.warning_amber_rounded,
+            color: app_theme.warning,
+            size: 20,
+          ),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text(
+              'Gagal terhubung ke server. Menampilkan data rencana default.',
+              style: TextStyle(
+                color: app_theme.warning,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: _load,
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Text(
+              'Coba Lagi',
+              style: TextStyle(
+                color: app_theme.primary,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildBody() {
     final info = _info;
     if (info == null) {
       return const Center(
           child: Text('Failed to load plan info',
               style: TextStyle(color: app_theme.secondary)));
+    }
+    if (_isUsingFallback) {
+      return Column(
+        children: [
+          _buildOfflineBanner(),
+          Expanded(child: _buildBodyContent(info)),
+        ],
+      );
     }
     return _buildBodyContent(info);
   }

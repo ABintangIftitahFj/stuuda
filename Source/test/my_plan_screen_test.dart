@@ -102,6 +102,18 @@ class MockSubscriptionRepository implements SubscriptionRepository {
   }
 }
 
+class MockFailedSubscriptionRepository implements SubscriptionRepository {
+  @override
+  Future<SubscriptionInfo?> fetchSubscriptionInfo() async {
+    return null;
+  }
+
+  @override
+  Future<Map<String, dynamic>?> fetchSubscriptionPlans() async {
+    return null;
+  }
+}
+
 void main() {
   testWidgets('MyPlanScreen renders subscription details without error', (WidgetTester tester) async {
     // We want to verify if MyPlanScreen renders using the parsed response structure
@@ -117,5 +129,23 @@ void main() {
 
     // Check if we see the subscription details
     expect(find.text('My Plan'), findsOneWidget);
+  });
+
+  testWidgets('MyPlanScreen renders fallback details when API fails', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MyPlanScreen(repository: MockFailedSubscriptionRepository()),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    // Check if we see the subscription details fallback
+    expect(find.text('My Plan'), findsOneWidget);
+    // Check if we see the offline banner message
+    expect(find.textContaining('Gagal terhubung ke server'), findsOneWidget);
+    // Check if we see the fallback plan title 'Free Plan'
+    expect(find.text('Free Plan'), findsOneWidget);
   });
 }

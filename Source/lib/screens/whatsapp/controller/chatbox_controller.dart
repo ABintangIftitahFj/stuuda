@@ -206,6 +206,10 @@ class ChatboxController extends ChangeNotifier {
       return;
     }
 
+    // Seed window state from contact list payload so badge inside chat
+    // matches outside immediately (before chat detail API resolves).
+    _seedWindowFromContact(contact);
+
     final lastMessage = contact.raw['last_message'];
     if (lastMessage is! Map) {
       return;
@@ -233,6 +237,60 @@ class ChatboxController extends ChangeNotifier {
 
     holduser.insert(0, messageMap);
     messageModels.insert(0, message);
+  }
+
+  /// Parse server timestamp ("YYYY-MM-DD HH:mm:ss" or ISO-8601) as UTC.
+  DateTime? _parseUtcTimestamp(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final normalized = raw.trim().replaceFirst(' ', 'T');
+      final dt = DateTime.parse(normalized);
+      return dt.isUtc
+          ? dt
+          : DateTime.utc(
+              dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Seed window state from contact.raw.last_incoming_message so the badge
+  /// inside chat matches the contact list badge immediately on open.
+  void _seedWindowFromContact(ContactSummary contact) {
+    final lastIncoming = contact.raw['last_incoming_message'];
+    if (lastIncoming is! Map) return;
+    final messagedAt = _parseUtcTimestamp(lastIncoming['messaged_at']?.toString());
+    if (messagedAt == null) return;
+    final expiresAt = messagedAt.add(const Duration(hours: 24));
+    if (DateTime.now().toUtc().isBefore(expiresAt)) {
+      isWindowOpened.value = true;
+      _startWindowCountdown(expiresAt.toLocal());
+    }
+  }
+
+  /// Compute window state from messages we already have. Used to override
+  /// a stale API `isDirectMessageDeliveryWindowOpened=false` when the local
+  /// data shows a recent incoming message — keeps the inside badge in sync
+  /// with the outside contact-list badge (both derive from "last incoming
+  /// message <24h ago").
+  DateTime? _windowExpiryFromLocal() {
+    DateTime? newestIncomingUtc;
+    for (final m in holduser) {
+      final isIncoming = m['isIncoming'] == true;
+      final isSystem = m['isSystem'] == true;
+      if (!isIncoming || isSystem) continue;
+      final ts = _parseUtcTimestamp(m['messagedAt']?.toString());
+      if (ts == null) continue;
+      if (newestIncomingUtc == null || ts.isAfter(newestIncomingUtc)) {
+        newestIncomingUtc = ts;
+      }
+    }
+    if (newestIncomingUtc == null) return null;
+    final expiresAt = newestIncomingUtc.add(const Duration(hours: 24));
+    if (DateTime.now().toUtc().isBefore(expiresAt)) {
+      return expiresAt.toLocal();
+    }
+    return null;
   }
 
   Future<void> refreshActiveChatForContact(dynamic contactUid) async {
@@ -457,20 +515,35 @@ class ChatboxController extends ChangeNotifier {
     try {
       enableAiBot.value = conversation.enableAiBot;
       replyAEnableBot.value = conversation.enableReplyBot;
-      isWindowOpened.value = conversation.isDirectMessageDeliveryWindowOpened;
       windowExpiresText.value =
           conversation.directMessageDeliveryWindowOpenedTillMessage;
-      if (conversation.windowExpiresAt != null &&
-          conversation.isDirectMessageDeliveryWindowOpened) {
-        _startWindowCountdown(conversation.windowExpiresAt!);
-      } else {
-        _stopWindowCountdown();
-      }
+
+      // Apply messages FIRST so window reconciliation can read holduser.
       if (replaceExisting) {
         _replaceMessages(conversation.messages);
       } else {
         _appendMessages(conversation.messages);
       }
+
+      // Reconcile window state: prefer API when open; otherwise fall back
+      // to local computation (newest incoming <24h). The contact-list
+      // endpoint and chat endpoint use the same backend formula but can
+      // briefly diverge — local data is what the user already sees, so
+      // align the inside badge to it instead of trusting a stale flag.
+      final apiOpen = conversation.isDirectMessageDeliveryWindowOpened;
+      final apiExpires = conversation.windowExpiresAt;
+      final localExpiresLocal = _windowExpiryFromLocal();
+      if (apiOpen && apiExpires != null) {
+        isWindowOpened.value = true;
+        _startWindowCountdown(apiExpires);
+      } else if (localExpiresLocal != null) {
+        isWindowOpened.value = true;
+        _startWindowCountdown(localExpiresLocal);
+      } else {
+        isWindowOpened.value = false;
+        _stopWindowCountdown();
+      }
+
       injectReplyChatDummyIfEmpty();
       assignedLabelIds = conversation.assignedLabelIds;
     } catch (e) {
@@ -484,6 +557,15 @@ class ChatboxController extends ChangeNotifier {
     if (userId == null || userId!.isEmpty) {
       return;
     }
+    // Snapshot scroll position BEFORE refresh. With reverse:true,
+    // minScrollExtent == newest end. If user is browsing older messages
+    // (scrolled away from the newest end), preserve their position so
+    // 10s polling doesn't yank them to the bottom and hide old messages.
+    final wasNearNewest = scrollController.hasClients
+        ? (scrollController.position.pixels -
+                scrollController.position.minScrollExtent) <
+            120
+        : true;
     try {
       final conversation = await _chatRepository.fetchConversation(userId!);
       _handleConversationResponse(conversation, replaceExisting: true);
@@ -493,7 +575,7 @@ class ChatboxController extends ChangeNotifier {
       pr("Error in getUserChatSend: $error");
       // Don't crash, just keep current state
     } finally {
-      if (scrollController.hasClients) {
+      if (wasNearNewest && scrollController.hasClients) {
         scrollController.jumpTo(scrollController.position.minScrollExtent);
       }
     }
@@ -566,17 +648,6 @@ class ChatboxController extends ChangeNotifier {
       return;
     }
 
-    // Keep local pending/sending/failed messages so they don't disappear while refreshing.
-    // Also keep recently accepted/sent messages if they aren't in the API response yet.
-    final pendingMessages = holduser
-        .where((m) =>
-            m['status'] == 'pending' ||
-            m['status'] == 'sending' ||
-            m['status'] == 'failed' ||
-            ((m['status'] == 'accepted' || m['status'] == 'sent') &&
-                !messages.any((apiMsg) => apiMsg.uid == m['uid'])))
-        .toList();
-
     // Build lookup: content → repliedToMessageUid from current local messages.
     // Used to restore reply context lost when API omits replied_to field.
     final localReplyByContent = <String, String>{};
@@ -586,13 +657,11 @@ class ChatboxController extends ChangeNotifier {
         localReplyByContent[m['content']?.toString() ?? ''] = uid;
       }
     }
-    // Also merge persisted cache.
     localReplyByContent.addAll(_localReplyCache);
 
     messageModels.assignAll(messages);
     final apiMessages = messages.map((message) {
       final map = message.toMap();
-      // Restore repliedToMessageUid if API returned it empty but we have local data.
       final replied = map['repliedToMessageUid']?.toString() ?? '';
       if (replied.isEmpty) {
         final content = map['content']?.toString() ?? '';
@@ -604,12 +673,33 @@ class ChatboxController extends ChangeNotifier {
       return map;
     }).toList();
 
-    // Avoid duplicates if API already returned the message
     final apiUids = apiMessages.map((m) => m['uid']).toSet();
-    final uniquePending =
-        pendingMessages.where((m) => !apiUids.contains(m['uid'])).toList();
 
-    holduser.assignAll([...uniquePending, ...apiMessages]);
+    // Preserve any local message whose uid is not in the API response.
+    // - Pending/sending/failed optimistic sends still in flight.
+    // - Newly accepted server messages not yet indexed in API (any status).
+    // - Older paginated messages loaded via loadMoreMessages2 (page > 1).
+    // Without this, polling refresh (page=1) wipes pagination history and
+    // newly-sent messages with non-whitelisted status (e.g. "initialize").
+    final preservedPending = <Map<String, dynamic>>[];
+    final preservedOlder = <Map<String, dynamic>>[];
+    for (final m in holduser) {
+      if (apiUids.contains(m['uid'])) continue;
+      final status = m['status']?.toString() ?? '';
+      final uid = m['uid']?.toString() ?? '';
+      final isInFlightLocal = uid.startsWith('local-') ||
+          status == 'pending' ||
+          status == 'sending' ||
+          status == 'failed';
+      if (isInFlightLocal) {
+        preservedPending.add(m);
+      } else {
+        preservedOlder.add(m);
+      }
+    }
+
+    // Order: in-flight optimistic first (newest), API page, then older paginated.
+    holduser.assignAll([...preservedPending, ...apiMessages, ...preservedOlder]);
   }
 
   void _appendMessages(List<ChatMessage> messages) {
@@ -797,7 +887,16 @@ class ChatboxController extends ChangeNotifier {
       final oldMap = holduser[index];
       final newMap = sentMessage.toMap();
 
-      // Preserve local reply metadata if server returned it empty
+      // Server may queue the message and return log_message with empty
+      // 'message' field before WhatsApp acknowledges delivery. Keep the
+      // user-typed content so the bubble isn't blank in the meantime.
+      final oldContent = oldMap['content']?.toString() ?? '';
+      final newContent = newMap['content']?.toString() ?? '';
+      if (newContent.isEmpty && oldContent.isNotEmpty) {
+        newMap['content'] = oldContent;
+      }
+
+      // Same for reply metadata.
       final oldRepliedId = oldMap['repliedToMessageUid']?.toString() ?? '';
       final newRepliedId = newMap['repliedToMessageUid']?.toString() ?? '';
       if (newRepliedId.isEmpty && oldRepliedId.isNotEmpty) {

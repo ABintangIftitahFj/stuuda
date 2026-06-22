@@ -183,7 +183,7 @@ class ApiUserController extends BaseController
                 'plan_title'      => $planDetails['plan_title'] ?? 'Free',
                 'plan_type'       => $planDetails['plan_type'] ?? 'free',
                 'has_active_plan' => $planDetails['has_active_plan'] ?? false,
-                'ends_at'         => $subscription->ends_at ?? null,
+                'ends_at'         => ($subscription && isset($subscription->ends_at)) ? $subscription->ends_at : null,
                 'features'        => $features,
             ],
         ]);
