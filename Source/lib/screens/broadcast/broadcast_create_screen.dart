@@ -110,25 +110,73 @@ class _BroadcastCreateScreenState extends State<BroadcastCreateScreen>
       if (_expireAt != null) 'expire_at': _fmtDt(_expireAt!),
     };
 
-    final ok = await _repo.scheduleCampaign(data);
+    final result = await _repo.scheduleCampaign(data);
     if (!mounted) return;
     setState(() => _submitting = false);
 
-    if (ok) {
+    if (result['success'] == true) {
       Navigator.of(context).pop(true);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Broadcast scheduled'),
+        SnackBar(
+          content: Text(result['message'] ?? 'Broadcast scheduled'),
           backgroundColor: app_theme.success,
         ),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to schedule broadcast'),
-          backgroundColor: app_theme.error,
-        ),
-      );
+      final msg = result['message'] ?? 'Failed to schedule broadcast';
+      if (msg.toLowerCase().contains('tidak ada kontak aktif') || msg.toLowerCase().contains('no active contacts')) {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: app_theme.surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: BorderSide(
+                color: app_theme.error.withValues(alpha: 0.4),
+                width: 1.5,
+              ),
+            ),
+            title: const Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: app_theme.error),
+                SizedBox(width: 8),
+                Text(
+                  'Peringatan',
+                  style: TextStyle(
+                    color: app_theme.error,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            content: Text(
+              '$msg. Campaign tidak bisa dikirim.',
+              style: const TextStyle(
+                color: app_theme.lavenderWhite,
+                fontSize: 14,
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                style: TextButton.styleFrom(
+                  foregroundColor: app_theme.primary,
+                  textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(msg),
+            backgroundColor: app_theme.error,
+          ),
+        );
+      }
     }
   }
 

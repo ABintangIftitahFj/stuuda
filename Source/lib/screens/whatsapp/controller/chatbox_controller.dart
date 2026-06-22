@@ -656,13 +656,34 @@ class ChatboxController extends ChangeNotifier {
     // Build lookup: content → repliedToMessageUid from current local messages.
     // Used to restore reply context lost when API omits replied_to field.
     final localReplyByContent = <String, String>{};
+    // Build lookup: content → local uid for outgoing optimistic messages so
+    // we can remap reply pointers when the API returns the real uid.
+    final localUidByOutgoingContent = <String, String>{};
     for (final m in holduser) {
       final uid = m['repliedToMessageUid']?.toString() ?? '';
       if (uid.isNotEmpty) {
         localReplyByContent[m['content']?.toString() ?? ''] = uid;
       }
+      final mUid = m['uid']?.toString() ?? '';
+      final isIncoming = m['isIncoming'] == true;
+      if (mUid.startsWith('local-') && !isIncoming) {
+        localUidByOutgoingContent[m['content']?.toString() ?? ''] = mUid;
+      }
     }
     localReplyByContent.addAll(_localReplyCache);
+
+    // localUid → realUid mapping: an API message with content matching an
+    // outstanding local-* outgoing message means the optimistic uid is being
+    // replaced. Anything still pointing at the local uid (as a reply target)
+    // must be remapped or its quoted bubble breaks.
+    final localToRealUid = <String, String>{};
+    for (final message in messages) {
+      if (message.isIncoming) continue;
+      final localUid = localUidByOutgoingContent[message.content];
+      if (localUid != null && localUid.isNotEmpty && localUid != message.uid) {
+        localToRealUid[localUid] = message.uid;
+      }
+    }
 
     messageModels.assignAll(messages);
     final apiMessages = messages.map((message) {
@@ -672,8 +693,11 @@ class ChatboxController extends ChangeNotifier {
         final content = map['content']?.toString() ?? '';
         final restored = localReplyByContent[content];
         if (restored != null && restored.isNotEmpty) {
-          map['repliedToMessageUid'] = restored;
+          // Restored value may itself be a stale local uid — remap if known.
+          map['repliedToMessageUid'] = localToRealUid[restored] ?? restored;
         }
+      } else if (localToRealUid.containsKey(replied)) {
+        map['repliedToMessageUid'] = localToRealUid[replied]!;
       }
       return map;
     }).toList();
@@ -696,10 +720,18 @@ class ChatboxController extends ChangeNotifier {
           status == 'pending' ||
           status == 'sending' ||
           status == 'failed';
+      // Remap stale local-uid reply pointers on preserved entries so the
+      // quoted bubble can resolve once the target's real uid has arrived.
+      final repliedTo = m['repliedToMessageUid']?.toString() ?? '';
+      Map<String, dynamic> entry = m;
+      if (repliedTo.isNotEmpty && localToRealUid.containsKey(repliedTo)) {
+        entry = Map<String, dynamic>.from(m);
+        entry['repliedToMessageUid'] = localToRealUid[repliedTo]!;
+      }
       if (isInFlightLocal) {
-        preservedPending.add(m);
+        preservedPending.add(entry);
       } else {
-        preservedOlder.add(m);
+        preservedOlder.add(entry);
       }
     }
 
@@ -913,6 +945,26 @@ class ChatboxController extends ChangeNotifier {
       }
 
       holduser[index] = newMap;
+
+      // Remap any other messages that reference the old local uid as their
+      // replied-to target. Without this, replies to own optimistic messages
+      // orphan once the local uid is replaced by the real server uid — the
+      // quoted bubble would then fail to resolve and disappear.
+      final newUid = newMap['uid']?.toString() ?? '';
+      final newWamid = newMap['wamid']?.toString() ?? '';
+      final replacementId = newWamid.isNotEmpty ? newWamid : newUid;
+      if (localId.isNotEmpty && replacementId.isNotEmpty && replacementId != localId) {
+        for (var i = 0; i < holduser.length; i++) {
+          if (i == index) continue;
+          final m = holduser[i];
+          if (m['repliedToMessageUid']?.toString() == localId) {
+            final remapped = Map<String, dynamic>.from(m);
+            remapped['repliedToMessageUid'] = replacementId;
+            holduser[i] = remapped;
+          }
+        }
+      }
+
       notifyListeners();
     }
   }

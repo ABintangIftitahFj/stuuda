@@ -632,7 +632,7 @@ class WhatsAppServiceEngine extends BaseEngine implements WhatsAppServiceEngineI
             $contactsWhereClause['contacts.language_code'] = $whatsAppTemplate->language;
         }
 
-        $contactCount = $this->contactRepository->countContactsForCampaign($contactsWhereClause, $groupContactIds, $labelIds);
+        $contactCount = $this->contactRepository->countContactsForCampaign($contactsWhereClause, $groupContactIds, $labelIds, true);
 
         return $this->engineSuccessResponse([
             'totalContacts' => $contactCount,
@@ -817,10 +817,10 @@ class WhatsAppServiceEngine extends BaseEngine implements WhatsAppServiceEngineI
                 })->all();
         }
         // get contacts count of selected
-        $totalContacts = $this->contactRepository->countContactsForCampaign($contactsWhereClause, $groupContactIds, $labelIds);
+        $totalContacts = $this->contactRepository->countContactsForCampaign($contactsWhereClause, $groupContactIds, $labelIds, true);
 
         if (!$totalContacts) {
-            return $this->engineFailedResponse([], __tr('Contacts does not found'));
+            return $this->engineFailedResponse([], __tr('Tidak ada kontak aktif'));
         }
         // demo account restrictions
         if (isDemo() and ($totalContacts > 3)) {
@@ -968,7 +968,7 @@ class WhatsAppServiceEngine extends BaseEngine implements WhatsAppServiceEngineI
             ])) {
                 $isSucceed = true;
             }
-        });
+        }, true);
 
         if ($isSucceed) {
 

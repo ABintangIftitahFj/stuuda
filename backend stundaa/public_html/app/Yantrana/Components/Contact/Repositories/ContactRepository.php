@@ -575,7 +575,7 @@ class ContactRepository extends BaseRepository implements ContactRepositoryInter
      * @param array $labelIds
      * @return Collection
      */
-    public function countContactsForCampaign($whereClauses, $groupContactIds, $labelIds)
+    public function countContactsForCampaign($whereClauses, $groupContactIds, $labelIds, $onlyActive24h = false)
     {
         $query = $this->primaryModel::where($whereClauses);
         // demo account restriction
@@ -593,6 +593,17 @@ class ContactRepository extends BaseRepository implements ContactRepositoryInter
             $query->whereIn('contacts._id', $groupContactIds);
         }
 
+        if ($onlyActive24h) {
+            $activeThreshold = now()->subHours(24)->toDateTimeString();
+            $query->whereExists(function ($subQuery) use ($activeThreshold) {
+                $subQuery->select(DB::raw(1))
+                    ->from('whatsapp_message_logs')
+                    ->whereColumn('whatsapp_message_logs.contacts__id', 'contacts._id')
+                    ->where('whatsapp_message_logs.is_incoming_message', 1)
+                    ->where('whatsapp_message_logs.messaged_at', '>=', $activeThreshold);
+            });
+        }
+
         return $query->distinct()->count('contacts._id');
     }
 
@@ -603,9 +614,10 @@ class ContactRepository extends BaseRepository implements ContactRepositoryInter
      * @param array $groupContactIds
      * @param array $labelIds
      * @param function $callback
+     * @param bool $onlyActive24h
      * @return Object
      */
-    public function getContactsForCampaignInChunks($whereClauses, $groupContactIds, $labelIds, $callback)
+    public function getContactsForCampaignInChunks($whereClauses, $groupContactIds, $labelIds, $callback, $onlyActive24h = false)
     {
         $query = $this->primaryModel::where($whereClauses);
         // demo account restriction
@@ -619,6 +631,18 @@ class ContactRepository extends BaseRepository implements ContactRepositoryInter
             $query->whereIn('labels._id', $labelIds); // Match any of the given label IDs
             $query->distinct();
         }
+
+        if ($onlyActive24h) {
+            $activeThreshold = now()->subHours(24)->toDateTimeString();
+            $query->whereExists(function ($subQuery) use ($activeThreshold) {
+                $subQuery->select(DB::raw(1))
+                    ->from('whatsapp_message_logs')
+                    ->whereColumn('whatsapp_message_logs.contacts__id', 'contacts._id')
+                    ->where('whatsapp_message_logs.is_incoming_message', 1)
+                    ->where('whatsapp_message_logs.messaged_at', '>=', $activeThreshold);
+            });
+        }
+
         if (empty($groupContactIds)) {
             return $query->chunk(500, $callback);
         }

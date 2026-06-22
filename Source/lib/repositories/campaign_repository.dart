@@ -125,19 +125,34 @@ class CampaignRepository {
     return completer.future;
   }
 
-  Future<bool> scheduleCampaign(Map<String, dynamic> data) async {
-    final completer = Completer<bool>();
+  Future<Map<String, dynamic>> scheduleCampaign(Map<String, dynamic> data) async {
+    final completer = Completer<Map<String, dynamic>>();
     data_transport.post(
       'vendor/whatsapp/campaign/schedule',
       inputData: data,
-      onSuccess: (_) {
-        if (!completer.isCompleted) completer.complete(true);
+      onSuccess: (res) {
+        if (!completer.isCompleted) {
+          completer.complete({
+            'success': true,
+            'message': res?['data']?['message'] ?? 'Broadcast scheduled',
+          });
+        }
       },
-      onFailed: (_) {
-        if (!completer.isCompleted) completer.complete(false);
+      onFailed: (res) {
+        if (!completer.isCompleted) {
+          completer.complete({
+            'success': false,
+            'message': res?['data']?['message'] ?? 'Failed to schedule broadcast',
+          });
+        }
       },
-      onError: (_) {
-        if (!completer.isCompleted) completer.complete(false);
+      onError: (res) {
+        if (!completer.isCompleted) {
+          completer.complete({
+            'success': false,
+            'message': res?['data']?['message'] ?? 'Network or server error',
+          });
+        }
       },
     );
     return completer.future;
