@@ -420,7 +420,10 @@ class ContactProvider with ChangeNotifier {
   }
 
   bool contactExists(String contactUid) {
-    return contactsList.any((entry) => entry.value['_uid'] == contactUid);
+    return contactsList.any((entry) =>
+        entry.key == contactUid ||
+        entry.value['_uid'] == contactUid ||
+        entry.value['wa_id'] == contactUid);
   }
 
   Future<void> fetchSingleContact(String contactUid) async {
@@ -451,8 +454,10 @@ class ContactProvider with ChangeNotifier {
   }
 
   void updateMessageCountToZero(String contactId) {
-    int index =
-        contactsList.indexWhere((entry) => entry.value['_uid'] == contactId);
+    int index = contactsList.indexWhere((entry) =>
+        entry.key == contactId ||
+        entry.value['_uid'] == contactId ||
+        entry.value['wa_id'] == contactId);
     if (index != -1) {
       final contactEntry = contactsList[index];
       int unreadMessages = contactEntry.value['unread_messages_count'] ?? 0;
@@ -465,8 +470,10 @@ class ContactProvider with ChangeNotifier {
           'unread_messages_count': 0,
         };
         contactsList[index] = MapEntry(contactEntry.key, updatedContact);
-        int originalIndex = originalContactsList
-            .indexWhere((entry) => entry.value['_uid'] == contactId);
+        int originalIndex = originalContactsList.indexWhere((entry) =>
+            entry.key == contactId ||
+            entry.value['_uid'] == contactId ||
+            entry.value['wa_id'] == contactId);
         if (originalIndex != -1) {
           originalContactsList[originalIndex] =
               MapEntry(contactEntry.key, updatedContact);
@@ -484,9 +491,11 @@ class ContactProvider with ChangeNotifier {
     String justNowLabel, {
     String? lastMessageText,
     bool? lastMessageIsIncoming,
+    String? waId,
   }) {
-    final contactIndex =
-        contactsList.indexWhere((entry) => entry.key == contactUid);
+    final contactIndex = contactsList.indexWhere((entry) =>
+        entry.key == contactUid ||
+        entry.value['_uid'] == contactUid);
     if (contactIndex != -1) {
       final contactEntry = contactsList[contactIndex];
       final updatedContact = {
@@ -501,56 +510,62 @@ class ContactProvider with ChangeNotifier {
         },
         'unread_messages_count':
             (contactEntry.value['unread_messages_count'] ?? 0) + 1,
+        if (waId != null && waId.isNotEmpty) 'wa_id': waId,
       };
       _player.play(AssetSource('audio/receivesound.mp3'));
       contactsList.removeAt(contactIndex);
       contactsList.insert(0, MapEntry(contactUid, updatedContact));
+
+      int originalIndex = originalContactsList.indexWhere((entry) =>
+          entry.key == contactUid ||
+          entry.value['_uid'] == contactUid);
+      if (originalIndex != -1) {
+        originalContactsList.removeAt(originalIndex);
+        originalContactsList.insert(0, MapEntry(contactUid, updatedContact));
+      }
     } else {
-      final newContact = MapEntry(contactUid, {
-        'last_message': {
-          'formatted_message_time': justNowLabel,
-          '_uid': lastMessageUid,
-          'message': lastMessageText,
-          'is_incoming_message': lastMessageIsIncoming,
-        },
-        'unread_messages_count': 1,
-      });
-      contactsList.insert(0, newContact);
+      int originalIndex = originalContactsList.indexWhere((entry) =>
+          entry.key == contactUid ||
+          entry.value['_uid'] == contactUid);
+      if (originalIndex != -1) {
+        final contactEntry = originalContactsList[originalIndex];
+        final updatedContact = {
+          ...contactEntry.value,
+          'last_message': {
+            'formatted_message_time': justNowLabel,
+            '_uid': lastMessageUid,
+            'message': lastMessageText ??
+                contactEntry.value['last_message']?['message'],
+            'is_incoming_message': lastMessageIsIncoming ??
+                contactEntry.value['last_message']?['is_incoming_message'],
+          },
+          'unread_messages_count':
+              (contactEntry.value['unread_messages_count'] ?? 0) + 1,
+          if (waId != null && waId.isNotEmpty) 'wa_id': waId,
+        };
+        _player.play(AssetSource('audio/receivesound.mp3'));
+        originalContactsList.removeAt(originalIndex);
+        originalContactsList.insert(0, MapEntry(contactUid, updatedContact));
+        contactsList.insert(0, MapEntry(contactUid, updatedContact));
+      } else {
+        final newContact = MapEntry(contactUid, {
+          '_uid': contactUid,
+          'contact_uid': contactUid,
+          'wa_id': waId ?? contactUid,
+          'full_name': 'Contact',
+          'last_message': {
+            'formatted_message_time': justNowLabel,
+            '_uid': lastMessageUid,
+            'message': lastMessageText,
+            'is_incoming_message': lastMessageIsIncoming,
+          },
+          'unread_messages_count': 1,
+        });
+        contactsList.insert(0, newContact);
+        originalContactsList.insert(0, newContact);
+      }
     }
     unreadMsgCount++;
-
-    final originalContactIndex =
-        originalContactsList.indexWhere((entry) => entry.key == contactUid);
-    if (originalContactIndex != -1) {
-      final originalEntry = originalContactsList[originalContactIndex];
-      final updatedOriginalContact = {
-        ...originalEntry.value,
-        'last_message': {
-          'formatted_message_time': justNowLabel,
-          '_uid': lastMessageUid,
-          'message': lastMessageText ??
-              originalEntry.value['last_message']?['message'],
-          'is_incoming_message': lastMessageIsIncoming ??
-              originalEntry.value['last_message']?['is_incoming_message'],
-        },
-        'unread_messages_count':
-            (originalEntry.value['unread_messages_count'] ?? 0) + 1,
-      };
-      originalContactsList.removeAt(originalContactIndex);
-      originalContactsList.insert(
-          0, MapEntry(contactUid, updatedOriginalContact));
-    } else {
-      final newOriginalContact = MapEntry(contactUid, {
-        'last_message': {
-          'formatted_message_time': justNowLabel,
-          '_uid': lastMessageUid,
-          'message': lastMessageText,
-          'is_incoming_message': lastMessageIsIncoming,
-        },
-        'unread_messages_count': 1,
-      });
-      originalContactsList.insert(0, newOriginalContact);
-    }
     _syncActiveAssignedCache();
     notifyListeners();
   }

@@ -13,13 +13,16 @@ class ChatRepository {
     int? page,
   }) async {
     final completer = Completer<ChatConversation>();
-    final buffer =
-        StringBuffer('vendor/whatsapp/contact/chat/$contactUid?assigned=');
+    final buffer = StringBuffer('vendor/whatsapp/contact/chat/$contactUid');
+    final params = <String>[];
     if (way.isNotEmpty) {
-      buffer.write('&way=$way');
+      params.add('way=$way');
     }
     if (page != null) {
-      buffer.write('&page=$page');
+      params.add('page=$page');
+    }
+    if (params.isNotEmpty) {
+      buffer.write('?${params.join('&')}');
     }
 
     await data_transport.get(

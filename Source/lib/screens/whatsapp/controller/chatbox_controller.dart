@@ -178,10 +178,21 @@ class ChatboxController extends ChangeNotifier {
       currentPage = 2;
       hasMoreMessages.value = true;
       selectedReplyMessage.value = null;
+      // Reset window state so leftover expiry from a previous contact does
+      // not leak into the new chat (e.g. opening an Expired contact right
+      // after one with an active 24h window).
+      isWindowOpened.value = false;
+      windowExpiresText.value = '';
+      _stopWindowCountdown();
       _loadReplyCache(); // load persisted reply cache for this contact
       _startPolling();
     } else {
       _activeContactUid = id;
+      // Re-opening same contact within session — reset pagination so old
+      // messages can be re-fetched from page 2 instead of continuing from
+      // a stale page counter that would skip them.
+      currentPage = 2;
+      hasMoreMessages.value = true;
     }
   }
 
@@ -221,12 +232,6 @@ class ChatboxController extends ChangeNotifier {
         Map<String, dynamic>.from(lastMessage),
       ),
     );
-
-    if (message.content.trim().isEmpty &&
-        message.templateMessage.trim().isEmpty &&
-        message.media.link.trim().isEmpty) {
-      return;
-    }
 
     final messageMap = message.toMap();
     final messageUid = messageMap['uid']?.toString() ?? '';
@@ -494,12 +499,11 @@ class ChatboxController extends ChangeNotifier {
       final conversation = await _chatRepository.fetchConversation(userId!);
       _handleConversationResponse(conversation, replaceExisting: true);
     } catch (error) {
-      // Handle error gracefully - don't crash, just show empty chat
+      // Keep existing holduser on error so a transient backend reject (e.g.
+      // 24h window closed, network blip) does not blank the chat. Caller
+      // sees previously-loaded messages until next successful refresh.
       pr("Error fetching conversation: $error");
       _resetLoadingStates();
-      // Clear messages to show empty state
-      holduser.clear();
-      messageModels.clear();
     }
   }
 
@@ -536,14 +540,23 @@ class ChatboxController extends ChangeNotifier {
       final seededExpires = _windowExpiresAt;
       final seededStillValid =
           seededExpires != null && seededExpires.isAfter(DateTime.now());
-      if (apiOpen && apiExpires != null) {
+      // Prefer the LATEST still-valid expiry across all three sources so a
+      // freshly-sent outgoing message does not flip the badge to expired when
+      // the API briefly omits the window flag while the backend reconciles.
+      DateTime? bestExpires;
+      void pick(DateTime? candidate) {
+        if (candidate == null) return;
+        if (!candidate.isAfter(DateTime.now())) return;
+        if (bestExpires == null || candidate.isAfter(bestExpires!)) {
+          bestExpires = candidate;
+        }
+      }
+      if (apiOpen) pick(apiExpires);
+      pick(localExpiresLocal);
+      if (seededStillValid) pick(seededExpires);
+      if (bestExpires != null) {
         isWindowOpened.value = true;
-        _startWindowCountdown(apiExpires);
-      } else if (localExpiresLocal != null) {
-        isWindowOpened.value = true;
-        _startWindowCountdown(localExpiresLocal);
-      } else if (seededStillValid) {
-        isWindowOpened.value = true;
+        _startWindowCountdown(bestExpires!);
       } else {
         isWindowOpened.value = false;
         _stopWindowCountdown();
@@ -619,12 +632,31 @@ class ChatboxController extends ChangeNotifier {
     bool isRecordedAudio = false,
   }) async {
     try {
-      final mediaWamid = selectedReplyMessage.value?['wamid']?.toString() ?? '';
+      var mediaWamid = selectedReplyMessage.value?['wamid']?.toString() ?? '';
       final mediaUid = selectedReplyMessage.value?['uid']?.toString() ?? '';
+
+      if (mediaWamid.isEmpty || mediaWamid.startsWith('local-')) {
+        final selectedContent =
+            selectedReplyMessage.value?['content']?.toString() ?? '';
+        if (selectedContent.isNotEmpty) {
+          for (final m in holduser) {
+            final mUid = m['uid']?.toString() ?? '';
+            if (mUid.startsWith('local-')) continue;
+            final mWamid = m['wamid']?.toString() ?? '';
+            if (mWamid.isEmpty) continue;
+            if (m['content']?.toString() == selectedContent) {
+              mediaWamid = mWamid;
+              break;
+            }
+          }
+        }
+      }
+
       final isMediaValidWamid = mediaWamid.isNotEmpty &&
           !mediaWamid.startsWith('local-') &&
           mediaWamid != mediaUid;
-      final effectiveMediaQuotedId = isMediaValidWamid ? mediaWamid : '';
+      final effectiveMediaQuotedId =
+          isMediaValidWamid ? mediaWamid : '';
 
       await _chatRepository.sendMedia(
         context: context,
@@ -650,6 +682,11 @@ class ChatboxController extends ChangeNotifier {
 
   void _replaceMessages(List<ChatMessage> messages) {
     if (messages.isEmpty && holduser.isNotEmpty) {
+      return;
+    }
+    if (messages.isEmpty && holduser.isEmpty) {
+      holduser.assignAll([]);
+      messageModels.assignAll([]);
       return;
     }
 
@@ -744,8 +781,15 @@ class ChatboxController extends ChangeNotifier {
       hasMoreMessages.value = false;
       return;
     }
-    messageModels.addAll(messages);
-    holduser.addAll(messages.map((message) => message.toMap()).toList());
+    // Dedupe by uid — otherwise pagination races with polling refresh and
+    // older messages are added twice when their uids briefly overlap.
+    final existingUids =
+        holduser.map((m) => m['uid']?.toString() ?? '').toSet();
+    final fresh =
+        messages.where((m) => !existingUids.contains(m.uid)).toList();
+    if (fresh.isEmpty) return;
+    messageModels.addAll(fresh);
+    holduser.addAll(fresh.map((message) => message.toMap()).toList());
   }
 
   Future<void> loadMessagesWithAppendLogic() async {
@@ -781,12 +825,35 @@ class ChatboxController extends ChangeNotifier {
 
     final trimmedMessage = messageBody.trim();
 
-    final wamid = selectedReplyMessage.value?['wamid']?.toString() ?? '';
+    var wamid = selectedReplyMessage.value?['wamid']?.toString() ?? '';
     final uid = selectedReplyMessage.value?['uid']?.toString() ?? '';
+
+    // If the selected reply target is an own optimistic message (no wamid yet,
+    // or uid still local-*), try to find a server-reflected version of the
+    // same content in holduser and use that wamid. Without this, replying to
+    // a freshly-sent own message would send no quote to backend and lose the
+    // quoted-bubble after polling refresh.
+    if (wamid.isEmpty || wamid.startsWith('local-')) {
+      final selectedContent =
+          selectedReplyMessage.value?['content']?.toString() ?? '';
+      if (selectedContent.isNotEmpty) {
+        for (final m in holduser) {
+          final mUid = m['uid']?.toString() ?? '';
+          if (mUid.startsWith('local-')) continue;
+          final mWamid = m['wamid']?.toString() ?? '';
+          if (mWamid.isEmpty) continue;
+          if (m['content']?.toString() == selectedContent) {
+            wamid = mWamid;
+            break;
+          }
+        }
+      }
+    }
+
+    final quotedMessageId = wamid.isNotEmpty ? wamid : uid;
     final isValidWamid =
         wamid.isNotEmpty && !wamid.startsWith('local-') && wamid != uid;
     final effectiveQuotedId = isValidWamid ? wamid : '';
-    final quotedMessageId = wamid.isNotEmpty ? wamid : uid;
     pr('[REPLY] wamid=$wamid uid=$uid isValid=$isValidWamid effectiveId=$effectiveQuotedId');
 
     _lastSentTime = now;
@@ -885,6 +952,8 @@ class ChatboxController extends ChangeNotifier {
 
   void _insertTemplateWaitingNotice() {
     final now = DateTime.now();
+    final nowUtc = now.toUtc();
+    final wib = nowUtc.add(const Duration(hours: 7));
     final notice = ChatMessage(
       uid: 'local-template-waiting-${now.microsecondsSinceEpoch}',
       wamid: '',
@@ -893,8 +962,8 @@ class ChatboxController extends ChangeNotifier {
       isIncoming: false,
       isSystem: true,
       status: 'sent',
-      messagedAt: now.toIso8601String(),
-      formattedMessagedAt: DateFormat('h:mm a').format(now),
+      messagedAt: nowUtc.toIso8601String(),
+      formattedMessagedAt: DateFormat('h:mm a').format(wib),
       templateMessage: '',
       whatsAppError: '',
       data: const <String, dynamic>{},

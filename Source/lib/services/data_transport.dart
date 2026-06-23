@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http_parser/http_parser.dart';
 import 'package:stundaa/services/input_security.dart';
 import 'package:fbroadcast/fbroadcast.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:stundaa/screens/user/login.dart';
 import 'auth.dart' as auth;
@@ -15,6 +15,7 @@ import 'package:universal_io/io.dart';
 import 'utils.dart';
 
 String token = '';
+bool _isLoggingOut = false;
 const Duration requestTimeout = Duration(seconds: 30);
 
 http.Client httpClient = http.Client();
@@ -318,17 +319,27 @@ void _thenProcessing(
     auth.storeAuthToken(responseData['data']?['additional']?['token_refreshed'] as String);
   }
 
-  // Check if the user is authenticated
+  // Check if the user is authenticated.
+  // On HTTP 401/403 the backend explicitly rejected the token — log out.
+  // On HTTP 200 with authorized=false, the token may have been rotated by
+  // a concurrent in-flight request. Compare current token against the latest
+  // from SharedPreferences: if they differ, a refresh raced us and we
+  // suppress the false positive instead of logging the user out.
   if (responseData['data']?['auth_info']?['authorized'] == false) {
-    auth.logout();
-    if (context != null && context.mounted) {
-      navigatePage(context, const LoginPage());
+    final isAuthError = value.statusCode == 401 || value.statusCode == 403;
+    final latestToken = auth.getAuthToken();
+
+    if (isAuthError ||
+        latestToken.isEmpty ||
+        latestToken == token) {
+      _performLogout(context, failedCallbackAction, responseData);
+      return;
     }
-    if (failedCallbackAction != null) {
-      failedCallbackAction(responseData);
-    }
-    return;
-  } else if (value.statusCode == 200) {
+    // Token was refreshed by another in-flight request — suppress this
+    // false positive. Fall through to normal processing below.
+  }
+
+  if (value.statusCode == 200) {
     // Handle success case
     if (thenCallbackAction != null) {
       thenCallbackAction(responseData);
@@ -386,5 +397,24 @@ void _thenProcessing(
     if (onError != null) {
       onError(responseData);
     }
+  }
+}
+
+void _performLogout(
+    BuildContext? context,
+    Function? failedCallbackAction,
+    Map<String, dynamic> responseData,
+) {
+  if (_isLoggingOut) return;
+  _isLoggingOut = true;
+  auth.logout();
+  if (context != null && context.mounted) {
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+      (route) => false,
+    );
+  }
+  if (failedCallbackAction != null) {
+    failedCallbackAction(responseData);
   }
 }

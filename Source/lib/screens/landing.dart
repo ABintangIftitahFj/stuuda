@@ -805,6 +805,7 @@ class _LandingPageState extends State<LandingPage> with WidgetsBindingObserver {
         if (eventName == 'VendorChannelBroadcast' &&
             eventData['message_status'] == null) {
           final contactUid = eventData['contactUid'];
+          final contactWaId = eventData['contactWaId']?.toString();
           final justNowLabel = localizedJustNowLabel();
           final isNewIncoming = eventData['isNewIncomingMessage'] == true;
 
@@ -825,6 +826,7 @@ class _LandingPageState extends State<LandingPage> with WidgetsBindingObserver {
               lastMessageText: eventData['lastMessageText'],
               lastMessageIsIncoming: eventData['lastMessageIsIncoming'] == 1 ||
                   eventData['lastMessageIsIncoming'] == true,
+              waId: contactWaId,
             );
           }
 
