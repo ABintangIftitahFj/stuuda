@@ -3,14 +3,11 @@ import 'package:intl/intl.dart';
 class ChatMessage {
   /// Format chat timestamp as Indonesia time (WIB, UTC+7).
   ///
-  /// Prefers the server-provided [fallback] (already formatted in the
-  /// vendor's timezone) when present, so we don't double-shift a naive
-  /// Jakarta timestamp and end up 7 hours off. Falls back to parsing
-  /// [messagedAtRaw] as UTC and shifting to WIB only when the server did
-  /// not supply a formatted value.
+  /// Parses [messagedAtRaw] as UTC and shifts to WIB (+7 hours).
+  /// Falls back to [fallback] only when [messagedAtRaw] is null/empty
+  /// or parsing fails.
   static const Duration _wibOffset = Duration(hours: 7);
   static String _formatLocalTime(String? messagedAtRaw, String fallback) {
-    if (fallback.trim().isNotEmpty) return fallback;
     if (messagedAtRaw == null || messagedAtRaw.isEmpty) return fallback;
     try {
       final normalized = messagedAtRaw.trim().replaceFirst(' ', 'T');

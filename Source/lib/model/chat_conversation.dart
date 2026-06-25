@@ -33,9 +33,11 @@ class ChatConversation {
 
   factory ChatConversation.fromChatResponse(Map<String, dynamic>? response) {
     final data = response?['data'] is Map ? response!['data'] as Map : response;
-    final clientModels = data?['client_models'] is Map
-        ? data!['client_models'] as Map
-        : const <String, dynamic>{};
+    final clientModels = response?['client_models'] is Map
+        ? response!['client_models'] as Map
+        : (data?['client_models'] is Map
+            ? data!['client_models'] as Map
+            : const <String, dynamic>{});
     final rawLogs = clientModels['whatsappMessageLogs'] is Map
         ? clientModels['whatsappMessageLogs'] as Map
         : const <dynamic, dynamic>{};
