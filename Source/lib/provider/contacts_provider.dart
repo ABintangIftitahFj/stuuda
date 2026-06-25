@@ -496,23 +496,28 @@ class ContactProvider with ChangeNotifier {
     final contactIndex = contactsList.indexWhere((entry) =>
         entry.key == contactUid ||
         entry.value['_uid'] == contactUid);
+    final displayTime = (formattedTime.isNotEmpty) ? formattedTime : justNowLabel;
     if (contactIndex != -1) {
       final contactEntry = contactsList[contactIndex];
       final updatedContact = {
         ...contactEntry.value,
         'last_message': {
-          'formatted_message_time': justNowLabel,
+          'formatted_message_time': displayTime,
+          'messaged_at': DateTime.now().toUtc().toIso8601String(),
           '_uid': lastMessageUid,
           'message':
               lastMessageText ?? contactEntry.value['last_message']?['message'],
           'is_incoming_message': lastMessageIsIncoming ??
               contactEntry.value['last_message']?['is_incoming_message'],
         },
-        'unread_messages_count':
-            (contactEntry.value['unread_messages_count'] ?? 0) + 1,
+        'unread_messages_count': lastMessageIsIncoming == true
+            ? (contactEntry.value['unread_messages_count'] ?? 0) + 1
+            : (contactEntry.value['unread_messages_count'] ?? 0),
         if (waId != null && waId.isNotEmpty) 'wa_id': waId,
       };
-      _player.play(AssetSource('audio/receivesound.mp3'));
+      if (lastMessageIsIncoming == true) {
+        _player.play(AssetSource('audio/receivesound.mp3'));
+      }
       contactsList.removeAt(contactIndex);
       contactsList.insert(0, MapEntry(contactUid, updatedContact));
 
@@ -532,18 +537,22 @@ class ContactProvider with ChangeNotifier {
         final updatedContact = {
           ...contactEntry.value,
           'last_message': {
-            'formatted_message_time': justNowLabel,
+            'formatted_message_time': displayTime,
+            'messaged_at': DateTime.now().toUtc().toIso8601String(),
             '_uid': lastMessageUid,
             'message': lastMessageText ??
                 contactEntry.value['last_message']?['message'],
             'is_incoming_message': lastMessageIsIncoming ??
                 contactEntry.value['last_message']?['is_incoming_message'],
           },
-          'unread_messages_count':
-              (contactEntry.value['unread_messages_count'] ?? 0) + 1,
+          'unread_messages_count': lastMessageIsIncoming == true
+              ? (contactEntry.value['unread_messages_count'] ?? 0) + 1
+              : (contactEntry.value['unread_messages_count'] ?? 0),
           if (waId != null && waId.isNotEmpty) 'wa_id': waId,
         };
-        _player.play(AssetSource('audio/receivesound.mp3'));
+        if (lastMessageIsIncoming == true) {
+          _player.play(AssetSource('audio/receivesound.mp3'));
+        }
         originalContactsList.removeAt(originalIndex);
         originalContactsList.insert(0, MapEntry(contactUid, updatedContact));
         contactsList.insert(0, MapEntry(contactUid, updatedContact));
@@ -554,18 +563,24 @@ class ContactProvider with ChangeNotifier {
           'wa_id': waId ?? contactUid,
           'full_name': 'Contact',
           'last_message': {
-            'formatted_message_time': justNowLabel,
+            'formatted_message_time': displayTime,
+            'messaged_at': DateTime.now().toUtc().toIso8601String(),
             '_uid': lastMessageUid,
             'message': lastMessageText,
             'is_incoming_message': lastMessageIsIncoming,
           },
-          'unread_messages_count': 1,
+          'unread_messages_count': lastMessageIsIncoming == true ? 1 : 0,
         });
+        if (lastMessageIsIncoming == true) {
+          _player.play(AssetSource('audio/receivesound.mp3'));
+        }
         contactsList.insert(0, newContact);
         originalContactsList.insert(0, newContact);
       }
     }
-    unreadMsgCount++;
+    if (lastMessageIsIncoming == true) {
+      unreadMsgCount++;
+    }
     _syncActiveAssignedCache();
     notifyListeners();
   }

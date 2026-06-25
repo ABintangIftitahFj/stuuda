@@ -356,8 +356,9 @@ class ChatboxController extends ChangeNotifier {
     final remaining = expires.difference(DateTime.now());
     if (remaining.isNegative) {
       windowCountdownText.value = '';
-      isWindowOpened.value = false;
       _windowCountdownTimer?.cancel();
+      // Let the next periodic API poll (every 10s) handle the window close
+      // to avoid clock drift between client and server locking the chat prematurely.
       return;
     }
     final h = remaining.inHours;
@@ -540,26 +541,35 @@ class ChatboxController extends ChangeNotifier {
       final seededExpires = _windowExpiresAt;
       final seededStillValid =
           seededExpires != null && seededExpires.isAfter(DateTime.now());
-      // Prefer the LATEST still-valid expiry across all three sources so a
-      // freshly-sent outgoing message does not flip the badge to expired when
-      // the API briefly omits the window flag while the backend reconciles.
-      DateTime? bestExpires;
-      void pick(DateTime? candidate) {
-        if (candidate == null) return;
-        if (!candidate.isAfter(DateTime.now())) return;
-        if (bestExpires == null || candidate.isAfter(bestExpires!)) {
-          bestExpires = candidate;
-        }
-      }
-      if (apiOpen) pick(apiExpires);
-      pick(localExpiresLocal);
-      if (seededStillValid) pick(seededExpires);
-      if (bestExpires != null) {
+
+      if (apiOpen) {
+        // If server says window is open, trust it!
         isWindowOpened.value = true;
-        _startWindowCountdown(bestExpires!);
+        if (apiExpires != null) {
+          _startWindowCountdown(apiExpires);
+        } else {
+          _stopWindowCountdown();
+        }
       } else {
-        isWindowOpened.value = false;
-        _stopWindowCountdown();
+        // Server says window is closed (or hasn't updated yet). Check if we can fallback to local/seeded still-valid expiry.
+        DateTime? bestExpires;
+        void pick(DateTime? candidate) {
+          if (candidate == null) return;
+          if (!candidate.isAfter(DateTime.now())) return;
+          if (bestExpires == null || candidate.isAfter(bestExpires!)) {
+            bestExpires = candidate;
+          }
+        }
+        pick(localExpiresLocal);
+        if (seededStillValid) pick(seededExpires);
+
+        if (bestExpires != null) {
+          isWindowOpened.value = true;
+          _startWindowCountdown(bestExpires!);
+        } else {
+          isWindowOpened.value = false;
+          _stopWindowCountdown();
+        }
       }
 
       injectReplyChatDummyIfEmpty();
@@ -640,7 +650,6 @@ class ChatboxController extends ChangeNotifier {
   }) async {
     try {
       var mediaWamid = selectedReplyMessage.value?['wamid']?.toString() ?? '';
-      final mediaUid = selectedReplyMessage.value?['uid']?.toString() ?? '';
 
       if (mediaWamid.isEmpty || mediaWamid.startsWith('local-')) {
         final selectedContent =

@@ -90,7 +90,21 @@ class WhatsAppMessageLogModel extends BaseModel
     protected function formattedMessageTime(): Attribute
     {
         return Attribute::make(
-            get: fn(mixed $value, array $attributes) => isset($attributes['messaged_at']) ? formatDateTime($attributes['messaged_at'], null, $attributes['vendors__id']) : null,
+            get: function(mixed $value, array $attributes) {
+                if (!isset($attributes['messaged_at'])) {
+                    return null;
+                }
+                $date = \Carbon\Carbon::parse($attributes['messaged_at']);
+                $timezone = getVendorSettings('timezone', null, null, $attributes['vendors__id'] ?? null);
+                if (!$timezone) {
+                    $timezone = getAppSettings('timezone');
+                }
+                if (empty($timezone) || strtoupper($timezone) === 'UTC') {
+                    $timezone = 'Asia/Jakarta';
+                }
+                $date->setTimezone($timezone);
+                return $date->format('H:i');
+            }
         );
     }
 

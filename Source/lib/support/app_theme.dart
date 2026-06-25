@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-final Widget logoImage = Image.asset(
+Widget get logoImage => Image.asset(
   'assets/images/logo_stundaa.png',
   fit: BoxFit.contain,
 );
 
-final Widget logoLoadingImage = Image.asset(
+Widget get logoLoadingImage => Image.asset(
   'assets/images/logo_loading_screen.png',
   fit: BoxFit.contain,
 );

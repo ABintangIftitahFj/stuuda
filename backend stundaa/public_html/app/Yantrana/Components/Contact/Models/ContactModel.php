@@ -184,7 +184,7 @@ class ContactModel extends BaseModel
     {
         return $this->hasOne(WhatsAppMessageLogModel::class, 'contacts__id', '_id')->where([
             // 'wab_phone_number_id' => getVendorSettings('current_phone_number_id'),
-        ])->latest('messaged_at'); // OfMany('messaged_at')
+        ])->latestOfMany('_id');
     }
 
     /**
@@ -195,7 +195,7 @@ class ContactModel extends BaseModel
         return $this->hasOne(WhatsAppMessageLogModel::class, 'contacts__id', '_id')->where([
             // 'wab_phone_number_id' => getVendorSettings('current_phone_number_id'),
             'is_incoming_message' => 1,
-        ])->latest('messaged_at');
+        ])->latestOfMany('_id');
     }
 
     /**
@@ -207,7 +207,7 @@ class ContactModel extends BaseModel
             'status' => 'received',
             // 'wab_phone_number_id' => getVendorSettings('current_phone_number_id'),
             'is_incoming_message' => 1,
-        ])->latestOfMany('messaged_at');
+        ])->latestOfMany('_id');
     }
 
     /**

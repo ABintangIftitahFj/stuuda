@@ -861,6 +861,18 @@ class _LandingPageState extends State<LandingPage> with WidgetsBindingObserver {
           if (contactUid == null) {
             await controller.getUserChatSend();
           } else {
+            if (eventData['lastMessageUid'] != null) {
+              final justNowLabel = localizedJustNowLabel();
+              contactProvider.updateContactWithNewMessage(
+                contactUid,
+                eventData['lastMessageUid'].toString(),
+                eventData['formatted_last_message_time']?.toString() ?? '',
+                justNowLabel,
+                lastMessageText: eventData['lastMessageText']?.toString(),
+                lastMessageIsIncoming: false,
+                waId: eventData['contactWaId']?.toString(),
+              );
+            }
             await controller.refreshActiveChatForContact(contactUid);
           }
         } else if (eventName == 'VendorChannelBroadcast' &&
@@ -869,6 +881,18 @@ class _LandingPageState extends State<LandingPage> with WidgetsBindingObserver {
           if (contactUid == null) {
             await controller.getUserChatSend();
           } else {
+            if (eventData['lastMessageUid'] != null) {
+              final justNowLabel = localizedJustNowLabel();
+              contactProvider.updateContactWithNewMessage(
+                contactUid,
+                eventData['lastMessageUid'].toString(),
+                eventData['formatted_last_message_time']?.toString() ?? '',
+                justNowLabel,
+                lastMessageText: eventData['lastMessageText']?.toString(),
+                lastMessageIsIncoming: false,
+                waId: eventData['contactWaId']?.toString(),
+              );
+            }
             await controller.refreshActiveChatForContact(contactUid);
           }
         }
