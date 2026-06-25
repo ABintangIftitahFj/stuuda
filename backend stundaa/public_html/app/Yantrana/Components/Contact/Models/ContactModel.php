@@ -192,10 +192,10 @@ class ContactModel extends BaseModel
      */
     public function lastIncomingMessage(): HasOne
     {
-        return $this->hasOne(WhatsAppMessageLogModel::class, 'contacts__id', '_id')->where([
-            // 'wab_phone_number_id' => getVendorSettings('current_phone_number_id'),
-            'is_incoming_message' => 1,
-        ])->latestOfMany('_id');
+        return $this->hasOne(WhatsAppMessageLogModel::class, 'contacts__id', '_id')
+            ->ofMany(['_id' => 'max'], function ($query) {
+                $query->where('is_incoming_message', 1);
+            });
     }
 
     /**
@@ -203,11 +203,10 @@ class ContactModel extends BaseModel
      */
     public function lastUnreadMessage(): HasOne
     {
-        return $this->hasOne(WhatsAppMessageLogModel::class, 'contacts__id', '_id')->where([
-            'status' => 'received',
-            // 'wab_phone_number_id' => getVendorSettings('current_phone_number_id'),
-            'is_incoming_message' => 1,
-        ])->latestOfMany('_id');
+        return $this->hasOne(WhatsAppMessageLogModel::class, 'contacts__id', '_id')
+            ->ofMany(['_id' => 'max'], function ($query) {
+                $query->where('status', 'received')->where('is_incoming_message', 1);
+            });
     }
 
     /**
