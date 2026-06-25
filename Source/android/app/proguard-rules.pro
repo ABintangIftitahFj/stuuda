@@ -31,3 +31,6 @@
 # Prevent obfuscation of platform channels
 -keep class * extends io.flutter.plugin.common.MethodChannel { *; }
 -keep class * implements io.flutter.plugin.common.MethodChannel$MethodCallHandler { *; }
+
+# Ignore missing Play Store Split Install classes referenced by Flutter's deferred components
+-dontwarn com.google.android.play.core.**
