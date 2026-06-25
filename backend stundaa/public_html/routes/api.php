@@ -251,6 +251,22 @@ Route::group([
         'subscriptionPlans',
     ])->name('api.vendor.subscription.plans');
 
+    // schedule new campaign (mobile app)
+    Route::post('/campaign/schedule', [
+        WhatsAppServiceController::class,
+        'apiScheduleCampaign',
+    ])->name('app_api.vendor.campaign.write.schedule');
+    // Get paginated list of campaign (mobile app)
+    Route::get('/campaign', [
+        CampaignController::class,
+        'apiGetCampaignList',
+    ])->name('app_api.vendor.campaign.read.paginated_list');
+    // Get campaign status (mobile app)
+    Route::get('/campaign-status/{campaignUid}', [
+        CampaignController::class,
+        'apiGetCampaignStatus',
+    ])->name('app_api.vendor.campaign.read.status_details');
+
     Route::group([
         'prefix' => 'vendor/',
     ], function () {

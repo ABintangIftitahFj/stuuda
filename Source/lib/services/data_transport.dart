@@ -117,6 +117,11 @@ Future<String> get(
         )
         .timeout(requestTimeout);
 
+    // TRACE — dump chat endpoint payload only (reply-render investigation)
+    if (requestedUrl.contains('contact/chat/')) {
+      pr("CHAT_RAW url=$requestedUrl body=${httpResponse.body}");
+    }
+
     BuildContext? safeContext = capturedContext?.mounted == true ? capturedContext : null;
 
     _thenProcessing(
@@ -345,10 +350,10 @@ void _thenProcessing(
       thenCallbackAction(responseData);
     }
 
-    final dynamic _rawReaction = responseData['reaction'] ?? responseData['reaction_code'];
-    final int reaction = _rawReaction is int
-        ? _rawReaction
-        : int.tryParse(_rawReaction?.toString() ?? '') ?? 0;
+    final dynamic rawReaction = responseData['reaction'] ?? responseData['reaction_code'];
+    final int reaction = rawReaction is int
+        ? rawReaction
+        : int.tryParse(rawReaction?.toString() ?? '') ?? 0;
 
     if (reaction == 1 || reaction == 21) {
       if (successCallbackAction != null) {

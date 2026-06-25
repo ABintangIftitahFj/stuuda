@@ -60,6 +60,8 @@ class ChatRepository {
     if (quotedMessageWamid.isNotEmpty) {
       payload['quoted_message_wamid'] = quotedMessageWamid;
     }
+    // TRACE
+    debugPrint('SEND_PAYLOAD ${payload.toString()}');
 
     final completer = Completer<ChatMessage>();
     await data_transport.post(
@@ -67,6 +69,8 @@ class ChatRepository {
       inputData: payload,
       context: context,
       onSuccess: (responseData) {
+        // TRACE
+        debugPrint('SEND_RESP_OK reaction=${responseData?['reaction']} log_uid=${responseData?['data']?['log_message']?['_uid']} log_wamid=${responseData?['data']?['log_message']?['wamid']} replied_to_uid=${responseData?['data']?['log_message']?['replied_to_whatsapp_message_logs__uid']}');
         if (!completer.isCompleted) {
           final data = responseData?['data'] ?? {};
           final logMessage = data['log_message'];
@@ -83,11 +87,15 @@ class ChatRepository {
         }
       },
       onFailed: (responseData) {
+        // TRACE
+        debugPrint('SEND_RESP_FAIL ${responseData.toString()}');
         if (!completer.isCompleted) {
           completer.completeError(responseData ?? 'Failed to send message');
         }
       },
       onError: (error) {
+        // TRACE
+        debugPrint('SEND_RESP_ERR ${error.toString()}');
         if (!completer.isCompleted) {
           completer.completeError(error ?? 'Failed to send message');
         }

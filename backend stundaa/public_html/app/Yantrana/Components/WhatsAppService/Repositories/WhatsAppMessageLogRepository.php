@@ -133,7 +133,7 @@ class WhatsAppMessageLogRepository extends BaseRepository implements WhatsAppMes
                 ],
             ],
         ]))) {
-            return $findTheExistingLogEntry;
+            return $this->fetchIt($findTheExistingLogEntry, ['force_fresh' => true]);
         }
 
         return false;

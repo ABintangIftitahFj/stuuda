@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:stundaa/model/subscription_info.dart';
 import 'package:stundaa/services/data_transport.dart' as data_transport;
 
@@ -12,27 +13,24 @@ class SubscriptionRepository {
           try {
             completer.complete(SubscriptionInfo.fromResponse(responseData));
           } catch (e) {
+            debugPrint('[SubscriptionRepository] fetchSubscriptionInfo error: $e');
             completer.complete(null);
           }
         }
       },
-      onFailed: (responseData) {
-        if (!completer.isCompleted) {
-          completer.complete(null);
-        }
+      onFailed: (_) {
+        if (!completer.isCompleted) completer.complete(null);
       },
-      onError: (error) {
-        if (!completer.isCompleted) {
-          completer.complete(null);
-        }
+      onError: (_) {
+        if (!completer.isCompleted) completer.complete(null);
       },
     ).catchError((_) => '');
     if (!completer.isCompleted) completer.complete(null);
     return completer.future;
   }
 
-  Future<Map<String, dynamic>?> fetchSubscriptionPlans() async {
-    final completer = Completer<Map<String, dynamic>?>();
+  Future<List<AvailablePlan>> fetchSubscriptionPlans() async {
+    final completer = Completer<List<AvailablePlan>>();
     await data_transport.get(
       'vendor/subscription-plans',
       onSuccess: (responseData) {
@@ -40,27 +38,33 @@ class SubscriptionRepository {
           try {
             final plansData = responseData?['data']?['plans'];
             if (plansData is Map) {
-              completer.complete(Map<String, dynamic>.from(plansData));
+              final list = <AvailablePlan>[];
+              for (final entry in plansData.entries) {
+                if (entry.value is Map) {
+                  list.add(AvailablePlan.fromMap(
+                    entry.key.toString(),
+                    Map<String, dynamic>.from(entry.value as Map),
+                  ));
+                }
+              }
+              completer.complete(list);
             } else {
-              completer.complete({});
+              completer.complete([]);
             }
           } catch (e) {
-            completer.complete(null);
+            debugPrint('[SubscriptionRepository] fetchPlans error: $e');
+            completer.complete([]);
           }
         }
       },
-      onFailed: (responseData) {
-        if (!completer.isCompleted) {
-          completer.complete(null);
-        }
+      onFailed: (_) {
+        if (!completer.isCompleted) completer.complete([]);
       },
-      onError: (error) {
-        if (!completer.isCompleted) {
-          completer.complete(null);
-        }
+      onError: (_) {
+        if (!completer.isCompleted) completer.complete([]);
       },
     ).catchError((_) => '');
-    if (!completer.isCompleted) completer.complete(null);
+    if (!completer.isCompleted) completer.complete([]);
     return completer.future;
   }
 }

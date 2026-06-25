@@ -1,20 +1,26 @@
 import 'package:intl/intl.dart';
 
 class ChatMessage {
-  /// Parse [messagedAtRaw] as UTC and format in device local time.
-  /// Falls back to [fallback] on parse failure.
+  /// Format chat timestamp as Indonesia time (WIB, UTC+7).
+  ///
+  /// Prefers the server-provided [fallback] (already formatted in the
+  /// vendor's timezone) when present, so we don't double-shift a naive
+  /// Jakarta timestamp and end up 7 hours off. Falls back to parsing
+  /// [messagedAtRaw] as UTC and shifting to WIB only when the server did
+  /// not supply a formatted value.
+  static const Duration _wibOffset = Duration(hours: 7);
   static String _formatLocalTime(String? messagedAtRaw, String fallback) {
+    if (fallback.trim().isNotEmpty) return fallback;
     if (messagedAtRaw == null || messagedAtRaw.isEmpty) return fallback;
     try {
-      // Normalize "YYYY-MM-DD HH:mm:ss" → ISO-8601
       final normalized = messagedAtRaw.trim().replaceFirst(' ', 'T');
       final dt = DateTime.parse(normalized);
-      // Server sends UTC; if no timezone info in string, treat as UTC
       final utcDt = dt.isUtc
           ? dt
           : DateTime.utc(
               dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second);
-      return DateFormat("h:mm a").format(utcDt.toLocal());
+      final wib = utcDt.add(_wibOffset);
+      return DateFormat("h:mm a").format(wib);
     } catch (_) {
       return fallback;
     }
@@ -69,16 +75,16 @@ class ChatMessage {
     final value = entry.value is Map
         ? Map<String, dynamic>.from(entry.value)
         : <String, dynamic>{};
-    final rawData = value['__data'];
+    final rawData = value['__data'] ?? value['data'];
     final data = rawData is Map
         ? Map<String, dynamic>.from(rawData)
         : <String, dynamic>{};
-    final rawMedia = data['media_values'];
+    final rawMedia = data['media_values'] ?? data['mediaValues'] ?? data['media'];
     final mediaMap = rawMedia is Map
         ? Map<String, dynamic>.from(rawMedia)
         : <String, dynamic>{};
 
-    final rawReplied = value['replied_to_message'];
+    final rawReplied = value['replied_to_message'] ?? value['repliedToMessage'];
     ChatMessage? repliedToMessage;
     if (rawReplied is Map) {
       repliedToMessage = ChatMessage.fromApiEntry(
@@ -90,24 +96,39 @@ class ChatMessage {
     }
 
     return ChatMessage(
-      uid: (value['_uid'] ?? entry.key).toString(),
-      wamid: value['wamid']?.toString() ?? '',
+      uid: (value['_uid'] ?? value['uid'] ?? entry.key).toString(),
+      wamid: (value['wamid'] ?? value['wa_mid'] ?? '').toString(),
       repliedToMessageUid: (value['replied_to_whatsapp_message_logs__uid'] ??
+              value['replied_to_whatsapp_message_logs_uid'] ??
+              value['repliedToWhatsappMessageLogsUid'] ??
               value['replied_to_uid'] ??
+              value['repliedToUid'] ??
               value['replied_to_message_uid'] ??
+              value['repliedToMessageUid'] ??
               '')
           .toString(),
-      content: value['message']?.toString() ?? '',
-      isIncoming: _parseBool(value['is_incoming_message']),
-      isSystem: _parseBool(value['is_system_message']),
-      status: value['status']?.toString() ?? 'unknown',
-      messagedAt: value['messaged_at']?.toString() ?? '',
+      content: (value['message'] ?? value['content'] ?? '').toString(),
+      isIncoming: _parseBool(value['is_incoming_message'] ??
+          value['isIncomingMessage'] ??
+          value['is_incoming'] ??
+          value['isIncoming']),
+      isSystem: _parseBool(value['is_system_message'] ??
+          value['isSystemMessage'] ??
+          value['is_system'] ??
+          value['isSystem']),
+      status: (value['status'] ?? 'unknown').toString(),
+      messagedAt: (value['messaged_at'] ?? value['messagedAt'] ?? '').toString(),
       formattedMessagedAt: _formatLocalTime(
-        value['messaged_at']?.toString(),
-        value['formatted_message_time']?.toString() ?? '',
+        (value['messaged_at'] ?? value['messagedAt'])?.toString(),
+        (value['formatted_message_time'] ??
+                value['formattedMessageTime'] ??
+                value['formatted_message_ago_time'] ??
+                value['formattedMessageAgoTime'] ??
+                '')
+            .toString(),
       ),
-      templateMessage: value['template_message']?.toString() ?? '',
-      whatsAppError: value['whatsapp_message_error']?.toString() ?? '',
+      templateMessage: (value['template_message'] ?? value['templateMessage'] ?? '').toString(),
+      whatsAppError: (value['whatsapp_message_error'] ?? value['whatsAppMessageError'] ?? '').toString(),
       data: data,
       media: ChatMedia.fromMap(mediaMap),
       repliedToMessage: repliedToMessage,
@@ -122,6 +143,8 @@ class ChatMessage {
     dynamic filetype,
   }) {
     final now = DateTime.now();
+    final nowUtc = now.toUtc();
+    final wib = nowUtc.add(_wibOffset);
     return ChatMessage(
       uid: 'local-${now.microsecondsSinceEpoch}',
       wamid: '',
@@ -130,8 +153,8 @@ class ChatMessage {
       isIncoming: false,
       isSystem: false,
       status: 'pending',
-      messagedAt: now.toIso8601String(),
-      formattedMessagedAt: DateFormat("h:mm a").format(now),
+      messagedAt: nowUtc.toIso8601String(),
+      formattedMessagedAt: DateFormat("h:mm a").format(wib),
       templateMessage: '',
       whatsAppError: '',
       data: const <String, dynamic>{},

@@ -2212,6 +2212,10 @@ class WhatsAppServiceEngine extends BaseEngine implements WhatsAppServiceEngineI
             'contact_wa_id' => Arr::get($sendMessageResult, 'contacts.0.wa_id'),
             'wamid' => Arr::get($sendMessageResult, 'messages.0.id'),
             'message' => $options['message_body'],
+            // Outgoing messages need messaged_at set explicitly so the
+            // formatted_message_time accessor returns a value — without it the
+            // mobile bubble renders without a timestamp until the next refresh.
+            'messaged_at' => now(),
             '__data' => [
                 'contact_data' => $contactsData,
                 'initial_response' => $sendMessageResult,
@@ -2405,6 +2409,14 @@ class WhatsAppServiceEngine extends BaseEngine implements WhatsAppServiceEngineI
         }
 
         $this->hasMoreMessages = $resultOfMessages->hasMorePages();
+        // TRACE — pagination + reply-render evidence
+        \Log::info('CHAT_PAGE_BACKEND', [
+            'contact_id'      => $contactId,
+            'request_page'    => request()->page,
+            'returned_count'  => $resultOfMessages->count(),
+            'has_more_pages'  => $this->hasMoreMessages,
+            'only_recent'     => $onlyRecent,
+        ]);
         return $resultOfMessages->keyBy('_uid')->transform(function ($item, string $key) {
             if (__isEmpty($item->__data) and __isEmpty($item->message)) {
                 $item->message = '<i class="fas fa-trash"></i> ' . __tr('This message was deleted by system for cleanup.');
@@ -2417,6 +2429,17 @@ class WhatsAppServiceEngine extends BaseEngine implements WhatsAppServiceEngineI
             if (! $item->message || Arr::get($item->__data, 'interaction_message_data')) {
                 $item->template_message = $this->compileMessageWithValues($item->__data);
             };
+            // TRACE — reply relation evidence
+            if ($item->replied_to_whatsapp_message_logs__uid) {
+                \Log::info('REPLY_TRACE', [
+                    'uid'              => $item->_uid,
+                    'wamid'            => $item->wamid,
+                    'replied_to_uid'   => $item->replied_to_whatsapp_message_logs__uid,
+                    'relation_loaded'  => $item->relationLoaded('repliedToMessage'),
+                    'relation_present' => $item->repliedToMessage ? true : false,
+                    'relation_keys'    => $item->repliedToMessage ? array_keys($item->repliedToMessage->toArray()) : null,
+                ]);
+            }
             return $item;
         });
     }
@@ -2769,6 +2792,12 @@ class WhatsAppServiceEngine extends BaseEngine implements WhatsAppServiceEngineI
                 $repliedToMessageLogUid = $repliedToLog->_uid;
             }
         }
+        // TRACE
+        \Log::info('REPLY_BACKEND_RECV', [
+            'quoted_wamid_received' => $quotedWamid,
+            'replied_to_uid_resolved' => $repliedToMessageLogUid,
+            'lookup_failed' => $quotedWamid && !$repliedToMessageLogUid,
+        ]);
 
         // options extend
         $options = array_merge([
@@ -2938,6 +2967,13 @@ class WhatsAppServiceEngine extends BaseEngine implements WhatsAppServiceEngineI
             'whatsappMessageLogs' => $this->contactChatData($contact->_id)->data('whatsappMessageLogs'),
         ], 'prepend');
 
+        // TRACE
+        \Log::info('REPLY_BACKEND_RESP', [
+            'log_message_uid' => $logMessage->_uid ?? null,
+            'log_message_wamid' => $logMessage->wamid ?? null,
+            'stored_replied_to_uid' => $logMessage->replied_to_whatsapp_message_logs__uid ?? null,
+            'log_message_keys' => $logMessage ? array_keys($logMessage->toArray()) : null,
+        ]);
         return $this->engineSuccessResponse([
             'contact' => $contact,
             'log_message' => $logMessage,
@@ -4085,7 +4121,7 @@ class WhatsAppServiceEngine extends BaseEngine implements WhatsAppServiceEngineI
             // Dispatch event for message
             event(new VendorChannelBroadcast($vendorUid, [
                 'message_status' => $messageStatus ?? null,
-                'contactUid' => $contactUid,
+                'contactUid' => $contact->_uid,
                 'contactWaId' => $waId,
                 'isNewIncomingMessage' => $isNewIncomingMessage,
                 'campaignUid' => $campaignUid,

@@ -330,7 +330,7 @@ class CampaignController extends BaseController
      *
      * @return json object
      *---------------------------------------------------------------- */
-    public function apiGetCampaignStatus($vendorUid, $campaignUid)
+    public function apiGetCampaignStatus($vendorUid = null, $campaignUid = null)
     {
         validateVendorAccess('manage_campaigns');
         // ask engine to process the request

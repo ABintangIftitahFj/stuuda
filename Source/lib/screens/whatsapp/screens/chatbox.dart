@@ -511,7 +511,8 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
   @override
   Widget build(BuildContext context) {
     DateTime now = DateTime.now();
-    String formattedTime = DateFormat('h:mm a').format(now);
+    final wibNow = now.toUtc().add(const Duration(hours: 7));
+    String formattedTime = DateFormat('h:mm a').format(wibNow);
     return Scaffold(
       appBar: _buildAppBar(context, formattedTime),
       body: SafeArea(
@@ -602,7 +603,7 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                                     controller.windowCountdownText.value;
                                 return Text(
                                   countdown.isNotEmpty
-                                      ? 'Chat window closes in $countdown'
+                                      ? 'Anda terhubung, sisa waktu = $countdown'
                                       : controller.windowExpiresText.value,
                                   style: const TextStyle(
                                     color: Colors.green,
@@ -1191,6 +1192,10 @@ class _ChatboxScreenState extends State<ChatboxScreen> {
                       final quotedMessage = messageData['repliedToMessage']
                               as Map<String, dynamic>? ??
                           controller.findMessageByUid(repliedToMessageUid);
+                      // TRACE — only when this is a reply bubble
+                      if (repliedToMessageUid.isNotEmpty) {
+                        debugPrint('REPLY_RENDER msgUid=${messageData['uid']} repliedToUid=$repliedToMessageUid hasInlineReplied=${messageData['repliedToMessage'] != null} quotedResolved=${quotedMessage != null} foundViaScope=${messageData['repliedToMessage'] == null && quotedMessage != null}');
+                      }
                       final quotedSenderName = quotedMessage == null
                           ? null
                           : quotedMessage['isIncoming'] == true

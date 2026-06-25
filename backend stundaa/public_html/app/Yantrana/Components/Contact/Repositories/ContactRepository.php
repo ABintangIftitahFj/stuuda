@@ -359,10 +359,14 @@ class ContactRepository extends BaseRepository implements ContactRepositoryInter
         $whereClause = [
             'vendors__id' => $vendorId ?: getVendorId(),
         ];
+        $query = $this->primaryModel::where($whereClause);
         if ($contactUid) {
-            $whereClause['_uid'] = $contactUid;
+            $query->where(function($q) use ($contactUid) {
+                $q->where('contacts._uid', $contactUid)
+                  ->orWhere('contacts.wa_id', $contactUid);
+            });
         }
-        $query = $this->primaryModel::where($whereClause)->with([
+        $query->with([
             'lastMessage',
             'lastUnreadMessage',
             'lastIncomingMessage',
@@ -452,7 +456,10 @@ class ContactRepository extends BaseRepository implements ContactRepositoryInter
         // UID FILTER
         // -----------------------------------------
         if (!empty($requestContactUid)) {
-            $query->where('_uid', $requestContactUid);
+            $query->where(function($q) use ($requestContactUid) {
+                $q->where('contacts._uid', $requestContactUid)
+                  ->orWhere('contacts.wa_id', $requestContactUid);
+            });
         }
 
         // -----------------------------------------

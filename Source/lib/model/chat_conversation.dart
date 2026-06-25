@@ -50,10 +50,8 @@ class ChatConversation {
       directMessageDeliveryWindowOpenedTillMessage:
           data?['directMessageDeliveryWindowOpenedTillMessage']?.toString() ??
               '',
-      windowExpiresAt: data?['directMessageDeliveryWindowExpiresAt'] != null
-          ? DateTime.tryParse(
-              data!['directMessageDeliveryWindowExpiresAt'].toString())
-          : null,
+      windowExpiresAt: _parseUtcDate(
+          data?['directMessageDeliveryWindowExpiresAt']?.toString()),
       assignedLabelIds: rawAssignedLabels is List
           ? rawAssignedLabels
               .map((label) => int.tryParse(label.toString()))
@@ -61,6 +59,24 @@ class ChatConversation {
               .toList()
           : const <int>[],
     );
+  }
+
+  // Server emits naive "YYYY-MM-DD HH:mm:ss" already in UTC. DateTime.parse
+  // treats no-offset as LOCAL, which made the countdown 7h off in WIB. Treat
+  // unspecified-zone timestamps as UTC, then convert to device local.
+  static DateTime? _parseUtcDate(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final normalized = raw.trim().replaceFirst(' ', 'T');
+      final dt = DateTime.parse(normalized);
+      final utc = dt.isUtc
+          ? dt
+          : DateTime.utc(
+              dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second);
+      return utc.toLocal();
+    } catch (_) {
+      return null;
+    }
   }
 
   static bool _parseBool(dynamic value) {

@@ -34,6 +34,96 @@ class PlanFeature {
   bool get isIncluded => limit != 0;
 }
 
+class PlanCharge {
+  final String title;
+  final bool enabled;
+  final double charge;
+
+  const PlanCharge({
+    required this.title,
+    required this.enabled,
+    required this.charge,
+  });
+
+  factory PlanCharge.fromMap(Map<String, dynamic>? map) {
+    if (map == null) return const PlanCharge(title: '', enabled: false, charge: 0);
+    final chargeRaw = map['charge'];
+    double parsed = 0;
+    if (chargeRaw is num) {
+      parsed = chargeRaw.toDouble();
+    } else if (chargeRaw != null) {
+      parsed = double.tryParse(chargeRaw.toString()) ?? 0;
+    }
+    final rawEnabled = map['enabled'];
+    final enabled = rawEnabled == true || rawEnabled == 1 || rawEnabled == 'on' || rawEnabled == '1';
+    return PlanCharge(
+      title: map['title']?.toString() ?? '',
+      enabled: enabled,
+      charge: parsed,
+    );
+  }
+
+  String get priceLabel {
+    if (charge == 0) return 'Free';
+    return '\$${charge.toStringAsFixed(0)}';
+  }
+
+  String get intervalLabel => title.isNotEmpty ? title : '';
+}
+
+class AvailablePlan {
+  final String id;
+  final String title;
+  final bool popular;
+  final bool enabled;
+  final List<PlanFeature> features;
+  final List<PlanCharge> charges;
+
+  const AvailablePlan({
+    required this.id,
+    required this.title,
+    required this.popular,
+    required this.enabled,
+    required this.features,
+    required this.charges,
+  });
+
+  factory AvailablePlan.fromMap(String planId, Map<String, dynamic> map) {
+    final rawFeatures = map['features'] is Map ? map['features'] as Map : const {};
+    final rawCharges = map['charges'] is Map ? map['charges'] as Map : const {};
+
+    final rawEnabled = map['enabled'];
+    final enabled = rawEnabled == true || rawEnabled == 1 || rawEnabled == 'on' || rawEnabled == '1';
+
+    return AvailablePlan(
+      id: planId,
+      title: map['title']?.toString() ?? planId,
+      popular: map['popular'] == true || map['popular'] == 1,
+      enabled: enabled,
+      features: rawFeatures.entries
+          .where((entry) => entry.value is Map)
+          .map((entry) {
+            final featureMap = Map<String, dynamic>.from(entry.value as Map);
+            featureMap['key'] = entry.key.toString();
+            return PlanFeature.fromMap(featureMap);
+          })
+          .toList(),
+      charges: rawCharges.values
+          .whereType<Map>()
+          .map((c) => PlanCharge.fromMap(Map<String, dynamic>.from(c)))
+          .toList(),
+    );
+  }
+
+  PlanCharge? get monthlyCharge => charges.where((c) => c.title.toLowerCase() == 'monthly').firstOrNull;
+  PlanCharge? get yearlyCharge => charges.where((c) => c.title.toLowerCase() == 'yearly').firstOrNull;
+  PlanCharge get bestCharge => yearlyCharge ?? monthlyCharge ?? (charges.isNotEmpty ? charges.first : const PlanCharge(title: '', enabled: false, charge: 0));
+}
+
+extension FirstOrNull<T> on Iterable<T> {
+  T? get firstOrNull => isEmpty ? null : first;
+}
+
 class SubscriptionInfo {
   final String planTitle;
   final String planType;

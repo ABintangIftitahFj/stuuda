@@ -125,10 +125,32 @@ class CampaignRepository {
     return completer.future;
   }
 
+  String _mapError(String? backendMsg, int? reactionCode) {
+    final raw = (backendMsg ?? '').toLowerCase();
+
+    if (reactionCode == 22) return 'Subscription or plan limit reached.';
+    if (raw.contains('template does not exist')) return 'Selected template no longer exists. Please sync templates.';
+    if (raw.contains('template not found')) return 'Template not found. Sync templates and try again.';
+    if (raw.contains('invalid group')) return 'Selected contact group is unavailable.';
+    if (raw.contains('group contact does not found')) return 'Selected group has no contacts.';
+    if (raw.contains('tidak ada kontak aktif') || raw.contains('no active contacts')) return 'No active contacts found in the selected group.';
+    if (raw.contains('demo limit')) return 'Demo accounts can send to 3 contacts maximum.';
+    if (raw.contains('test contact missing')) return 'Set a test contact under WhatsApp Settings first.';
+    if (raw.contains('test contact does not found')) return 'Test contact not found in your contacts.';
+    if (raw.contains('failed to send test message')) return 'Test message failed. Check WhatsApp Cloud API setup.';
+    if (raw.contains('failed to create campaign')) return 'Failed to create broadcast. Please try again.';
+    if (raw.contains('failed to queue messages')) return 'Failed to prepare broadcast messages. Please try again.';
+    if (raw.contains('network or server error')) return 'Connection failed. Check your internet and try again.';
+    if (raw.contains('request timed out')) return 'Connection timed out. Please check your internet connection.';
+    if (raw.contains('no internet connection')) return 'No internet connection. Check your network.';
+
+    return backendMsg ?? 'Failed to schedule broadcast. Please try again.';
+  }
+
   Future<Map<String, dynamic>> scheduleCampaign(Map<String, dynamic> data) async {
     final completer = Completer<Map<String, dynamic>>();
     data_transport.post(
-      'vendor/whatsapp/campaign/schedule',
+      'campaign/schedule',
       inputData: data,
       onSuccess: (res) {
         if (!completer.isCompleted) {
@@ -140,17 +162,29 @@ class CampaignRepository {
       },
       onFailed: (res) {
         if (!completer.isCompleted) {
+          final backendMsg = res?['data']?['message'] as String?
+              ?? res?['message'] as String?;
+          final reactionCode = res?['reaction'] is int
+              ? res!['reaction'] as int?
+              : int.tryParse(res?['reaction']?.toString() ?? '');
           completer.complete({
             'success': false,
-            'message': res?['data']?['message'] ?? 'Failed to schedule broadcast',
+            'message': _mapError(backendMsg, reactionCode),
+            'reaction_code': reactionCode,
           });
         }
       },
       onError: (res) {
         if (!completer.isCompleted) {
+          final backendMsg = res?['data']?['message'] as String?
+              ?? res?['message'] as String?;
+          final reactionCode = res?['reaction'] is int
+              ? res!['reaction'] as int?
+              : int.tryParse(res?['reaction']?.toString() ?? '');
           completer.complete({
             'success': false,
-            'message': res?['data']?['message'] ?? 'Network or server error',
+            'message': _mapError(backendMsg, reactionCode),
+            'reaction_code': reactionCode,
           });
         }
       },

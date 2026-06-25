@@ -23,16 +23,16 @@ class MockSubscriptionRepository implements SubscriptionRepository {
           {"key": "contact_custom_fields", "description": "Contact Custom Fields", "limit": -1},
           {"key": "system_users", "description": "Team Members/Agents", "limit": -1},
           {"key": "ai_chat_bot", "description": "AI Chat Bot", "limit": 1},
-          {"key": "api_access", "description": "API and Webhook Access", "limit": 1}
-        ]
-      }
+          {"key": "api_access", "description": "API and Webhook Access", "limit": 1},
+        ],
+      },
     });
   }
 
   @override
-  Future<Map<String, dynamic>?> fetchSubscriptionPlans() async {
-    return {
-      "plan_1": {
+  Future<List<AvailablePlan>> fetchSubscriptionPlans() async {
+    return [
+      AvailablePlan.fromMap('plan_1', {
         "id": "plan_1",
         "enabled": "on",
         "popular": true,
@@ -41,20 +41,13 @@ class MockSubscriptionRepository implements SubscriptionRepository {
         "features": {
           "contacts": {"description": "Contacts", "limit": "5"},
           "campaigns": {"limit_duration": "monthly", "limit_duration_title": "Per Month", "description": "Campaigns", "limit": "10"},
-          "bot_replies": {"description": "Bot Replies", "limit": "10"},
-          "bot_flows": {"description": "Bot Flows", "limit": "5"},
-          "contact_custom_fields": {"description": "Contact Custom Fields", "limit": "5"},
-          "system_users": {"description": "Team Members/Agents", "limit": "5"},
-          "ai_chat_bot": {"type": "switch", "description": "AI Chat Bot", "limit": "1"},
-          "api_access": {"type": "switch", "description": "API and Webhook Access", "limit": "1"},
-          "WhatsJetCallingAddon": {"type": "switch", "description": "Whatsapp Calling API", "limit": "1"}
         },
         "charges": {
           "monthly": {"title": "monthly", "enabled": 0, "price_id": "", "charge": 10},
-          "yearly": {"title": "yearly", "enabled": "on", "price_id": "", "charge": 100}
-        }
-      },
-      "plan_2": {
+          "yearly": {"title": "yearly", "enabled": "on", "price_id": "", "charge": 100},
+        },
+      }),
+      AvailablePlan.fromMap('plan_2', {
         "id": "plan_2",
         "enabled": "on",
         "popular": false,
@@ -62,90 +55,55 @@ class MockSubscriptionRepository implements SubscriptionRepository {
         "trial_days": 0,
         "features": {
           "contacts": {"description": "Contacts", "limit": "15"},
-          "campaigns": {"limit_duration": "monthly", "limit_duration_title": "Per Month", "description": "Campaigns", "limit": "10"},
-          "bot_replies": {"description": "Bot Replies", "limit": "10"},
-          "bot_flows": {"description": "Bot Flows", "limit": "5"},
-          "contact_custom_fields": {"description": "Contact Custom Fields", "limit": "10"},
-          "system_users": {"description": "Team Members/Agents", "limit": "10"},
-          "ai_chat_bot": {"type": "switch", "description": "AI Chat Bot", "limit": "1"},
-          "api_access": {"type": "switch", "description": "API and Webhook Access", "limit": "1"},
-          "WhatsJetCallingAddon": {"type": "switch", "description": "Whatsapp Calling API", "limit": "1"}
         },
         "charges": {
           "monthly": {"title": "monthly", "enabled": 0, "price_id": "", "charge": 20},
-          "yearly": {"title": "yearly", "enabled": "on", "price_id": "", "charge": 199}
-        }
-      },
-      "plan_3": {
-        "id": "plan_3",
-        "enabled": "on",
-        "popular": false,
-        "title": "Ultimate",
-        "trial_days": 0,
-        "features": {
-          "contacts": {"description": "Contacts", "limit": "-1"},
-          "campaigns": {"limit_duration": "monthly", "limit_duration_title": "Per Month", "description": "Campaigns", "limit": "-1"},
-          "bot_replies": {"description": "Bot Replies", "limit": "-1"},
-          "bot_flows": {"description": "Bot Flows", "limit": "-1"},
-          "contact_custom_fields": {"description": "Contact Custom Fields", "limit": "-1"},
-          "system_users": {"description": "Team Members/Agents", "limit": "-1"},
-          "ai_chat_bot": {"type": "switch", "description": "AI Chat Bot", "limit": "1"},
-          "api_access": {"type": "switch", "description": "API and Webhook Access", "limit": "1"},
-          "WhatsJetCallingAddon": {"type": "switch", "description": "Whatsapp Calling API", "limit": "1"}
+          "yearly": {"title": "yearly", "enabled": "on", "price_id": "", "charge": 199},
         },
-        "charges": {
-          "monthly": {"title": "monthly", "enabled": "on", "price_id": "", "charge": 30},
-          "yearly": {"title": "yearly", "enabled": "on", "price_id": "", "charge": 299}
-        }
-      }
-    };
+      }),
+    ];
   }
 }
 
-class MockFailedSubscriptionRepository implements SubscriptionRepository {
+class MockEmptySubscriptionRepository implements SubscriptionRepository {
   @override
-  Future<SubscriptionInfo?> fetchSubscriptionInfo() async {
-    return null;
-  }
+  Future<SubscriptionInfo?> fetchSubscriptionInfo() async => null;
 
   @override
-  Future<Map<String, dynamic>?> fetchSubscriptionPlans() async {
-    return null;
-  }
+  Future<List<AvailablePlan>> fetchSubscriptionPlans() async => [];
 }
 
 void main() {
-  testWidgets('MyPlanScreen renders subscription details without error', (WidgetTester tester) async {
-    // We want to verify if MyPlanScreen renders using the parsed response structure
+  testWidgets('renders active subscription with plan cards', (WidgetTester tester) async {
     await tester.pumpWidget(
-      MaterialApp(
-        home: MyPlanScreen(repository: MockSubscriptionRepository()),
-      ),
+      MaterialApp(home: MyPlanScreen(repository: MockSubscriptionRepository())),
     );
 
-    // Let it run through the states
     await tester.pump();
     await tester.pumpAndSettle();
 
-    // Check if we see the subscription details
     expect(find.text('My Plan'), findsOneWidget);
+    expect(find.text('Ultimate'), findsOneWidget);
+    expect(find.text('ACTIVE'), findsOneWidget);
+    expect(find.text('Standard'), findsOneWidget);
+    expect(find.text('Popular'), findsOneWidget);
+    expect(find.text('Premium'), findsOneWidget);
+    expect(find.text('Plan Features'), findsOneWidget);
+    expect(find.text('Available Plans'), findsOneWidget);
   });
 
-  testWidgets('MyPlanScreen renders fallback details when API fails', (WidgetTester tester) async {
+  testWidgets('shows free fallback with offline banner', (WidgetTester tester) async {
     await tester.pumpWidget(
-      MaterialApp(
-        home: MyPlanScreen(repository: MockFailedSubscriptionRepository()),
-      ),
+      MaterialApp(home: MyPlanScreen(repository: MockEmptySubscriptionRepository())),
     );
 
     await tester.pump();
     await tester.pumpAndSettle();
 
-    // Check if we see the subscription details fallback
     expect(find.text('My Plan'), findsOneWidget);
-    // Check if we see the offline banner message
-    expect(find.textContaining('Gagal terhubung ke server'), findsOneWidget);
-    // Check if we see the fallback plan title 'Free Plan'
     expect(find.text('Free Plan'), findsOneWidget);
+    expect(find.text('FREE'), findsOneWidget);
+    expect(find.textContaining('Unable to reach server'), findsOneWidget);
+    expect(find.text('Upgrade Plan'), findsOneWidget);
   });
 }

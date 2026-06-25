@@ -603,6 +603,9 @@ class ChatboxController extends ChangeNotifier {
   Future<void> loadMoreMessages2() async {
     if (!hasMoreMessages.value || isLoading.value) return;
 
+    // TRACE
+    pr("PAGE_REQ requested_page=$currentPage holduser_before=${holduser.length} hasMore=${hasMoreMessages.value}");
+
     isLoading.value = true;
     try {
       final conversation = await _chatRepository.fetchConversation(
@@ -610,11 +613,15 @@ class ChatboxController extends ChangeNotifier {
         way: 'prepend',
         page: currentPage,
       );
+      // TRACE
+      pr("PAGE_RESP requested_page=$currentPage api_message_count=${conversation.messages.length}");
       if (conversation.messages.isEmpty) {
         hasMoreMessages.value = false;
       } else {
         _handleConversationResponse(conversation, replaceExisting: false);
       }
+      // TRACE
+      pr("PAGE_DONE requested_page=$currentPage holduser_after=${holduser.length} hasMore=${hasMoreMessages.value}");
     } catch (error) {
       pr("loadMoreMessages2 catch $error");
     } finally {
@@ -653,8 +660,7 @@ class ChatboxController extends ChangeNotifier {
       }
 
       final isMediaValidWamid = mediaWamid.isNotEmpty &&
-          !mediaWamid.startsWith('local-') &&
-          mediaWamid != mediaUid;
+          !mediaWamid.startsWith('local-');
       final effectiveMediaQuotedId =
           isMediaValidWamid ? mediaWamid : '';
 
@@ -681,6 +687,8 @@ class ChatboxController extends ChangeNotifier {
   }
 
   void _replaceMessages(List<ChatMessage> messages) {
+    // TRACE
+    pr("REPLACE api_count=${messages.length} holduser_before=${holduser.length}");
     if (messages.isEmpty && holduser.isNotEmpty) {
       return;
     }
@@ -774,9 +782,13 @@ class ChatboxController extends ChangeNotifier {
 
     // Order: in-flight optimistic first (newest), API page, then older paginated.
     holduser.assignAll([...preservedPending, ...apiMessages, ...preservedOlder]);
+    // TRACE
+    pr("REPLACE_DONE holduser_after=${holduser.length} apiMessages=${apiMessages.length} preservedPending=${preservedPending.length} preservedOlder=${preservedOlder.length}");
   }
 
   void _appendMessages(List<ChatMessage> messages) {
+    // TRACE
+    pr("APPEND_IN api_count=${messages.length} holduser_before=${holduser.length}");
     if (messages.isEmpty) {
       hasMoreMessages.value = false;
       return;
@@ -787,9 +799,13 @@ class ChatboxController extends ChangeNotifier {
         holduser.map((m) => m['uid']?.toString() ?? '').toSet();
     final fresh =
         messages.where((m) => !existingUids.contains(m.uid)).toList();
+    // TRACE
+    pr("APPEND fresh=${fresh.length} duplicates=${messages.length - fresh.length}");
     if (fresh.isEmpty) return;
     messageModels.addAll(fresh);
     holduser.addAll(fresh.map((message) => message.toMap()).toList());
+    // TRACE
+    pr("APPEND_DONE holduser_after=${holduser.length}");
   }
 
   Future<void> loadMessagesWithAppendLogic() async {
@@ -852,9 +868,10 @@ class ChatboxController extends ChangeNotifier {
 
     final quotedMessageId = wamid.isNotEmpty ? wamid : uid;
     final isValidWamid =
-        wamid.isNotEmpty && !wamid.startsWith('local-') && wamid != uid;
+        wamid.isNotEmpty && !wamid.startsWith('local-');
     final effectiveQuotedId = isValidWamid ? wamid : '';
-    pr('[REPLY] wamid=$wamid uid=$uid isValid=$isValidWamid effectiveId=$effectiveQuotedId');
+    // TRACE
+    pr('SEND_REPLY selectedUid=$uid selectedWamid=${selectedReplyMessage.value?['wamid']} resolvedWamid=$wamid effectiveQuotedId=$effectiveQuotedId isValid=$isValidWamid selectedContent=${selectedReplyMessage.value?['content']} windowOpened=${isWindowOpened.value}');
 
     _lastSentTime = now;
 
@@ -989,6 +1006,8 @@ class ChatboxController extends ChangeNotifier {
 
   void _replaceLocalOptimisticMessage(String localId, ChatMessage sentMessage) {
     final index = holduser.indexWhere((m) => m['uid'] == localId);
+    // TRACE
+    pr('SWAP_OPTIMISTIC localId=$localId serverUid=${sentMessage.uid} serverWamid=${sentMessage.wamid} serverRepliedToUid=${sentMessage.repliedToMessageUid} foundLocal=${index != -1}');
     if (index != -1) {
       final oldMap = holduser[index];
       final newMap = sentMessage.toMap();

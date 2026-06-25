@@ -96,7 +96,7 @@ class _BroadcastCreateScreenState extends State<BroadcastCreateScreen>
     }
     setState(() => _submitting = true);
 
-    String _fmtDt(DateTime dt) {
+    String fmtDt(DateTime dt) {
       final utc = dt.toUtc();
       return '${utc.year}-${utc.month.toString().padLeft(2,'0')}-${utc.day.toString().padLeft(2,'0')}T${utc.hour.toString().padLeft(2,'0')}:${utc.minute.toString().padLeft(2,'0')}:${utc.second.toString().padLeft(2,'0')}';
     }
@@ -106,8 +106,8 @@ class _BroadcastCreateScreenState extends State<BroadcastCreateScreen>
       'timezone': 'UTC',
       'template_name': _templateNameCtrl.text.trim(),
       'template_language': _templateLangCtrl.text.trim(),
-      if (_scheduleAt != null) 'schedule_at': _fmtDt(_scheduleAt!),
-      if (_expireAt != null) 'expire_at': _fmtDt(_expireAt!),
+      if (_scheduleAt != null) 'schedule_at': fmtDt(_scheduleAt!),
+      if (_expireAt != null) 'expire_at': fmtDt(_expireAt!),
     };
 
     final result = await _repo.scheduleCampaign(data);
@@ -124,60 +124,67 @@ class _BroadcastCreateScreenState extends State<BroadcastCreateScreen>
       );
     } else {
       final msg = result['message'] ?? 'Failed to schedule broadcast';
-      if (msg.toLowerCase().contains('tidak ada kontak aktif') || msg.toLowerCase().contains('no active contacts')) {
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            backgroundColor: app_theme.surface,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-              side: BorderSide(
-                color: app_theme.error.withValues(alpha: 0.4),
-                width: 1.5,
-              ),
-            ),
-            title: const Row(
-              children: [
-                Icon(Icons.warning_amber_rounded, color: app_theme.error),
-                SizedBox(width: 8),
-                Text(
-                  'Peringatan',
-                  style: TextStyle(
-                    color: app_theme.error,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            content: Text(
-              '$msg. Campaign tidak bisa dikirim.',
-              style: const TextStyle(
-                color: app_theme.lavenderWhite,
-                fontSize: 14,
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                style: TextButton.styleFrom(
-                  foregroundColor: app_theme.primary,
-                  textStyle: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(msg),
-            backgroundColor: app_theme.error,
-          ),
-        );
-      }
+      final code = result['reaction_code'] as int?;
+      final isWarning = code == 22 ||
+          msg.toLowerCase().contains('no active contacts') ||
+          msg.toLowerCase().contains('demo limit') ||
+          msg.toLowerCase().contains('subscription');
+
+      _showResultDialog(msg, isWarning: isWarning);
     }
+  }
+
+  void _showResultDialog(String message, {bool isWarning = false}) {
+    final iconColor = isWarning ? app_theme.warning : app_theme.error;
+    final iconData = isWarning
+        ? Icons.warning_amber_rounded
+        : Icons.error_outline_rounded;
+    final titleText = isWarning ? 'Warning' : 'Error';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: app_theme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(
+            color: iconColor.withValues(alpha: 0.4),
+            width: 1.5,
+          ),
+        ),
+        title: Row(
+          children: [
+            Icon(iconData, color: iconColor),
+            const SizedBox(width: 8),
+            Text(
+              titleText,
+              style: TextStyle(
+                color: iconColor,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          message,
+          style: const TextStyle(
+            color: app_theme.lavenderWhite,
+            fontSize: 14,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            style: TextButton.styleFrom(
+              foregroundColor: app_theme.primary,
+              textStyle: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _pickDateTime(bool isSchedule) async {

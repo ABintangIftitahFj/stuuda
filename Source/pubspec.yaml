@@ -227,13 +227,12 @@ flutter_native_splash:
     # App icon without an icon background: This should be 1152×1152 pixels, and fit within a circle
     # 768 pixels in diameter.
 
-    image: assets/images/splash_stundaa_android_12.png
-#    image: assets/images/whatsjet.png
-#    image: assets/images/whatsjet.svg
-#    image: assets/images/android12splash.png
+    # Use the 1024x1024 launcher icon: it already fits inside a circle, so the
+    # Android 12 splash screen renders the brand mark instead of a square crop.
+    image: assets/images/icon_stundaa.png
 
     # Splash screen background color.
-    #color: "#42a5f5"
+    color: "#000000"
     # App icon background color.
     icon_background_color: "#000000"
 
